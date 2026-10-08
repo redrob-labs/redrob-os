@@ -30,6 +30,13 @@ disable_fw_kms_setup=1
 # Run in 64-bit mode
 arm_64bit=1
 
+# Force the 4K-page kernel. gVisor (runsc) only supports a 4K page size on
+# arm64 and panics ("Only 4K page size is supported on arm64!") under the Pi5
+# default 16K-page kernel. The F4 sandbox depends on gVisor, so 4K is required.
+# All arm64 user binaries in the image (redrob-agent, redrob-code, llama.cpp)
+# must be built/validated for 4K pages. See docs/open-questions.md Q2.
+kernel=kernel8.img
+
 # Disable compensation for displays with overscan
 disable_overscan=1
 

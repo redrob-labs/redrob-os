@@ -7,9 +7,17 @@ devices:
   - subsystem: pci
     vendor: hailo                     # AI HAT+ 2
 backends:
-  - cpu                               # always available
-  - hailo                             # when the accelerator module is present
+  # Router LLM (~1B) backends. Hailo is intentionally NOT here: Hailo-8 is a
+  # quantized-CNN vision accelerator, not an LLM engine, and its Dataflow
+  # Compiler is x86-only. See docs/open-questions.md Q3.
+  - cpu                               # always available (llama.cpp)
   - remote-gpu                        # tailnet GPU box
+vision_backends:
+  # Hailo accelerates vision/CNN models (e.g. YOLO) only. HEF models are
+  # cross-compiled on an x86 dev machine and dropped into models_dir; the Pi
+  # only runs inference (HailoRT).
+  - cpu
+  - hailo                             # when the AI HAT+ accelerator is present
 models_dir: /data/models              # updated separately from OTA
 network:
   - "100.64.0.0/10"                   # tailnet only, for remote-gpu
