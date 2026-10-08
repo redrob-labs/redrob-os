@@ -3,8 +3,13 @@ set -e
 
 
 function prepare_rauc_signing() {
-    local key="/build/key.pem"
-    local cert="/build/cert.pem"
+    # Upstream HAOS builds inside a Docker container where /build is the work
+    # dir. We build without Docker, so default to a dir under the external tree
+    # and allow override via RAUC_DEV_SIGNING_DIR.
+    local signing_dir="${RAUC_DEV_SIGNING_DIR:-${BR2_EXTERNAL_HAOS_PATH}/.dev-signing}"
+    mkdir -p "${signing_dir}"
+    local key="${signing_dir}/key.pem"
+    local cert="${signing_dir}/cert.pem"
 
     if [ ! -f "${key}" ]; then
         echo "Generating a self-signed certificate for development"
@@ -30,7 +35,8 @@ function write_rauc_config() {
 
 
 function install_rauc_certs() {
-    local cert="/build/cert.pem"
+    local signing_dir="${RAUC_DEV_SIGNING_DIR:-${BR2_EXTERNAL_HAOS_PATH}/.dev-signing}"
+    local cert="${signing_dir}/cert.pem"
 
     if [ "${DEPLOYMENT}" == "development" ]; then
         # Contains development and release certificate

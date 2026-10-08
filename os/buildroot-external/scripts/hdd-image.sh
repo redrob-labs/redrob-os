@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BOOTSTATE_SIZE=8M
-SYSTEM_SIZE=256M
+SYSTEM_SIZE=384M
 KERNEL_SIZE=24M
 OVERLAY_SIZE=96M
 
@@ -24,6 +24,12 @@ function create_disk_image() {
     export ota_compatible ota_version
     # variables used in genimage configs
     export BOOTSTATE_SIZE SYSTEM_SIZE KERNEL_SIZE OVERLAY_SIZE
+    # RAUC bundle signing key/cert (upstream hardcodes /build which only exists
+    # inside HAOS's Docker build container; we build without it)
+    RAUC_SIGNING_DIR="${RAUC_DEV_SIGNING_DIR:-${BR2_EXTERNAL_HAOS_PATH}/.dev-signing}"
+    RAUC_KEY="${RAUC_SIGNING_DIR}/key.pem"
+    RAUC_CERT="${RAUC_SIGNING_DIR}/cert.pem"
+    export RAUC_KEY RAUC_CERT
     RAUC_MANIFEST=$(tempio -template "${BR2_EXTERNAL_HAOS_PATH}/ota/manifest.raucm.gtpl")
     IMAGE_NAME="$(haos_image_basename)"
     BOOT_SPL_TYPE=$(test "$BOOT_SPL" == "true" && echo "spl" || echo "nospl")

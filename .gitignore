@@ -15,3 +15,4 @@
 /agent/target/
 /modules/*/target/
 /modules/*/build/
+os/buildroot-external/.dev-signing/
