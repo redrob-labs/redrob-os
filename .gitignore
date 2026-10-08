@@ -14,6 +14,7 @@
 /os/release/
 /agent/target/
 /modules/*/target/
+/modules/*/*/target/
 /modules/*/build/
 os/buildroot-external/.dev-signing/
 __pycache__/

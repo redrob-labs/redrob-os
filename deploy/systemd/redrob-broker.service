@@ -1,0 +1,46 @@
+[Unit]
+Description=Redrob Credential Broker (holds tokens outside the sandbox)
+Documentation=https://github.com/redrob-labs/redrob-os
+After=network-online.target mnt-data.mount redrob-firstboot.service
+Wants=network-online.target
+RequiresMountsFor=/mnt/data
+Requires=redrob-firstboot.service
+Before=redrob-agent.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=redrob-broker
+Group=redrob-broker
+Environment=RUST_LOG=info
+ExecStart=/usr/bin/redrob-broker --config /etc/redrob/broker.toml
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+# /run/redrob/broker.sock: dir owned by the broker, group redrob-broker (the agent is a member).
+RuntimeDirectory=redrob
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+ReadWritePaths=/mnt/data/redrob/broker /mnt/data/redrob/audit
+ReadOnlyPaths=/mnt/data/redrob/identity
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+MemoryHigh=96M
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

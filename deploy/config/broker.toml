@@ -1,0 +1,108 @@
+# Redrob credential broker (/etc/redrob/broker.toml). Design: docs/design/credential-broker.md
+# The broker is the only process holding third-party credentials. The agent talks to it
+# over the Unix socket; the agent's own outbound HTTP goes through the egress proxy.
+
+socket = "/run/redrob/broker.sock"
+state_dir = "/mnt/data/redrob/broker"     # encrypted store + key file (0600, user redrob-broker)
+audit_dir = "/mnt/data/redrob/audit"      # broker-YYYY-MM-DD.jsonl, user-readable
+admin_user = "redrob-agent"               # may set credentials, grant scopes, post approvals
+timeout_secs = 60
+
+# Forward proxy the agent is pointed at ([proxy] in agent.toml). Allow-list only,
+# no credential injection, every request logged. Hosts the agent legitimately reaches:
+[egress]
+listen = "127.0.0.1:3128"
+allow = [
+  "console.redrob.ai",          # inference + pairing (Redrob Console)
+  "*.redrob.ai",
+  "slack.com", "*.slack.com",   # channel adapters keep their bot tokens in the agent (phase 1)
+  "discord.com", "gateway.discord.gg", "*.discord.gg",
+  "api.telegram.org",
+  "*.googleapis.com", "accounts.google.com", "oauth2.googleapis.com",
+  "github.com", "api.github.com", "*.githubusercontent.com",
+]
+
+# Scoped calls: POST /v1/call {task, scope, method, path, query, body}.
+# Default methods = GET only. Paths are prefixes.
+[scopes."google.gmail.read"]
+base_url = "https://gmail.googleapis.com"
+credential = "google.user"
+paths = ["/gmail/v1/users/me/messages", "/gmail/v1/users/me/threads", "/gmail/v1/users/me/labels"]
+risk = "read"
+
+[scopes."google.gmail.send"]
+base_url = "https://gmail.googleapis.com"
+credential = "google.user"
+methods = ["POST"]
+paths = ["/gmail/v1/users/me/messages/send", "/gmail/v1/users/me/drafts"]
+risk = "external-send"
+
+[scopes."google.calendar.read"]
+base_url = "https://www.googleapis.com"
+credential = "google.user"
+paths = ["/calendar/v3/"]
+risk = "read"
+
+[scopes."google.calendar.write"]
+base_url = "https://www.googleapis.com"
+credential = "google.user"
+methods = ["POST", "PUT", "PATCH"]
+paths = ["/calendar/v3/calendars/"]
+risk = "mutate"
+
+[scopes."google.drive.read"]
+base_url = "https://www.googleapis.com"
+credential = "google.user"
+paths = ["/drive/v3/files"]
+risk = "read"
+
+[scopes."google.drive.write"]
+base_url = "https://www.googleapis.com"
+credential = "google.user"
+methods = ["POST", "PATCH"]
+paths = ["/drive/v3/files", "/upload/drive/v3/files"]
+risk = "mutate"
+
+[scopes."slack.read"]
+base_url = "https://slack.com"
+credential = "slack.bot"
+paths = ["/api/conversations.", "/api/users.", "/api/search."]
+risk = "read"
+
+[scopes."slack.write"]
+base_url = "https://slack.com"
+credential = "slack.bot"
+methods = ["POST"]
+paths = ["/api/chat.postMessage", "/api/chat.update", "/api/reactions.add"]
+risk = "external-send"
+
+[scopes."discord.read"]
+base_url = "https://discord.com"
+credential = "discord.bot"
+auth = "header:Authorization"           # Discord wants "Bot <token>"; store the value with the prefix
+paths = ["/api/v10/channels/", "/api/v10/guilds/", "/api/v10/users/@me"]
+risk = "read"
+
+[scopes."discord.write"]
+base_url = "https://discord.com"
+credential = "discord.bot"
+auth = "header:Authorization"
+methods = ["POST", "PATCH"]
+paths = ["/api/v10/channels/"]
+risk = "external-send"
+
+[scopes."git.push"]
+base_url = "https://api.github.com"
+credential = "github.pat"
+methods = ["POST", "PATCH", "PUT"]
+paths = ["/repos/"]
+risk = "spend"                          # always per-action approval, like the design's `approval`
+
+[scopes."console.infer"]
+base_url = "https://console.redrob.ai"
+credential = "console.apikey"
+methods = ["POST"]
+paths = ["/api/backend/v1/chat/completions", "/api/backend/v1/responses"]
+# Design: `spend` above budget needs approval. Budget accounting is phase 2; until then
+# inference is auto + logged, otherwise every model turn would stall on the user.
+risk = "mutate"

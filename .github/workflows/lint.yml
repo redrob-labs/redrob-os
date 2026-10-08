@@ -59,3 +59,17 @@ jobs:
             exit 1
           fi
           echo "no /build/*.pem"
+
+  broker:
+    name: credential broker (cargo test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: modules/credential-broker/broker
+      - run: cargo test --locked
+        working-directory: modules/credential-broker/broker
+      - run: cargo fmt --check
+        working-directory: modules/credential-broker/broker

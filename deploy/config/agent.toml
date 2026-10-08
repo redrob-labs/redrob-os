@@ -74,6 +74,19 @@ allowed_workspace_roots = ["@@DATA@@/workspace"]
 [http_request]
 allowed_domains = []          # filled per-task by the credential broker policy
 
+# ---------------------------------------------------------------------------
+# Egress (F4/F5): every HTTP call the agent makes goes through the credential
+# broker's forward proxy on loopback. The broker allow-lists hosts
+# (/etc/redrob/broker.toml [egress]) and writes the audit log; the local router
+# model and the broker socket are reached directly.
+# ---------------------------------------------------------------------------
+[proxy]
+enabled = true
+http_proxy = "http://127.0.0.1:3128"
+https_proxy = "http://127.0.0.1:3128"
+no_proxy = ["127.0.0.1", "localhost"]
+scope = "zeroclaw"
+
 [web_fetch]
 allowed_domains = []
 

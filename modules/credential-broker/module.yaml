@@ -3,8 +3,8 @@ version: 0.0.1
 description: Holds OAuth tokens and API keys outside the sandbox. The agent requests scoped calls; raw tokens never cross the boundary. Every external call is written to the audit log.
 capabilities: []
 devices: []
-secrets_store: /data/credentials      # encrypted with the device key from first boot
-audit_log: /data/audit/broker.jsonl   # user-readable
+secrets_store: /data/broker           # host: /mnt/data/redrob/broker; ChaCha20-Poly1305, key file 0600
+audit_log: /data/audit/broker-YYYY-MM-DD.jsonl  # host: /mnt/data/redrob/audit, one file per day
 scopes:
   - slack
   - discord
@@ -13,9 +13,12 @@ scopes:
   - google.drive
   - git.push                          # requires user approval per push
 network:
+  - "slack.com"
   - "*.slack.com"
   - "discord.com"
   - "*.googleapis.com"
   - "github.com"
+  - "api.github.com"
+  - "console.redrob.ai"
 host_access: none
 approval: per-task

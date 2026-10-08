@@ -8,7 +8,7 @@ ID_DIR=$DATA/identity
 AGENT_DIR=$DATA/agent
 TEMPLATE=/usr/share/redrob/agent.toml
 
-mkdir -p "$ID_DIR" "$AGENT_DIR/data" "$AGENT_DIR/workspace" "$DATA/audit" "$DATA/models"
+mkdir -p "$ID_DIR" "$AGENT_DIR/data" "$AGENT_DIR/workspace" "$DATA/broker" "$DATA/audit" "$DATA/models"
 
 # 1. Device id: random UUID, generated here, kept for the life of the device.
 if [ ! -s "$ID_DIR/device-id" ]; then
@@ -44,5 +44,10 @@ fi
 hostnamectl set-hostname "$(cat "$DATA/hostname")" 2>/dev/null || true
 
 chown -R redrob-agent:redrob-agent "$AGENT_DIR" 2>/dev/null || true
+# Broker state is private to the broker; the audit log is written by the broker and
+# readable by group redrob-broker (the agent is a member) for the dashboard.
+chown redrob-broker:redrob-broker "$DATA/broker" "$DATA/audit" 2>/dev/null || true
+chmod 0700 "$DATA/broker" 2>/dev/null || true
+chmod 0750 "$DATA/audit" 2>/dev/null || true
 rm -f "$ID_DIR/.firstboot"
 echo "redrob-firstboot: device $(cat "$ID_DIR/device-id") ready"
