@@ -1,0 +1,17 @@
+config BR2_PACKAGE_REDROB_USB_BROKER
+	bool "Redrob USB Broker"
+	depends on BR2_PACKAGE_REDROB_AGENT
+	help
+	  Default-deny admission for hot-plugged USB devices via the kernel's
+	  authorized_default, user approval over a Unix socket, BadUSB
+	  (storage + HID) rejection and read-only automount of approved
+	  storage (modules/usb-broker/broker). Built with cargo outside
+	  Buildroot; installed from BR2_PACKAGE_REDROB_USB_BROKER_BINARY.
+
+if BR2_PACKAGE_REDROB_USB_BROKER
+
+config BR2_PACKAGE_REDROB_USB_BROKER_BINARY
+	string "Path to the prebuilt usb broker binary"
+	default "$(BR2_EXTERNAL_HAOS_PATH)/../../modules/usb-broker/broker/target/release/redrob-usb-broker"
+
+endif

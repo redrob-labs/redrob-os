@@ -1,0 +1,28 @@
+[package]
+name = "redrob-usb-broker"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Redrob OS USB broker: default-deny for new USB devices, user approval, BadUSB rejection, read-only automount"
+publish = false
+
+[lib]
+name = "redrob_usb_broker"
+path = "src/lib.rs"
+
+[[bin]]
+name = "redrob-usb-broker"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+axum = { version = "0.8.8", default-features = false, features = ["http1", "json", "tokio", "macros"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.48", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs", "process", "signal"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter"] }
+
+[dev-dependencies]
+tempfile = "3.23"

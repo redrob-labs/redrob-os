@@ -73,3 +73,17 @@ jobs:
         working-directory: modules/credential-broker/broker
       - run: cargo fmt --check
         working-directory: modules/credential-broker/broker
+
+  usb-broker:
+    name: usb broker (cargo test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: modules/usb-broker/broker
+      - run: cargo test --locked
+        working-directory: modules/usb-broker/broker
+      - run: cargo fmt --check
+        working-directory: modules/usb-broker/broker
