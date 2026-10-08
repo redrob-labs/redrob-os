@@ -11,9 +11,11 @@ ConditionPathExists=/mnt/boot/EFI/BOOT/grubenv
 
 [Service]
 Type=oneshot
-# Up to 60 s for the agent to come up; a boot where it never answers is a
-# boot that must NOT be marked good.
-ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:42617/health && exit 0; sleep 2; done; echo "redrob-mark-good: agent not healthy, slot stays unmarked" >&2; exit 1'
+TimeoutStartSec=6min
+# Up to 5 min for the agent to come up (first boot renders config and keys;
+# small CPUs are slow); a boot where it never answers is a boot that must
+# NOT be marked good.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 150); do curl -sf -o /dev/null http://127.0.0.1:42617/health && exit 0; sleep 2; done; echo "redrob-mark-good: agent not healthy, slot stays unmarked" >&2; exit 1'
 ExecStart=/usr/bin/rauc status mark-good
 RemainAfterExit=yes
 
