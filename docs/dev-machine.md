@@ -39,3 +39,18 @@ because the system Python 3.14 lacks `ensurepip` and QEMU's configure needs a ve
 The upstream `hassio` package pulls Supervisor container images at build time with
 `docker` / `skopeo` (`buildroot-external/package/hassio/*.sh`). That package is
 replaced by the Redrob agent in Stage 4, so it is dropped rather than ported.
+
+## Lint gates (CI `lint.yml`, run locally before a PR)
+
+```sh
+python3 scripts/lint-modules.py      # modules/*/module.yaml against modules/README.md schema
+scripts/verify-units.sh              # deploy/systemd/*.service via systemd-analyze in a stub root
+shellcheck -S warning scripts/*.sh deploy/firstboot/redrob-firstboot \
+  os/buildroot-external/scripts/redrob-post-build.sh \
+  os/buildroot-external/package/redrob-data/create-data-partition.sh
+```
+
+Only our own files are linted; `os/buildroot`, `agent/` and upstream HAOS scripts
+keep their own CI. A full image build is not in CI yet: a hosted runner has 14 GB
+disk and a 6 h job limit, and the Buildroot output here is larger than that. Measure
+before enabling.
