@@ -1,0 +1,100 @@
+# Redrob Agent config template.
+# Installed to /data/agent/config.toml on first boot by redrob-firstboot.
+# @@DATA@@ is replaced with the agent data root (/data/agent on device,
+# ~/.local/state/redrob-agent for L0 host runs).
+
+schema_version = 3
+
+# ---------------------------------------------------------------------------
+# Inference: Redrob Console is the default. OpenAI-compatible base URL.
+# The key is NOT in this file: pairing writes it into the encrypted secrets
+# store (`redrob-agent config set providers.models.custom.console.api_key ...`).
+# ---------------------------------------------------------------------------
+[providers.models.custom.console]
+uri = "https://console.redrob.ai/api/backend/v1"
+model = "auto"
+wire_api = "chat_completions"
+context_window = 1000000
+timeout_secs = 120
+fallback = ["llamacpp.router"]
+
+# Local router model (F6). Served by the local-inference module on loopback.
+[providers.models.llamacpp.router]
+uri = "http://127.0.0.1:8081"
+model = "router"
+context_window = 32000
+vision = false
+
+[agents.default]
+enabled = true
+model_provider = "custom.console"
+risk_profile = "default"
+runtime_profile = "default"
+
+[agents.default.workspace]
+path = "@@DATA@@/workspace"
+
+# ---------------------------------------------------------------------------
+# Autonomy: read-only tools auto-approved, everything that writes outside the
+# workspace or leaves the device goes through the approval gate (F4).
+# ---------------------------------------------------------------------------
+[risk_profiles.default]
+level = "supervised"
+auto_approve = [
+  "file_read", "glob_search", "content_search", "image_info",
+  "memory_recall", "memory_store", "calculator",
+]
+forbidden_paths = ["/data/credentials", "/data/agent/config.toml", "/data/agent/secrets"]
+shell_env_passthrough = ["LANG", "TZ", "PATH"]
+sandbox_enabled = true
+sandbox_backend = "auto"
+
+[runtime_profiles.default]
+max_tool_iterations = 50
+max_tool_result_chars = 50000
+max_context_tokens = 200000
+
+# ---------------------------------------------------------------------------
+# Tool sandbox (F4): Podman exposes a Docker-compatible socket; containers.conf
+# on the device sets runsc (gVisor) as the default OCI runtime.
+# ---------------------------------------------------------------------------
+[runtime]
+kind = "docker"
+shell = "bash"
+
+[runtime.docker]
+image = "localhost/redrob-sandbox:latest"
+network = "none"
+memory_limit_mb = 2048
+cpu_limit = 2.0
+read_only_rootfs = true
+mount_workspace = true
+allowed_workspace_roots = ["@@DATA@@/workspace"]
+
+[http_request]
+allowed_domains = []          # filled per-task by the credential broker policy
+
+[web_fetch]
+allowed_domains = []
+
+# ---------------------------------------------------------------------------
+# Local gateway (pairing + dashboard). Loopback only; the display module and
+# the pairing flow reach it through the host.
+# ---------------------------------------------------------------------------
+[gateway]
+host = "127.0.0.1"
+port = 42617
+allow_public_bind = false
+require_pairing = true
+
+[memory]
+backend = "sqlite"
+auto_save = true
+hygiene_enabled = true
+archive_after_days = 7
+purge_after_days = 30
+embedding_provider = "none"
+search_mode = "bm25"
+
+[secrets]
+encrypt = true

@@ -1,0 +1,50 @@
+[Unit]
+Description=Redrob Agent (resident agent runtime)
+Documentation=https://github.com/redrob-labs/redrob-os
+After=network-online.target data.mount
+Wants=network-online.target
+RequiresMountsFor=/data
+
+[Service]
+Type=simple
+User=redrob-agent
+Group=redrob-agent
+SupplementaryGroups=redrob-broker
+Environment=ZEROCLAW_CONFIG_DIR=/data/agent
+Environment=ZEROCLAW_DATA_DIR=/data/agent/data
+Environment=ZEROCLAW_WORKSPACE=/data/agent/workspace
+Environment=RUST_LOG=info
+ExecStart=/usr/bin/redrob-agent daemon
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+TimeoutStopSec=20
+
+# Writable state lives only under /data; rootfs is read-only anyway.
+StateDirectory=
+ReadWritePaths=/data/agent
+ReadOnlyPaths=/data/models
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+
+# Idle budget (F-NFR: OS + agent idle <= 1 GiB); hard cap leaves room for sandboxes.
+MemoryHigh=512M
+MemoryMax=1G
+CPUWeight=100
+
+[Install]
+WantedBy=multi-user.target
