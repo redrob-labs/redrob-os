@@ -5,8 +5,8 @@ DefaultDependencies=no
 After=haos-expand.service
 Before=umount.target local-fs.target
 Conflicts=umount.target
-After=systemd-fsck@dev-disk-by\x2dlabel-hassos\x2ddata.service
-Wants=systemd-fsck@dev-disk-by\x2dlabel-hassos\x2ddata.service systemd-growfs@mnt-data.service
+After=systemd-fsck@dev-disk-by\x2dlabel-redrob\x2ddata.service
+Wants=systemd-fsck@dev-disk-by\x2dlabel-redrob\x2ddata.service systemd-growfs@mnt-data.service
 
 [Mount]
 What=/dev/disk/by-label/redrob-data

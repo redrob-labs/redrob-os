@@ -12,7 +12,7 @@ OLD_DEVICE_CHILD="$(readlink -f "/dev/disk/by-label/redrob-data")"
 # every boot.
 # Instead, just start the unit here, which makes sure a device with the
 # partlabel "redrob-data-external" is present.
-if ! systemctl start "dev-disk-by\\x2dpartlabel-hassos\\x2ddata\\x2dexternal.device"; then
+if ! systemctl start "dev-disk-by\\x2dpartlabel-redrob\\x2ddata\\x2dexternal.device"; then
     echo "[ERROR] External data device ${NEW_DEVICE} not found!"
     exit 1
 fi
