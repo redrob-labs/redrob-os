@@ -4,6 +4,8 @@ Agentic OS for Raspberry Pi 5. A resident agent runs tasks (including coding) in
 sandbox on behalf of the user, with channels such as Slack, Discord and Google connected.
 GPU/accelerator, display, keyboard and USB are attachable modules.
 
+한국어: [README.ko.md](./README.ko.md)
+
 Monorepo layout:
 
 | Path | Role | Upstream | License |
@@ -37,6 +39,8 @@ git fetch upstream-agent && git subtree pull --prefix=agent upstream-agent maste
 ```sh
 git submodule update --init --depth 1 os/buildroot
 ```
+
+The current upstream pins are recorded in [UPSTREAM.md](./UPSTREAM.md).
 
 ## License
 
