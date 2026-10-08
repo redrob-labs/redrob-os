@@ -1,0 +1,61 @@
+name: lint
+
+# Fast checks on our own tree. Upstream subtrees (os/buildroot, agent/) are
+# not linted here; they carry their own CI. A full image build is not run on
+# hosted runners yet (measure runner disk/time first, see docs/dev-machine.md).
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  manifests:
+    name: module manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml==6.0.2
+      - run: python3 scripts/lint-modules.py
+
+  shellcheck:
+    name: shellcheck (our scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q shellcheck
+          shellcheck --version
+          shellcheck -S warning \
+            scripts/*.sh \
+            deploy/firstboot/redrob-firstboot \
+            os/buildroot-external/scripts/redrob-post-build.sh \
+            os/buildroot-external/package/redrob-data/create-data-partition.sh
+
+  config:
+    name: deploy config syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: TOML parses
+        run: python3 -c "import tomllib,sys; tomllib.load(open('deploy/config/agent.toml','rb')); print('agent.toml ok')"
+      - name: systemd units verify
+        run: scripts/verify-units.sh
+      - name: no hardcoded Docker build path in our scripts
+        run: |
+          if grep -rn '/build/\(key\|cert\)\.pem' os/buildroot-external/scripts os/buildroot-external/ova 2>/dev/null; then
+            echo "::error::found /build/*.pem (Docker-only path); use the signing dir from rauc.sh"
+            exit 1
+          fi
+          echo "no /build/*.pem"
