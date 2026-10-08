@@ -1,6 +1,27 @@
 # Credential broker (F5)
 
-Status: design, 2026-10-08. Implements requirement F5 and the egress half of F4.
+Status: **phase 1 implemented, 2026-10-08** -- `modules/credential-broker/broker/`
+(`redrob-broker`, Rust), unit `deploy/systemd/redrob-broker.service`, config
+`deploy/config/broker.toml`, verification in `../verification/credential-broker.md`.
+Implements requirement F5 and the egress half of F4.
+
+## What phase 1 ships, and where it deviates from the design below
+
+| Design | Phase 1 |
+|---|---|
+| socket `/run/redrob/broker.sock` 0660 group `redrob-broker` | same; `RuntimeDirectory=redrob` |
+| `POST /v1/call` scoped call | same, plus `/v1/health`, admin routes `/v1/credentials`, `/v1/grants`, `/v1/approvals` (peer uid must be `redrob-agent` or root, from `SO_PEERCRED`) |
+| per-task egress proxy on a Unix socket for the sandbox | **not yet** -- the sandbox (Podman + gVisor) does not exist on this host. Instead one forward proxy on `127.0.0.1:3128` for the agent, allow-list from `[egress]`, every request audited. `agent.toml [proxy]` points the agent at it |
+| store: SQLite, ChaCha20-Poly1305 under a key derived from `device.key`, reusing `zeroclaw-config` | JSON file `store.json` + `.secret_key` (32 random bytes, 0600, broker user) under `/mnt/data/redrob/broker`. Same cipher, **own 40-line implementation**: `zeroclaw-config` pulls postgres, rusqlite, websockets and the whole agent schema, far too much surface for the one process that holds tokens. The device key stays identity-only |
+| approval record signed with the device key | approval = `(task, sha256(task, scope, method, path, sorted query, body))` posted by the admin peer; single use; a different hash does not unlock. Signing is phase 2 |
+| `spend` above budget needs approval | `spend` always needs approval (`git.push`); `console.infer` is `mutate` until budget accounting exists |
+| OAuth refresh in the broker | not yet; the stored value is sent as-is (`bearer` or `header:<Name>`) |
+| audit `/data/audit/broker.jsonl`, daily rotation, 90 days | `/mnt/data/redrob/audit/broker-YYYY-MM-DD.jsonl`; no retention/size cap yet |
+| paths `/data/...` | host paths are `/mnt/data/redrob/...`; `/data/...` in manifests is the module view (bind of `/mnt/data/redrob`) |
+
+Phase 2 (not started): route the agent's channel adapters and `google_workspace` through
+`/v1/call` so Z1 holds no third-party credential; per-task sandbox socket; OAuth refresh;
+approval signing; audit retention.
 
 ## Problem
 

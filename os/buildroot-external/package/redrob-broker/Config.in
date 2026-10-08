@@ -1,0 +1,17 @@
+config BR2_PACKAGE_REDROB_BROKER
+	bool "Redrob Credential Broker"
+	depends on BR2_PACKAGE_REDROB_AGENT
+	help
+	  Holds OAuth tokens and API keys outside the agent and the sandbox,
+	  serves scoped vendor calls over a Unix socket and runs the agent's
+	  egress proxy (modules/credential-broker/broker). Built with cargo
+	  outside Buildroot and installed from BR2_PACKAGE_REDROB_BROKER_BINARY
+	  with its systemd unit and /etc/redrob/broker.toml from deploy/.
+
+if BR2_PACKAGE_REDROB_BROKER
+
+config BR2_PACKAGE_REDROB_BROKER_BINARY
+	string "Path to the prebuilt broker binary"
+	default "$(BR2_EXTERNAL_HAOS_PATH)/../../modules/credential-broker/broker/target/release/redrob-broker"
+
+endif

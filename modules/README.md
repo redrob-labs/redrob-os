@@ -22,5 +22,5 @@ Modules in this tree:
 |---|---|---|
 | `display` | display, input | kiosk (cage + dashboard) or full Wayland desktop; the only module that receives `/dev/dri` and `/dev/input` |
 | `usb-broker` | storage | USBGuard policy, approval flow, read-only automount, scoped path exposure to the agent |
-| `credential-broker` | none | holds OAuth tokens and API keys outside the sandbox, serves scoped calls, writes the audit log to `/data` |
+| `credential-broker` | none | holds OAuth tokens and API keys outside the sandbox, serves scoped calls, runs the agent egress proxy, writes the audit log to `/data` (`broker/`: Rust daemon, phase 1 done) |
 | `local-inference` | accelerator | llama.cpp router model; backend switch CPU / AI HAT+ 2 / remote GPU over tailnet |

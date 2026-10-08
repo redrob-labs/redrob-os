@@ -1,8 +1,8 @@
 [Unit]
 Description=Redrob Agent (resident agent runtime)
 Documentation=https://github.com/redrob-labs/redrob-os
-After=network-online.target mnt-data.mount redrob-firstboot.service
-Wants=network-online.target
+After=network-online.target mnt-data.mount redrob-firstboot.service redrob-broker.service
+Wants=network-online.target redrob-broker.service
 RequiresMountsFor=/mnt/data
 Requires=redrob-firstboot.service
 StartLimitIntervalSec=0
