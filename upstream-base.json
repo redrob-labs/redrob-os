@@ -1,0 +1,22 @@
+{
+  "upstreams": {
+    "os": {
+      "repository": "https://github.com/home-assistant/operating-system",
+      "subtree_prefix": "os",
+      "branch": "dev",
+      "commit": "ece5bb5d791ca88d1b2bea7db9330e18c770b59e",
+      "describe": "18.3-28-gece5bb5d7",
+      "nearest_tag": "18.3",
+      "vendored_in": "aff64f0b5af0e4392556f0fd87beb8ee9461f1ef"
+    },
+    "agent": {
+      "repository": "https://github.com/zeroclaw-labs/zeroclaw",
+      "subtree_prefix": "agent",
+      "branch": "master",
+      "commit": "05f9fe95d4a9be5ab76124ed3a40da3fb9697f3a",
+      "describe": "v0.8.5",
+      "nearest_tag": "v0.8.5",
+      "vendored_in": "931684ff59ba3d5ba6a26a1093c835bf09df8e65"
+    }
+  }
+}
