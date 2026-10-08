@@ -8,7 +8,7 @@ ID_DIR=$DATA/identity
 AGENT_DIR=$DATA/agent
 TEMPLATE=/usr/share/redrob/agent.toml
 
-mkdir -p "$ID_DIR" "$AGENT_DIR/data" "$AGENT_DIR/workspace" "$DATA/broker" "$DATA/audit" "$DATA/models"
+mkdir -p "$ID_DIR" "$AGENT_DIR/data" "$AGENT_DIR/workspace" "$DATA/broker" "$DATA/usb" "$DATA/audit" "$DATA/models"
 
 # 1. Device id: random UUID, generated here, kept for the life of the device.
 if [ ! -s "$ID_DIR/device-id" ]; then
