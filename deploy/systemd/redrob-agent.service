@@ -1,18 +1,19 @@
 [Unit]
 Description=Redrob Agent (resident agent runtime)
 Documentation=https://github.com/redrob-labs/redrob-os
-After=network-online.target data.mount
+After=network-online.target mnt-data.mount redrob-firstboot.service
 Wants=network-online.target
-RequiresMountsFor=/data
+RequiresMountsFor=/mnt/data
+Requires=redrob-firstboot.service
 
 [Service]
 Type=simple
 User=redrob-agent
 Group=redrob-agent
 SupplementaryGroups=redrob-broker
-Environment=ZEROCLAW_CONFIG_DIR=/data/agent
-Environment=ZEROCLAW_DATA_DIR=/data/agent/data
-Environment=ZEROCLAW_WORKSPACE=/data/agent/workspace
+Environment=ZEROCLAW_CONFIG_DIR=/mnt/data/redrob/agent
+Environment=ZEROCLAW_DATA_DIR=/mnt/data/redrob/agent/data
+Environment=ZEROCLAW_WORKSPACE=/mnt/data/redrob/agent/workspace
 Environment=RUST_LOG=info
 ExecStart=/usr/bin/redrob-agent daemon
 Restart=always
@@ -22,8 +23,8 @@ TimeoutStopSec=20
 
 # Writable state lives only under /data; rootfs is read-only anyway.
 StateDirectory=
-ReadWritePaths=/data/agent
-ReadOnlyPaths=/data/models
+ReadWritePaths=/mnt/data/redrob/agent
+ReadOnlyPaths=/mnt/data/redrob/models
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes

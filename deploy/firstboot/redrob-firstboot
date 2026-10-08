@@ -1,0 +1,48 @@
+#!/bin/sh
+# Redrob first boot (F1): device identity, agent config, pairing material.
+# Runs once; idempotent. Nothing here is baked into the image.
+set -eu
+
+DATA=/mnt/data/redrob
+ID_DIR=$DATA/identity
+AGENT_DIR=$DATA/agent
+TEMPLATE=/usr/share/redrob/agent.toml
+
+mkdir -p "$ID_DIR" "$AGENT_DIR/data" "$AGENT_DIR/workspace" "$DATA/audit" "$DATA/models"
+
+# 1. Device id: random UUID, generated here, kept for the life of the device.
+if [ ! -s "$ID_DIR/device-id" ]; then
+    cat /proc/sys/kernel/random/uuid > "$ID_DIR/device-id"
+    chmod 0644 "$ID_DIR/device-id"
+fi
+
+# 2. Device key pair (ed25519). Private key readable by the broker group only.
+if [ ! -s "$ID_DIR/device.key" ]; then
+    if command -v openssl >/dev/null 2>&1; then
+        openssl genpkey -algorithm ed25519 -out "$ID_DIR/device.key"
+        openssl pkey -in "$ID_DIR/device.key" -pubout -out "$ID_DIR/device.pub"
+    else
+        # No openssl on the target: 32 random bytes as the seed; the agent
+        # derives the ed25519 pair from it on first use.
+        head -c 32 /dev/urandom > "$ID_DIR/device.key"
+    fi
+    chmod 0640 "$ID_DIR/device.key"
+    chgrp redrob-broker "$ID_DIR/device.key" 2>/dev/null || true
+fi
+
+# 3. Agent config from the template, paths under /mnt/data.
+if [ ! -s "$AGENT_DIR/config.toml" ]; then
+    sed "s|@@DATA@@|$AGENT_DIR|g" "$TEMPLATE" > "$AGENT_DIR/config.toml"
+    chmod 0640 "$AGENT_DIR/config.toml"
+fi
+
+# 4. Hostname: redrob-<first 6 hex of device id> unless the user set one.
+if [ ! -s "$DATA/hostname" ]; then
+    short=$(cut -c1-6 "$ID_DIR/device-id")
+    echo "redrob-$short" > "$DATA/hostname"
+fi
+hostnamectl set-hostname "$(cat "$DATA/hostname")" 2>/dev/null || true
+
+chown -R redrob-agent:redrob-agent "$AGENT_DIR" 2>/dev/null || true
+rm -f "$ID_DIR/.firstboot"
+echo "redrob-firstboot: device $(cat "$ID_DIR/device-id") ready"

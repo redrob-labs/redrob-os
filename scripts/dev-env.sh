@@ -24,3 +24,9 @@ PATH="$HOME/.local/bin:$PATH"
 
 export PATH
 export CROSS_COMPILE=aarch64-none-linux-gnu-
+
+# Buildroot (os/): the upstream defconfigs point at /cache from the build
+# container; keep downloads and ccache under $HOME instead.
+export BR2_DL_DIR="$HOME/.local/cache/redrob-os/dl"
+export BR2_CCACHE_DIR="$HOME/.local/cache/redrob-os/cc"
+export FORCE_UNSAFE_CONFIGURE=1

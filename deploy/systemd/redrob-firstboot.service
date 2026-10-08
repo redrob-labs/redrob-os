@@ -1,0 +1,16 @@
+[Unit]
+Description=Redrob first boot (device identity and agent config)
+DefaultDependencies=no
+After=mnt-data.mount systemd-tmpfiles-setup.service
+Requires=mnt-data.mount
+Before=redrob-agent.service network-online.target
+ConditionPathExists=|/mnt/data/redrob/identity/.firstboot
+ConditionPathExists=|!/mnt/data/redrob/agent/config.toml
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/redrob-firstboot
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+config BR2_PACKAGE_REDROB_DATA
+	bool "Redrob data partition image"
+	depends on BR2_PACKAGE_HOST_E2FSPROGS
+	help
+	  Builds data.ext4, the initial content of the writable data
+	  partition, from a plain directory with mke2fs -d. Needs neither
+	  root nor a container engine. Replaces the upstream supervisor
+	  data-partition builder.

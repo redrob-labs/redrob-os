@@ -14,7 +14,7 @@ APPARMOR_URL="https://version.home-assistant.io/apparmor_${channel}.txt"
 # Make image
 rm -f "${data_img}"
 truncate --size="1280M" "${data_img}"
-mkfs.ext4 -L "hassos-data" -E lazy_itable_init=0,lazy_journal_init=0 "${data_img}"
+mkfs.ext4 -L "redrob-data" -E lazy_itable_init=0,lazy_journal_init=0 "${data_img}"
 
 # Mount / init file structs
 mkdir -p "${data_dir}"

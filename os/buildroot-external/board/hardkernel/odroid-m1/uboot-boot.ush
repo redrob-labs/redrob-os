@@ -1,4 +1,4 @@
-part start ${devtype} ${devnum} hassos-bootstate mmc_env
+part start ${devtype} ${devnum} redrob-bootstate mmc_env
 ${devtype} dev ${devnum}
 
 setenv loadbootstate " \
@@ -26,7 +26,7 @@ setenv bootargs_haos "zram.enabled=1 zram.num_devices=3 systemd.machine_id=${MAC
 setenv bootargs_a "root=PARTUUID=8d3d53e3-6d49-4c38-8349-aff6859e82fd rootfstype=erofs ro rootwait"
 setenv bootargs_b "root=PARTUUID=a3ec664e-32ce-4665-95ea-7ae90ce9aa20 rootfstype=erofs ro rootwait"
 
-part number ${devtype} ${devnum} hassos-boot boot_partnum
+part number ${devtype} ${devnum} redrob-boot boot_partnum
 
 # Load environment from haos-config.txt
 if test -e ${devtype} ${devnum}:${boot_partnum} haos-config.txt; then
@@ -90,7 +90,7 @@ for BOOT_SLOT in "${BOOT_ORDER}"; do
     if test ${BOOT_A_LEFT} -gt 0; then
       setexpr BOOT_A_LEFT ${BOOT_A_LEFT} - 1
       echo "Trying to boot slot A, ${BOOT_A_LEFT} attempts remaining. Loading kernel ..."
-      part number ${devtype} ${devnum} hassos-kernel0 kernel_partnum
+      part number ${devtype} ${devnum} redrob-kernel0 kernel_partnum
       if load ${devtype} ${devnum}:${kernel_partnum} ${kernel_addr_r} Image; then
           setenv bootargs "${bootargs_haos} ${bootargs_a} rauc.slot=A ${cmdline}"
       fi
@@ -99,7 +99,7 @@ for BOOT_SLOT in "${BOOT_ORDER}"; do
     if test ${BOOT_B_LEFT} -gt 0; then
       setexpr BOOT_B_LEFT ${BOOT_B_LEFT} - 1
       echo "Trying to boot slot B, ${BOOT_B_LEFT} attempts remaining. Loading kernel ..."
-      part number ${devtype} ${devnum} hassos-kernel1 kernel_partnum
+      part number ${devtype} ${devnum} redrob-kernel1 kernel_partnum
       if load ${devtype} ${devnum}:${kernel_partnum} ${kernel_addr_r} Image; then
           setenv bootargs "${bootargs_haos} ${bootargs_b} rauc.slot=B ${cmdline}"
       fi

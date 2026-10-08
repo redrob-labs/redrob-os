@@ -20,31 +20,31 @@ bootloader-custom-backend=/usr/lib/rauc/rpi-tryboot.sh
 path=/etc/rauc/keyring.pem
 
 [slot.boot.0]
-device=/dev/disk/by-partlabel/hassos-boot
+device=/dev/disk/by-partlabel/redrob-boot
 type=vfat
 allow-mounted=true
 {{- if eq (env "BOOT_SPL") "true" }}
 [slot.spl.0]
-device=/dev/disk/by-partlabel/hassos-boot
+device=/dev/disk/by-partlabel/redrob-boot
 type=raw
 {{- end }}
 
 [slot.kernel.0]
-device=/dev/disk/by-partlabel/hassos-kernel0
+device=/dev/disk/by-partlabel/redrob-kernel0
 type=raw
 bootname=A
 
 [slot.rootfs.0]
-device=/dev/disk/by-partlabel/hassos-system0
+device=/dev/disk/by-partlabel/redrob-system0
 type=raw
 parent=kernel.0
 
 [slot.kernel.1]
-device=/dev/disk/by-partlabel/hassos-kernel1
+device=/dev/disk/by-partlabel/redrob-kernel1
 type=raw
 bootname=B
 
 [slot.rootfs.1]
-device=/dev/disk/by-partlabel/hassos-system1
+device=/dev/disk/by-partlabel/redrob-system1
 type=raw
 parent=kernel.1

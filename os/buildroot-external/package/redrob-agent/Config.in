@@ -1,0 +1,18 @@
+config BR2_PACKAGE_REDROB_AGENT
+	bool "Redrob Agent"
+	help
+	  Resident agent runtime (agent/ in the monorepo). The binary is
+	  built with cargo outside Buildroot and installed from
+	  BR2_PACKAGE_REDROB_AGENT_BINARY, together with its systemd unit,
+	  config template and the first-boot identity script from deploy/.
+
+if BR2_PACKAGE_REDROB_AGENT
+
+config BR2_PACKAGE_REDROB_AGENT_BINARY
+	string "Path to the prebuilt agent binary"
+	default "$(BR2_EXTERNAL_HAOS_PATH)/../../agent/target/release/zeroclaw"
+	help
+	  Absolute path (make variables allowed) to the cargo-built agent
+	  for the target architecture.
+
+endif

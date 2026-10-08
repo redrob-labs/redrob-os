@@ -1,6 +1,6 @@
 # Redrob Agent config template.
-# Installed to /data/agent/config.toml on first boot by redrob-firstboot.
-# @@DATA@@ is replaced with the agent data root (/data/agent on device,
+# Installed to /mnt/data/redrob/agent/config.toml on first boot by redrob-firstboot.
+# @@DATA@@ is replaced with the agent data root (/mnt/data/redrob/agent on device,
 # ~/.local/state/redrob-agent for L0 host runs).
 
 schema_version = 3
@@ -44,7 +44,7 @@ auto_approve = [
   "file_read", "glob_search", "content_search", "image_info",
   "memory_recall", "memory_store", "calculator",
 ]
-forbidden_paths = ["/data/credentials", "/data/agent/config.toml", "/data/agent/secrets"]
+forbidden_paths = ["/mnt/data/redrob/broker", "/mnt/data/redrob/agent/config.toml", "/mnt/data/redrob/agent/.secret_key"]
 shell_env_passthrough = ["LANG", "TZ", "PATH"]
 sandbox_enabled = true
 sandbox_backend = "auto"

@@ -41,10 +41,10 @@ index 82832a8..609072d 100755
  # status inline instead of only failing once an update is attempted.
  checkUpdateMethod()
  {
--   if blkid | grep -qE "/dev/mmcblk0p1.*LABEL_FATBOOT.*hassos-boot.*TYPE.*vfat"; then
+-   if blkid | grep -qE "/dev/mmcblk0p1.*LABEL_FATBOOT.*redrob-boot.*TYPE.*vfat"; then
 +   if [ "${UPDATE_BLOCKED}" = 1 ]; then
 +      return
-+   elif blkid | grep -qE "/dev/mmcblk0p1.*LABEL_FATBOOT.*hassos-boot.*TYPE.*vfat"; then
++   elif blkid | grep -qE "/dev/mmcblk0p1.*LABEL_FATBOOT.*redrob-boot.*TYPE.*vfat"; then
        # Booting from the SD card - recovery.bin can be staged on /mnt/boot.
        UPDATE_BLOCKED=0
     elif [ -n "${BOOTFS}" ]; then
