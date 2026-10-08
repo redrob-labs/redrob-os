@@ -19,6 +19,9 @@ for t in sysinit.target basic.target multi-user.target network-online.target \
 done
 install -m 755 /bin/true "$root/usr/bin/redrob-agent"
 install -m 755 /bin/true "$root/usr/libexec/redrob-firstboot"
+install -m 755 /bin/true "$root/usr/bin/rauc"
+printf "[Unit]\\nDescription=stub\\n[Service]\\nExecStart=/usr/bin/rauc\\n" > "$root/etc/systemd/system/rauc.service"
+mkdir -p "$root/bin" && install -m 755 /bin/true "$root/bin/sh"
 
 units=()
 for f in deploy/systemd/*.service; do units+=("$(basename "$f")"); done

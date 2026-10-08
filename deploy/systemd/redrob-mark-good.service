@@ -1,0 +1,21 @@
+[Unit]
+Description=Mark booted slot good after the agent is healthy
+Documentation=https://github.com/redrob-labs/redrob-os
+# GRUB raises <slot>_TRY on every boot and gives up after three attempts.
+# Upstream HAOS resets it from the Supervisor; Redrob OS has no Supervisor,
+# so this unit does it, and only once the agent actually serves /health.
+After=rauc.service redrob-agent.service network.target
+Requires=rauc.service
+Wants=redrob-agent.service
+ConditionPathExists=/mnt/boot/EFI/BOOT/grubenv
+
+[Service]
+Type=oneshot
+# Up to 60 s for the agent to come up; a boot where it never answers is a
+# boot that must NOT be marked good.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:42617/health && exit 0; sleep 2; done; echo "redrob-mark-good: agent not healthy, slot stays unmarked" >&2; exit 1'
+ExecStart=/usr/bin/rauc status mark-good
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
