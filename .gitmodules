@@ -2,3 +2,7 @@
 	path = os/buildroot
 	url = https://github.com/home-assistant/buildroot.git
 	branch = 2024.02.x-haos
+
+[submodule "agent/docs/book/po"]
+	path = agent/docs/book/po
+	url = https://github.com/zeroclaw-labs/zeroclaw-docs-translations.git
