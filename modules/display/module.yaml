@@ -1,0 +1,16 @@
+name: display
+version: 0.0.1
+description: Kiosk (cage + agent dashboard) or full Wayland desktop. Sole holder of /dev/dri and /dev/input.
+capabilities:
+  - display
+  - input
+devices:
+  - subsystem: drm
+  - subsystem: input
+modes:
+  - headless   # default, module stopped
+  - kiosk      # cage + dashboard UI
+  - desktop    # optional full Wayland session
+network: none
+host_access: none
+approval: once

@@ -1,0 +1,18 @@
+name: usb-broker
+version: 0.0.1
+description: USBGuard policy, user approval for new devices, read-only automount, scoped path exposure to the agent sandbox.
+capabilities:
+  - storage
+devices:
+  - subsystem: usb
+  - subsystem: block
+    attrs:
+      removable: "1"
+policy:
+  default: block            # USBGuard default
+  mount: read-only          # after approval
+  write: per-task           # agent writes need per-task approval
+  badusb: reject            # storage device that also presents an HID interface
+network: none
+host_access: none
+approval: per-device

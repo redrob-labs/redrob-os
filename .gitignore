@@ -1,0 +1,17 @@
+# agent / tooling scratch
+.agents/
+.kiro/
+.claude/
+
+# secrets
+.env
+.env.*
+*.pem
+*.key
+
+# build outputs
+/os/output/
+/os/release/
+/agent/target/
+/modules/*/target/
+/modules/*/build/

@@ -1,0 +1,21 @@
+name: credential-broker
+version: 0.0.1
+description: Holds OAuth tokens and API keys outside the sandbox. The agent requests scoped calls; raw tokens never cross the boundary. Every external call is written to the audit log.
+capabilities: []
+devices: []
+secrets_store: /data/credentials      # encrypted with the device key from first boot
+audit_log: /data/audit/broker.jsonl   # user-readable
+scopes:
+  - slack
+  - discord
+  - google.gmail
+  - google.calendar
+  - google.drive
+  - git.push                          # requires user approval per push
+network:
+  - "*.slack.com"
+  - "discord.com"
+  - "*.googleapis.com"
+  - "github.com"
+host_access: none
+approval: per-task

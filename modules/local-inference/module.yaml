@@ -1,0 +1,17 @@
+name: local-inference
+version: 0.0.1
+description: llama.cpp router model (~1B) for intent classification, tool choice and escalation to a remote model. Offline fallback.
+capabilities:
+  - accelerator
+devices:
+  - subsystem: pci
+    vendor: hailo                     # AI HAT+ 2
+backends:
+  - cpu                               # always available
+  - hailo                             # when the accelerator module is present
+  - remote-gpu                        # tailnet GPU box
+models_dir: /data/models              # updated separately from OTA
+network:
+  - "100.64.0.0/10"                   # tailnet only, for remote-gpu
+host_access: none
+approval: auto
