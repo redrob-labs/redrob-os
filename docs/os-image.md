@@ -38,3 +38,15 @@ A/B slots and rollback come from RAUC + GRUB as upstream.
   Docker-compatible socket). Swap to Podman + gVisor is the sandbox work item.
 - `BR2_PACKAGE_OS_AGENT` (upstream D-Bus agent) stays; audit whether the Redrob agent needs it.
 - aarch64 (`rpi5_64`) defconfig: same package set, agent binary from the cross build.
+
+## Known issues (dev4, from `docs/verification/measure.md`)
+
+- `redrob-broker` crash-loops at first boot: `Permission denied` creating
+  `/mnt/data/redrob/broker/.secret_key`. firstboot's chown of that dir is not
+  taking effect against the pre-built data partition. Fix in the broker/firstboot
+  deploy, not local-inference.
+- `redrob-usb-broker` fails `226/NAMESPACE`: it binds `/mnt/data/redrob/usb`
+  before firstboot creates it. Needs `After=redrob-firstboot.service` or an
+  `ExecStartPre`/`RuntimeDirectory`.
+- Both were previously verified only on the L0 host; dev4 is the first full-image
+  boot to exercise them.

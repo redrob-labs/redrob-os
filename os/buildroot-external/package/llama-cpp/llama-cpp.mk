@@ -23,10 +23,15 @@ LLAMA_CPP_CONF_OPTS = \
 	-DBUILD_SHARED_LIBS=ON
 
 # Headers and import libs are build-time only; the target keeps the server
-# binary and the ggml/llama shared libraries.
+# binary and the ggml/llama shared libraries. The upstream install also drops
+# a dozen extra CLI tools (llama-cli, llama-bench, ...) the device never runs,
+# so trim the target to llama-server alone to cut size and attack surface.
 define LLAMA_CPP_REMOVE_DEV_FILES
 	rm -rf $(TARGET_DIR)/usr/include/ggml* $(TARGET_DIR)/usr/include/llama* \
 		$(TARGET_DIR)/usr/lib/cmake/llama $(TARGET_DIR)/usr/lib/pkgconfig/llama.pc
+	find $(TARGET_DIR)/usr/bin -maxdepth 1 -name 'llama-*' ! -name 'llama-server' \
+		-type f -delete
+	rm -f $(TARGET_DIR)/usr/bin/convert_hf_to_gguf.py $(TARGET_DIR)/usr/bin/test-*
 endef
 LLAMA_CPP_POST_INSTALL_TARGET_HOOKS += LLAMA_CPP_REMOVE_DEV_FILES
 
