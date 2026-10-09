@@ -27,6 +27,11 @@ for unit in haos-supervisor.service haos-apparmor.service haos-bt-cache.timer; d
         "${HOST_DIR}/bin/systemctl" --root="${TARGET_DIR}" mask "${unit}" >/dev/null 2>&1 || true
     fi
 done
+# VT1: the Supervisor CLI (ha-cli@tty1) is replaced by a plain getty, so the console
+# shows /etc/issue and the pairing banner from /run/issue.d like the serial port does.
+rm -f "${TARGET_DIR}/etc/systemd/system/multi-user.target.wants/ha-cli@tty1.service"
+"${HOST_DIR}/bin/systemctl" --root="${TARGET_DIR}" mask ha-cli@tty1.service >/dev/null 2>&1 || true
+"${HOST_DIR}/bin/systemctl" --root="${TARGET_DIR}" enable getty@tty1.service >/dev/null 2>&1 || true
 
 # /etc/issue carries the product name; machine-info chassis stays from board meta.
 printf 'Welcome to Redrob OS %s (%s)\n' "$(. "${BR2_EXTERNAL_HAOS_PATH}/scripts/name.sh"; haos_version)" "${BOARD_NAME}" \

@@ -13,6 +13,7 @@ Monorepo layout:
 | `os/` | Buildroot-based read-only OS, A/B OTA, module (add-on) structure | [home-assistant/operating-system](https://github.com/home-assistant/operating-system) via `git subtree` | Apache-2.0 |
 | `agent/` | Resident agent runtime, channels, cron, secrets | [zeroclaw-labs/zeroclaw](https://github.com/zeroclaw-labs/zeroclaw) via `git subtree` | MIT OR Apache-2.0 (we use Apache-2.0) |
 | `modules/` | display, usb-broker, credential-broker, local-inference | new | Apache-2.0 |
+| `tools/` | small on-device helpers (`redrob-pairing`: first-boot pairing banner) | new | Apache-2.0 |
 | `docs/` | requirements, decisions, test plans | new | Apache-2.0 |
 
 Redrob Code (coding tool run inside the sandbox) stays in its own repository,
