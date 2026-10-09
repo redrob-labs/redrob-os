@@ -47,6 +47,8 @@ python3 scripts/lint-modules.py      # modules/*/module.yaml against modules/REA
 scripts/verify-units.sh              # deploy/systemd/*.service via systemd-analyze in a stub root
 scripts/l0-broker.sh test            # credential broker: cargo test (unit + integration)
 (cd modules/usb-broker/broker && cargo test)   # usb broker
+(cd modules/display/kiosk && cargo test)       # display kiosk
+(cd modules/local-inference/supervisor && cargo test)   # local-inference supervisor
 shellcheck -S warning scripts/*.sh deploy/firstboot/redrob-firstboot \
   os/buildroot-external/scripts/redrob-post-build.sh \
   os/buildroot-external/package/redrob-data/create-data-partition.sh

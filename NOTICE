@@ -27,6 +27,13 @@ agent/ -- derived from ZeroClaw
   agent/LICENSE-APACHE, agent/NOTICE). Redrob OS uses it under the
   Apache License, Version 2.0.
 
+os/buildroot-external/package/llama-cpp -- llama.cpp (ggml)
+  https://github.com/ggml-org/llama.cpp
+  Copyright (c) 2023-2024 The ggml authors
+  Licensed under the MIT License. Built as the CPU inference server
+  (llama-server) for the local-inference module's on-device router
+  model. Pinned at tag b4406; no source modified.
+
 ----------------------------------------------------------------------
 
 Reference only (no code copied):
