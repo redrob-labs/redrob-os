@@ -1,0 +1,28 @@
+[package]
+name = "redrob-display"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Redrob OS display module, kiosk mode: renders the agent dashboard straight to KMS (dumb buffers) and grabs the input devices"
+publish = false
+
+[lib]
+name = "redrob_display"
+path = "src/lib.rs"
+
+[[bin]]
+name = "redrob-display"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+drm = "0.14"
+evdev = "0.13"
+fontdue = "0.9"
+qrcodegen = "1.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tiny-skia = "0.11"
+
+[dev-dependencies]
+tempfile = "3.23"

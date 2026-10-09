@@ -56,7 +56,10 @@ class VM:
         self.expect(r"redrob[-\w]* login: ", timeout=timeout)
         self.child.sendline("root")
         self.expect(r"\r?\n# ", timeout=60)
-        self.child.sendline("stty -echo; export PS1='redrob# '")
+        # Disable the systemd/less pager: without this, `systemctl show`/`status` draw
+        # pager escapes (tilde lines, cursor moves) into the serial capture and corrupt
+        # the readback of values like ExecMainStatus/ConditionResult.
+        self.child.sendline("stty -echo; export PS1='redrob# ' SYSTEMD_PAGER=cat PAGER=cat SYSTEMD_COLORS=0")
         self.expect(PROMPT, timeout=20)
 
     def run(self, cmd, timeout=600):

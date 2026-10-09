@@ -1,0 +1,19 @@
+config BR2_PACKAGE_REDROB_DISPLAY
+	bool "Redrob display module (kiosk)"
+	depends on BR2_PACKAGE_REDROB_AGENT
+	select BR2_PACKAGE_DEJAVU
+	select BR2_PACKAGE_DEJAVU_SANS
+	help
+	  Display module, kiosk mode (modules/display/kiosk): draws the agent
+	  dashboard (service states, pairing code and QR) straight to KMS with
+	  dumb buffers and grabs every input device. Runs as redrob-display,
+	  the only user in the video and input groups. Skipped unless
+	  /mnt/data/redrob/display/mode says "kiosk".
+
+if BR2_PACKAGE_REDROB_DISPLAY
+
+config BR2_PACKAGE_REDROB_DISPLAY_BINARY
+	string "Path to the prebuilt display binary"
+	default "$(BR2_EXTERNAL_HAOS_PATH)/../../modules/display/kiosk/target/release/redrob-display"
+
+endif

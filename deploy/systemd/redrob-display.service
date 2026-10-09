@@ -1,0 +1,34 @@
+[Unit]
+Description=Redrob display module (kiosk: agent dashboard on KMS, holds /dev/dri and /dev/input)
+Documentation=https://github.com/redrob-labs/redrob-os
+After=mnt-data.mount systemd-udev-settle.service redrob-pairing.service
+Wants=redrob-pairing.service
+# Not enabled statically: redrob-display-mode.service starts it when the mode file says
+# "kiosk". An enabled unit with Conflicts= would stop the getty at every boot, even when
+# its own condition fails, because conflicts are resolved in the boot transaction before
+# conditions are checked.
+ConditionPathExists=/mnt/data/redrob/display/mode
+# VT1 is ours in kiosk mode; the getty would fight the KMS client for the console.
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+ExecCondition=/bin/sh -c 'grep -qx kiosk /mnt/data/redrob/display/mode'
+ExecStart=/usr/bin/redrob-display
+Restart=on-failure
+RestartSec=3
+User=redrob-display
+Group=redrob-display
+# video: /dev/dri/card*; input: /dev/input/event*. Nothing else on the box is in these groups.
+SupplementaryGroups=video input
+DevicePolicy=closed
+DeviceAllow=char-drm rw
+DeviceAllow=char-input rw
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+MemoryMax=128M
