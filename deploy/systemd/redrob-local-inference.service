@@ -1,0 +1,50 @@
+[Unit]
+Description=Redrob local-inference (serves the ~1B router model on loopback)
+Documentation=https://github.com/redrob-labs/redrob-os
+After=mnt-data.mount redrob-firstboot.service
+RequiresMountsFor=/mnt/data
+Requires=redrob-firstboot.service
+# Started before the agent so the fallback provider is up when the agent boots.
+Before=redrob-agent.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=redrob-infer
+Group=redrob-infer
+Environment=RUST_LOG=info
+ExecStart=/usr/bin/redrob-local-inference --config /etc/redrob/local-inference.toml
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+# The model is read-only input; nothing else on the data partition is reachable.
+ReadOnlyPaths=/mnt/data/redrob/models
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+
+# Egress lockdown: the router may bind loopback but can reach nothing off-box.
+# An on-device model that answers raw prompts must have no path to the network.
+IPAddressAllow=localhost
+IPAddressDeny=any
+
+# A ~1B Q4 model plus an 8k KV cache fits well under this; tune per board.
+MemoryHigh=1500M
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target
