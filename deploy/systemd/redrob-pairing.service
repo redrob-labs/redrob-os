@@ -1,0 +1,25 @@
+[Unit]
+Description=Redrob pairing banner (device id, address, one-time code, QR on every login prompt)
+Documentation=https://github.com/redrob-labs/redrob-os
+After=redrob-agent.service network-online.target
+Wants=redrob-agent.service
+ConditionPathExists=/mnt/data/redrob/identity/device-id
+
+[Service]
+Type=oneshot
+# Root only to read the agent's 0600 admin token and write /run/issue.d.
+ExecStart=/usr/bin/redrob-pairing
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/run/issue.d /run/redrob-pairing
+# Not /run/redrob: that directory belongs to redrob-broker (0750, its own user); claiming it
+# here would re-own it to root on every run.
+RuntimeDirectory=issue.d redrob-pairing
+RuntimeDirectoryPreserve=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+MemoryMax=32M

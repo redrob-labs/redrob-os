@@ -1,0 +1,10 @@
+[package]
+name = "redrob-pairing"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Redrob OS first-boot pairing banner: device id, address, one-time code and QR on the console"
+publish = false
+
+[dependencies]
+qrcodegen = "1.8.0"

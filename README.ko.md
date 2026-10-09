@@ -13,6 +13,7 @@ English: [README.md](./README.md)
 | `os/` | Buildroot 기반 읽기 전용 OS, A/B OTA, 모듈(애드온) 구조 | [home-assistant/operating-system](https://github.com/home-assistant/operating-system) (`git subtree`) | Apache-2.0 |
 | `agent/` | 상주 에이전트 런타임, 채널, 크론, 시크릿 | [zeroclaw-labs/zeroclaw](https://github.com/zeroclaw-labs/zeroclaw) (`git subtree`) | MIT OR Apache-2.0 (Apache-2.0 선택) |
 | `modules/` | display, usb-broker, credential-broker, local-inference | 신규 | Apache-2.0 |
+| `tools/` | 기기 안의 작은 도우미 (`redrob-pairing`: 첫 부팅 페어링 배너) | 신규 | Apache-2.0 |
 | `docs/` | 요구사항, 결정 기록, 테스트 계획 | 신규 | Apache-2.0 |
 
 Redrob Code(샌드박스 안에서 도는 코딩 툴)는 별도 저장소

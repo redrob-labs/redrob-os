@@ -16,5 +16,9 @@
 /modules/*/target/
 /modules/*/*/target/
 /modules/*/build/
+/tools/*/target/
+/scripts/ota-harness/*.serial.log
+/scripts/ota-harness/*.vars.fd
+/scripts/ota-harness/*.sock
 os/buildroot-external/.dev-signing/
 __pycache__/

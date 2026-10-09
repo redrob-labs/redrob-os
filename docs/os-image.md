@@ -31,8 +31,9 @@ A/B slots and rollback come from RAUC + GRUB as upstream.
 
 ## Deferred
 
-- Boot splash: x86 boots to the serial/VT console. A logo needs a kernel config fragment
-  (`CONFIG_LOGO`) and a custom clut224 image, or the display module's kiosk splash.
+- Boot splash: done in dev2 as the kernel logo (`BR2_LINUX_KERNEL_CUSTOM_LOGO_PATH` ->
+  `branding/boot-logo.png`, Buildroot turns on `CONFIG_LOGO`/`CLUT224`); fbcon paints it
+  top-left. A full-screen splash stays with the display module (kiosk).
 - Docker engine is still in the image (the agent's `[runtime] kind = "docker"` talks to a
   Docker-compatible socket). Swap to Podman + gVisor is the sandbox work item.
 - `BR2_PACKAGE_OS_AGENT` (upstream D-Bus agent) stays; audit whether the Redrob agent needs it.

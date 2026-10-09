@@ -9,12 +9,12 @@ root="$(mktemp -d "${TMPDIR:-/tmp}/redrob-units.XXXXXX")"
 trap 'rm -rf "$root"' EXIT
 
 mkdir -p "$root/etc/systemd/system" "$root/usr/bin" "$root/usr/libexec"
-cp deploy/systemd/*.service "$root/etc/systemd/system/"
+cp deploy/systemd/*.service deploy/systemd/*.timer "$root/etc/systemd/system/"
 
 printf '[Unit]\nDescription=stub\n[Mount]\nWhat=/dev/null\nWhere=/mnt/data\nType=ext4\n' \
   > "$root/etc/systemd/system/mnt-data.mount"
 for t in sysinit.target basic.target multi-user.target network-online.target \
-         network.target local-fs.target shutdown.target; do
+         network.target local-fs.target shutdown.target timers.target; do
   printf '[Unit]\nDescription=stub\n' > "$root/etc/systemd/system/$t"
 done
 install -m 755 /bin/true "$root/usr/bin/redrob-agent"
@@ -22,11 +22,13 @@ install -m 755 /bin/true "$root/usr/libexec/redrob-firstboot"
 install -m 755 /bin/true "$root/usr/bin/rauc"
 install -m 755 /bin/true "$root/usr/bin/redrob-broker"
 install -m 755 /bin/true "$root/usr/bin/redrob-usb-broker"
+install -m 755 /bin/true "$root/usr/bin/redrob-pairing"
 printf "[Unit]\\nDescription=stub\\n[Service]\\nExecStart=/usr/bin/rauc\\n" > "$root/etc/systemd/system/rauc.service"
+printf "[Unit]\\nDescription=stub\\n[Service]\\nExecStart=/usr/bin/rauc\\n" > "$root/etc/systemd/system/systemd-udevd.service"
 mkdir -p "$root/bin" && install -m 755 /bin/true "$root/bin/sh"
 
 units=()
-for f in deploy/systemd/*.service; do units+=("$(basename "$f")"); done
+for f in deploy/systemd/*.service deploy/systemd/*.timer; do units+=("$(basename "$f")"); done
 
 # Any warning (unknown key, bad value) is a failure: a key in the wrong
 # section is silently ignored at runtime, which is exactly the bug we want

@@ -1,0 +1,16 @@
+config BR2_PACKAGE_REDROB_PAIRING
+	bool "Redrob pairing banner"
+	depends on BR2_PACKAGE_REDROB_AGENT
+	help
+	  First-boot pairing banner (tools/redrob-pairing): device id,
+	  address, the agent's one-time pairing code and a QR code, written
+	  to /run/issue.d for every login prompt and /run/redrob/pairing.json
+	  for the display module. Refreshed by a timer.
+
+if BR2_PACKAGE_REDROB_PAIRING
+
+config BR2_PACKAGE_REDROB_PAIRING_BINARY
+	string "Path to the prebuilt pairing binary"
+	default "$(BR2_EXTERNAL_HAOS_PATH)/../../tools/redrob-pairing/target/release/redrob-pairing"
+
+endif
