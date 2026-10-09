@@ -1,0 +1,22 @@
+[Unit]
+Description=Redrob display mode (start the kiosk when /mnt/data/redrob/display/mode says so)
+Documentation=https://github.com/redrob-labs/redrob-os
+After=mnt-data.mount
+Requires=mnt-data.mount
+ConditionPathExists=/mnt/data/redrob/display/mode
+
+[Service]
+Type=oneshot
+# --no-block: the kiosk's own Conflicts/After ordering must not hold up multi-user.target.
+ExecStart=/bin/sh -c 'if grep -qx kiosk /mnt/data/redrob/display/mode; then systemctl --no-block start redrob-display.service; fi'
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
