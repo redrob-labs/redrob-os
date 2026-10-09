@@ -1,0 +1,15 @@
+config BR2_PACKAGE_LLAMA_CPP
+	bool "llama-cpp (router inference server)"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  llama.cpp OpenAI-compatible inference server (llama-server),
+	  CPU backend only. Serves the on-device ~1B router model that the
+	  local-inference module supervises and the agent falls back to when
+	  Redrob Console is unreachable. Built without libcurl and OpenMP to
+	  keep the device dependency surface minimal.
+
+	  https://github.com/ggml-org/llama.cpp
+
+comment "llama-cpp needs a toolchain w/ C++ and threads"
+	depends on !BR2_INSTALL_LIBSTDCPP || !BR2_TOOLCHAIN_HAS_THREADS

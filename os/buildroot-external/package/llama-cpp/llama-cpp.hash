@@ -1,0 +1,4 @@
+# Locally computed from the GitHub release tarball (archive/b4406.tar.gz) and
+# the LICENSE file at that tag.
+sha256  b15ee3a0375aeb95541d210ee4b98e0da9ba9c2787ed7a19222ba88d84808fff  llama-cpp-b4406.tar.gz
+sha256  e562a2ddfaf8280537795ac5ecd34e3012b6582a147ef69ba6a6a5c08c84757d  LICENSE

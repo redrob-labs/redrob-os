@@ -1,0 +1,19 @@
+config BR2_PACKAGE_REDROB_LOCAL_INFERENCE
+	bool "Redrob local-inference module (router)"
+	depends on BR2_PACKAGE_REDROB_AGENT
+	select BR2_PACKAGE_LLAMA_CPP
+	help
+	  Local-inference module (modules/local-inference): supervises the
+	  llama.cpp server that serves the on-device ~1B router model on
+	  loopback (127.0.0.1:8081). The agent uses it as its offline fallback
+	  provider when Redrob Console is unreachable. The GGUF model is
+	  provisioned separately from OTA under /mnt/data/redrob/models; the
+	  supervisor waits for it and relaunches the server if it exits.
+
+if BR2_PACKAGE_REDROB_LOCAL_INFERENCE
+
+config BR2_PACKAGE_REDROB_LOCAL_INFERENCE_BINARY
+	string "Path to the prebuilt supervisor binary"
+	default "$(BR2_EXTERNAL_HAOS_PATH)/../../modules/local-inference/supervisor/target/release/redrob-local-inference"
+
+endif

@@ -49,7 +49,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: TOML parses
-        run: python3 -c "import tomllib,sys; tomllib.load(open('deploy/config/agent.toml','rb')); print('agent.toml ok')"
+        run: python3 -c "import tomllib,sys; [tomllib.load(open(p,'rb')) for p in ['deploy/config/agent.toml','deploy/config/broker.toml','deploy/config/local-inference.toml']]; print('config toml ok')"
       - name: systemd units verify
         run: scripts/verify-units.sh
       - name: no hardcoded Docker build path in our scripts
@@ -101,3 +101,17 @@ jobs:
         working-directory: modules/display/kiosk
       - run: cargo fmt --check
         working-directory: modules/display/kiosk
+
+  local-inference:
+    name: local-inference supervisor (cargo test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: modules/local-inference/supervisor
+      - run: cargo test --locked
+        working-directory: modules/local-inference/supervisor
+      - run: cargo fmt --check
+        working-directory: modules/local-inference/supervisor

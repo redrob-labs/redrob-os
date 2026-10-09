@@ -1,0 +1,37 @@
+# Redrob OS local-inference supervisor config.
+# Installed to /etc/redrob/local-inference.toml. Every field is optional; the
+# values below are the device defaults made explicit.
+#
+# The supervisor keeps the ~1B router model served on loopback so the agent has
+# an offline fallback when Redrob Console is unreachable. The agent reaches it
+# as the `llamacpp.router` provider in agent.toml (http://127.0.0.1:8081).
+
+# GGUF router models live here, provisioned SEPARATELY from OTA. The file may
+# appear after boot; the supervisor polls until it does.
+models_dir = "/mnt/data/redrob/models"
+
+# Loopback only. A non-loopback address is refused at load time: the router
+# answers raw prompts with no auth and must never bind a routable interface.
+listen_host = "127.0.0.1"
+listen_port = 8081
+
+# llama.cpp OpenAI-compatible server.
+server_bin = "/usr/bin/llama-server"
+
+# Context window served, in tokens. Modest for a ~1B model on CPU; the agent's
+# provider declares its own context_window independently.
+ctx_size = 8192
+
+# Generation threads. 0 lets the server pick (nproc).
+threads = 4
+
+# Advertised model id; MUST match agent.toml provider `model` = "router".
+model_alias = "router"
+
+# Seconds between model-presence polls while no model is installed.
+poll_secs = 15
+# Seconds to back off before relaunching after the server exits.
+restart_secs = 5
+
+# Extra server args. --no-webui keeps the loopback surface to the API only.
+extra_args = ["--no-webui"]

@@ -19,6 +19,9 @@ vision_backends:
   - cpu
   - hailo                             # when the AI HAT+ accelerator is present
 models_dir: /data/models              # updated separately from OTA
+# Serve: the supervisor (modules/local-inference/supervisor) runs llama.cpp's
+# OpenAI-compatible server on 127.0.0.1:8081, model alias "router". The agent
+# reaches it as the `llamacpp.router` fallback provider (deploy/config/agent.toml).
 network:
   - "100.64.0.0/10"                   # tailnet only, for remote-gpu
 host_access: none
