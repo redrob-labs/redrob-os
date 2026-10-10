@@ -39,14 +39,15 @@ A/B slots and rollback come from RAUC + GRUB as upstream.
 - `BR2_PACKAGE_OS_AGENT` (upstream D-Bus agent) stays; audit whether the Redrob agent needs it.
 - aarch64 (`rpi5_64`) defconfig: same package set, agent binary from the cross build.
 
-## Known issues (dev4, from `docs/verification/measure.md`)
+## Resolved in dev5: broker state-dir provisioning
 
-- `redrob-broker` crash-loops at first boot: `Permission denied` creating
-  `/mnt/data/redrob/broker/.secret_key`. firstboot's chown of that dir is not
-  taking effect against the pre-built data partition. Fix in the broker/firstboot
-  deploy, not local-inference.
-- `redrob-usb-broker` fails `226/NAMESPACE`: it binds `/mnt/data/redrob/usb`
-  before firstboot creates it. Needs `After=redrob-firstboot.service` or an
-  `ExecStartPre`/`RuntimeDirectory`.
-- Both were previously verified only on the L0 host; dev4 is the first full-image
-  boot to exercise them.
+Both broker crash-loops seen on the dev4 full-image boot are fixed in dev5 and
+re-verified on a clean boot (`redrob-broker` and `redrob-usb-broker` both
+`active`). Root cause: firstboot ran `DefaultDependencies=no` (too early for a
+reliable `chown`-by-name) and the pre-built data partition baked the dirs with
+the build host's orphan uid, so `mkdir -p` no-op'd over them and ownership was
+never fixed; `/mnt/data/redrob/usb` was never baked at all, so the usb broker's
+mount namespace failed `226/NAMESPACE`. Fix: a dedicated oneshot
+`redrob-state-dirs.service` runs at multi-user time (users resolvable, data
+mounted) and owns `broker`/`audit` + creates `usb` every boot; both brokers
+`Requires=`/`After=` it. firstboot no longer touches those dirs.

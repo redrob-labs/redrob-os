@@ -8,7 +8,11 @@ ID_DIR=$DATA/identity
 AGENT_DIR=$DATA/agent
 TEMPLATE=/usr/share/redrob/agent.toml
 
-mkdir -p "$ID_DIR" "$AGENT_DIR/data" "$AGENT_DIR/workspace" "$DATA/broker" "$DATA/usb" "$DATA/audit" "$DATA/models"
+mkdir -p "$ID_DIR" "$AGENT_DIR/data" "$AGENT_DIR/workspace" "$DATA/models"
+# Broker state dirs ($DATA/broker, $DATA/audit, $DATA/usb) are provisioned and
+# owned every boot by redrob-state-dirs.service, not here: firstboot runs
+# DefaultDependencies=no (too early for a reliable chown-by-name) and the data
+# partition bakes those dirs with the build host's orphan uid.
 
 # 1. Device id: random UUID, generated here, kept for the life of the device.
 if [ ! -s "$ID_DIR/device-id" ]; then
@@ -44,10 +48,7 @@ fi
 hostnamectl set-hostname "$(cat "$DATA/hostname")" 2>/dev/null || true
 
 chown -R redrob-agent:redrob-agent "$AGENT_DIR" 2>/dev/null || true
-# Broker state is private to the broker; the audit log is written by the broker and
-# readable by group redrob-broker (the agent is a member) for the dashboard.
-chown redrob-broker:redrob-broker "$DATA/broker" "$DATA/audit" 2>/dev/null || true
-chmod 0700 "$DATA/broker" 2>/dev/null || true
-chmod 0750 "$DATA/audit" 2>/dev/null || true
+# $DATA/broker and $DATA/audit ownership (user redrob-broker) is set by
+# redrob-state-dirs.service, which runs at multi-user time with the user present.
 rm -f "$ID_DIR/.firstboot"
 echo "redrob-firstboot: device $(cat "$ID_DIR/device-id") ready"

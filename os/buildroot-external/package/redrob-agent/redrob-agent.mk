@@ -27,6 +27,8 @@ define REDROB_AGENT_INSTALL_INIT_SYSTEMD
 		$(TARGET_DIR)/usr/lib/systemd/system/redrob-agent.service
 	$(INSTALL) -D -m 0644 $(@D)/systemd/redrob-firstboot.service \
 		$(TARGET_DIR)/usr/lib/systemd/system/redrob-firstboot.service
+	$(INSTALL) -D -m 0644 $(@D)/systemd/redrob-state-dirs.service \
+		$(TARGET_DIR)/usr/lib/systemd/system/redrob-state-dirs.service
 	$(INSTALL) -D -m 0644 $(@D)/systemd/redrob-mark-good.service \
 		$(TARGET_DIR)/usr/lib/systemd/system/redrob-mark-good.service
 	mkdir -p $(TARGET_DIR)/usr/lib/systemd/system/multi-user.target.wants
@@ -34,6 +36,8 @@ define REDROB_AGENT_INSTALL_INIT_SYSTEMD
 		$(TARGET_DIR)/usr/lib/systemd/system/multi-user.target.wants/redrob-agent.service
 	ln -sf ../redrob-firstboot.service \
 		$(TARGET_DIR)/usr/lib/systemd/system/multi-user.target.wants/redrob-firstboot.service
+	ln -sf ../redrob-state-dirs.service \
+		$(TARGET_DIR)/usr/lib/systemd/system/multi-user.target.wants/redrob-state-dirs.service
 	ln -sf ../redrob-mark-good.service \
 		$(TARGET_DIR)/usr/lib/systemd/system/multi-user.target.wants/redrob-mark-good.service
 endef
