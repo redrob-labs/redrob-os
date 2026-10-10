@@ -1,10 +1,10 @@
 [Unit]
 Description=Redrob USB Broker (default-deny USB admission, approval, read-only automount)
 Documentation=https://github.com/redrob-labs/redrob-os
-After=systemd-udevd.service mnt-data.mount redrob-firstboot.service
+After=systemd-udevd.service mnt-data.mount redrob-firstboot.service redrob-state-dirs.service
 Wants=systemd-udevd.service
 RequiresMountsFor=/mnt/data
-Requires=redrob-firstboot.service
+Requires=redrob-firstboot.service redrob-state-dirs.service
 # Arm authorized_default=0 before the agent comes up, so nothing it does can race a device in.
 Before=redrob-agent.service
 StartLimitIntervalSec=0

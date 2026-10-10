@@ -48,12 +48,13 @@ serves; the unit caps that at `MemoryMax=2G`.
 `systemd is-system-running` reports **degraded** — from the two QEMU-only units
 above, plus the two broker findings below.
 
-## Findings: brokers crash-loop on a fresh image (pre-existing, surfaced here)
+## Findings: brokers crash-loop on a fresh image (RESOLVED in dev5)
 
 This is the first full-image boot test to exercise the broker daemons (they
 were previously verified only on the L0 host via `scripts/l0-broker.sh`). Both
-fail at first boot. Neither is a local-inference regression — these units were
-not touched in Stage 7/8.
+failed at first boot on dev4. Neither was a local-inference regression — these
+units were not touched in Stage 7/8. **Both are fixed in dev5** (see the
+resolution at the end of this section).
 
 **B1 — credential-broker: cannot create its key.**
 
@@ -88,6 +89,34 @@ process never execs. Likely fix: order it `After=redrob-firstboot.service`
 
 network-online.target is active in the guest, so the brokers are not blocked on
 the network — the failures above are the whole cause.
+
+### Resolution (dev5)
+
+Root cause of both: firstboot ran `DefaultDependencies=no` — too early for a
+reliable `chown`-by-name — and the `redrob-data` partition bakes
+`broker`/`audit`/`models` with the build host's orphan uid (1000), so
+firstboot's `mkdir -p` no-op'd over the existing dirs and the `chown ... || true`
+masked whatever failed; `/mnt/data/redrob/usb` was never baked, so the usb
+broker's `ReadWritePaths=/mnt/data/redrob/usb` had no source and the mount
+namespace could not be built.
+
+Fix: a dedicated oneshot `redrob-state-dirs.service` runs at multi-user time
+(users resolvable, `/mnt/data` mounted, no sandbox), creates
+`broker`/`audit`/`usb` and `chown`s `broker`/`audit` to `redrob-broker` every
+boot — no `|| true`, so a failure blocks the brokers loudly instead of leaving a
+crash loop. Both brokers now `Requires=`/`After=redrob-state-dirs.service`.
+firstboot no longer provisions those dirs.
+
+Re-verified on a clean dev5 boot:
+
+```
+redrob-state-dirs.service   Result=success ExecMainStatus=0 (active)
+/mnt/data/redrob/broker     drwx------ redrob-broker redrob-broker
+/mnt/data/redrob/audit      drwxr-x--- redrob-broker redrob-broker
+/mnt/data/redrob/usb        drwxr-xr-x root root  (created)
+redrob-broker.service       active
+redrob-usb-broker.service   active
+```
 
 ## Not possible on this machine (consolidated)
 

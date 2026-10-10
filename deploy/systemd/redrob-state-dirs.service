@@ -1,0 +1,24 @@
+[Unit]
+Description=Provision Redrob broker state directories (owner + mode)
+Documentation=https://github.com/redrob-labs/redrob-os
+# Runs at multi-user time (not DefaultDependencies=no like firstboot), so the
+# redrob-broker user/group are resolvable and /mnt/data is mounted. This is the
+# single source of truth for the broker state-dir ownership: firstboot does NOT
+# own these dirs, because it runs too early for a reliable chown-by-name and
+# because the data partition bakes them with the build host's uid (orphan 1000).
+After=mnt-data.mount
+Requires=mnt-data.mount
+RequiresMountsFor=/mnt/data
+Before=redrob-broker.service redrob-usb-broker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# No sandboxing on purpose: a mount-namespaced unit cannot create /mnt/data
+# subdirs that do not yet exist (that is the 226/NAMESPACE the usb broker hit).
+# No `|| true`: a chown failure must block the brokers loudly, not leave them
+# crash-looping on a wrong-owned dir.
+ExecStart=/bin/sh -c 'mkdir -p /mnt/data/redrob/broker /mnt/data/redrob/audit /mnt/data/redrob/usb && chown redrob-broker:redrob-broker /mnt/data/redrob/broker /mnt/data/redrob/audit && chmod 0700 /mnt/data/redrob/broker && chmod 0750 /mnt/data/redrob/audit && chmod 0755 /mnt/data/redrob/usb'
+
+[Install]
+WantedBy=multi-user.target
