@@ -6,6 +6,12 @@
 
 English: [README.md](./README.md)
 
+## 설치
+
+[Releases](https://github.com/redrob-labs/redrob-os/releases/latest)에서 최신 이미지를 받아
+[balenaEtcher](https://etcher.balena.io)로 굽고 부팅하면 됩니다. 전체 단계:
+[docs/install.ko.md](./docs/install.ko.md).
+
 모노레포 구성:
 
 | 경로 | 역할 | 상류 | 라이선스 |
