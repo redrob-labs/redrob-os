@@ -12,6 +12,9 @@ English: [README.md](./README.md)
 [balenaEtcher](https://etcher.balena.io)로 굽고 부팅하면 됩니다. 전체 단계:
 [docs/install.ko.md](./docs/install.ko.md).
 
+폰에서 기기 접속 — 같은 Wi‑Fi, 또는 직접 띄운 릴레이로 어디서든:
+[docs/remote-access.ko.md](./docs/remote-access.ko.md).
+
 모노레포 구성:
 
 | 경로 | 역할 | 상류 | 라이선스 |
