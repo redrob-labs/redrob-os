@@ -11,6 +11,35 @@ make -C os redrob_x86_64             # defconfig + full build -> os/output/image
 Output: `os/output/images/redrob_generic-x86-64-<version>.img.xz` (raw GPT disk),
 `.raucb` (OTA bundle), `.qcow2`/`.vmdk`/`.vdi` (virtual), `data.ext4`.
 
+### aarch64 / Raspberry Pi 5
+
+The device binaries are prebuilt per architecture, so the aarch64 image needs the
+six Redrob crates cross-built first (the defconfig points each
+`BR2_PACKAGE_REDROB_*_BINARY` at `target/aarch64-unknown-linux-gnu/release/`):
+
+```sh
+. scripts/dev-env.sh
+export CC_aarch64_unknown_linux_gnu=aarch64-none-linux-gnu-gcc
+export AR_aarch64_unknown_linux_gnu=aarch64-none-linux-gnu-ar
+for d in modules/credential-broker/broker modules/usb-broker/broker \
+         modules/local-inference/supervisor modules/display/kiosk tools/redrob-pairing; do
+  (cd "$d" && cargo build --release --target aarch64-unknown-linux-gnu)
+done
+(cd agent && cargo build --release --target aarch64-unknown-linux-gnu -p zeroclaw --bin zeroclaw)
+make -C os O=output-rpi5 redrob_rpi5_64   # fresh Buildroot aarch64 toolchain + full image
+```
+
+Output: `os/output-rpi5/images/redrob_rpi5-64-<version>.img.xz` (+ `.raucb`,
+`rootfs.erofs`, rpi5 DTBs, `boot.vfat`, `kernel.img`). A separate `O=output-rpi5`
+keeps the x86 `output/` toolchain intact.
+
+Linker prereq: `agent/.cargo/config.toml` names the Debian linker
+`aarch64-linux-gnu-gcc`, which this host does not ship. `scripts/dev-env.sh`'s
+global `~/.cargo/config.toml` uses the Arm GNU `-none-linux-gnu-` name, so the
+agent build needs `~/.local/bin/aarch64-linux-gnu-*` symlinks pointing at the Arm
+GNU toolchain's `aarch64-none-linux-gnu-*`. The other five crates link fine from
+the global config.
+
 ## What differs from upstream HAOS
 
 | Area | Change | Where |
@@ -37,7 +66,19 @@ A/B slots and rollback come from RAUC + GRUB as upstream.
 - Docker engine is still in the image (the agent's `[runtime] kind = "docker"` talks to a
   Docker-compatible socket). Swap to Podman + gVisor is the sandbox work item.
 - `BR2_PACKAGE_OS_AGENT` (upstream D-Bus agent) stays; audit whether the Redrob agent needs it.
-- aarch64 (`rpi5_64`) defconfig: same package set, agent binary from the cross build.
+
+## Resolved in dev5: aarch64 / Raspberry Pi 5 image
+
+`redrob_rpi5_64_defconfig` = upstream `rpi5_64` (RPi kernel/DTB/boot chain) with
+the same Redrob delta as x86 (hostname `redrob`, issue, `redrob-post-build.sh`,
+Supervisor `BR2_PACKAGE_HASSIO*` dropped, the seven `redrob-*` packages +
+`llama-cpp`). The six device crates are cross-built to
+`aarch64-unknown-linux-gnu` and each `BR2_PACKAGE_REDROB_*_BINARY` points at that
+output; `llama-cpp` cross-builds from source (`GGML_NATIVE=OFF`). Built as
+`O=output-rpi5`. Verified: all six binaries + `llama-server` land in the rootfs as
+aarch64 ELF and every `redrob-*` service symlink is enabled. NOT verified: a real
+boot — this host has no Raspberry Pi 5 QEMU machine model, so first-run/pairing on
+hardware is untested.
 
 ## Resolved in dev5: broker state-dir provisioning
 
