@@ -6,6 +6,12 @@ GPU/accelerator, display, keyboard and USB are attachable modules.
 
 한국어: [README.ko.md](./README.ko.md)
 
+## Install
+
+Download the latest image from [Releases](https://github.com/redrob-labs/redrob-os/releases/latest),
+flash it with [balenaEtcher](https://etcher.balena.io), and boot. Full steps:
+[docs/install.md](./docs/install.md).
+
 Monorepo layout:
 
 | Path | Role | Upstream | License |
