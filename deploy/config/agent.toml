@@ -91,13 +91,18 @@ scope = "zeroclaw"
 allowed_domains = []
 
 # ---------------------------------------------------------------------------
-# Local gateway (pairing + dashboard). Loopback only; the display module and
-# the pairing flow reach it through the host.
+# Local gateway (pairing + dashboard). Bound to all interfaces so a paired
+# phone on the SAME NETWORK can reach it directly (QR carries the LAN address).
+# Every route is gated by the one-time pairing token (require_pairing), so an
+# unpaired host on the LAN gets nothing. Caveat: this listener is plain HTTP,
+# so dashboard traffic is unencrypted on the local network — fine for a trusted
+# home/office LAN, not for a hostile one. For off-LAN/remote access use the
+# [relay] bridge instead (needs a reachable relay server).
 # ---------------------------------------------------------------------------
 [gateway]
-host = "127.0.0.1"
+host = "0.0.0.0"
 port = 42617
-allow_public_bind = false
+allow_public_bind = true
 require_pairing = true
 
 [memory]
