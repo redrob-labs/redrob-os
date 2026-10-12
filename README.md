@@ -12,6 +12,9 @@ Download the latest image from [Releases](https://github.com/redrob-labs/redrob-
 flash it with [balenaEtcher](https://etcher.balena.io), and boot. Full steps:
 [docs/install.md](./docs/install.md).
 
+Reach the device from your phone — same Wi‑Fi, or from anywhere via a relay you
+run: [docs/remote-access.md](./docs/remote-access.md).
+
 Monorepo layout:
 
 | Path | Role | Upstream | License |

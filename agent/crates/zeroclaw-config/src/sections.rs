@@ -459,6 +459,17 @@ sections! {
         help:  "Optional: expose your gateway over the public internet via Cloudflare \
                 or ngrok. Pick `none` to keep it localhost-only.",
     },
+    Relay => {
+        key:   "relay",
+        shape: DirectForm,
+        group: Network,
+        help:  "Optional: reach this device from OUTSIDE its LAN. Point it at a relay \
+                server you run (zerorelay): set the relay URL and account token and the \
+                device keeps a persistent outbound connection, so a paired phone can \
+                connect through the relay from anywhere. The relay is a blind forwarder \
+                — the client<->device mTLS terminates on the device, never on the relay. \
+                Leave disabled for LAN-only access.",
+    },
 
     QuickstartState => {
         key:   "onboard_state",
@@ -526,6 +537,7 @@ pub fn section_has_signal(cfg: &crate::schema::Config, section: Section) -> bool
                 .is_some_and(|rest| rest.contains('.'))
         }),
         Section::Hardware => cfg.hardware.enabled,
+        Section::Relay => cfg.relay.enabled,
         Section::McpServers => !cfg.mcp.servers.is_empty(),
         // Routes' existence in the Vec is the signal, same as McpServers.
         Section::ModelRoutes => !cfg.model_routes.is_empty(),
