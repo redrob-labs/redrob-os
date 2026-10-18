@@ -1,0 +1,5 @@
+# Redrob OS user-unit presets (systemctl --global). Applied at build time by
+# image/scripts/30-cleanup.sh and by systemd for new users.
+
+# Keep Flathub apps current without asking.
+enable redrob-flatpak-update.timer

@@ -1,0 +1,12 @@
+[Unit]
+Description=Redrob OS: update Flatpak apps (user)
+Documentation=man:flatpak-update(1)
+After=network-online.target
+
+[Service]
+Type=oneshot
+# System-wide and per-user installations; non-fatal if one has nothing to do.
+ExecStart=/usr/bin/flatpak update -y --noninteractive
+ExecStart=/usr/bin/flatpak uninstall -y --noninteractive --unused
+Nice=10
+IOSchedulingClass=idle

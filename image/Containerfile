@@ -1,0 +1,108 @@
+# Redrob OS -- bootable container image (bootc).
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+#
+# Build context is the REPOSITORY ROOT, not image/:
+#   podman build -f image/Containerfile \
+#     --build-arg BASE_IMAGE=$(. image/base.env; echo $BASE_IMAGE) \
+#     --build-arg BASE_TAG=$(. image/base.env; echo $BASE_TAG) \
+#     -t ghcr.io/redrob-labs/redrob-os:stable .
+# CI reads image/base.env and passes BASE_IMAGE/BASE_TAG the same way (docs/image.md).
+# The defaults below are a fallback for a bare `podman build`; image/base.env is the
+# single source of truth and the two must be kept identical.
+#
+# Layer order (each overlay is COPYed onto / at its final absolute path):
+#   1. base packages (dnf5, one transaction)            image/scripts, image/pins.env
+#   2. pinned binaries: gVisor runsc, Redrob Launcher   image/scripts/10-*,20-*
+#   3. base-OS overlay                                   image/files/
+#   4. branding overlay (os-release, logos, themes)      image/branding/   (branding agent)
+#   5. agent overlay (units, sandbox, pairing)           image/agent/      (agent agent)
+#   6. installer overlay (first-login hooks)             image/installer/  (installer agent)
+#   7. cleanup + `ostree container commit` + `bootc container lint`
+# Later overlays win on path collisions, so branding/agent/installer may override
+# anything in image/files/.
+
+ARG BASE_IMAGE="quay.io/fedora-ostree-desktops/kinoite"
+ARG BASE_TAG="44"
+
+# Build-time context: everything the RUN steps need, bind-mounted read-only at /ctx
+# so nothing from the build tree leaks into the final image.
+FROM scratch AS ctx
+COPY image/pins.env /pins.env
+COPY image/scripts/ /scripts/
+
+FROM ${BASE_IMAGE}:${BASE_TAG}
+
+ARG BASE_IMAGE
+ARG BASE_TAG
+ARG REDROB_OS_VERSION="dev"
+ARG REDROB_OS_GIT_SHA="unknown"
+
+LABEL org.opencontainers.image.title="Redrob OS" \
+      org.opencontainers.image.description="Redrob OS is an agentic desktop that keeps itself updated and runs your AI agent in a sandbox" \
+      org.opencontainers.image.vendor="Redrob" \
+      org.opencontainers.image.url="https://github.com/redrob-labs/redrob-os" \
+      org.opencontainers.image.source="https://github.com/redrob-labs/redrob-os" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.version="${REDROB_OS_VERSION}" \
+      org.opencontainers.image.revision="${REDROB_OS_GIT_SHA}" \
+      org.opencontainers.image.base.name="${BASE_IMAGE}:${BASE_TAG}" \
+      ai.redrob.os.base="${BASE_IMAGE}:${BASE_TAG}"
+
+# 1. Base packages -- a single dnf5 transaction so the swap (fedora-logos ->
+#    generic-logos) and the installs resolve together. Weak deps off keeps the
+#    image small; anything we actually want is named explicitly.
+#    Already in the Kinoite base (verified against the Fedora Atomic Desktops
+#    manifests): flatpak, podman, bluez, pipewire, cups, fwupd, ibus-hangul,
+#    plasma-print-manager, plasma-discover, bootc, tuned-ppd (Fedora 41+ default
+#    power daemon; power-profiles-daemon is NOT used). Listing a present package
+#    is a no-op, so the list below is the full intent, not just the delta.
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=cache,dst=/var/cache/rpm-ostree \
+    --mount=type=tmpfs,dst=/tmp \
+    dnf5 -y swap --setopt=install_weak_deps=False fedora-logos generic-logos && \
+    dnf5 -y install --setopt=install_weak_deps=False \
+        generic-logos \
+        naver-nanum-fonts-all \
+        ibus-hangul \
+        podman \
+        greenboot \
+        greenboot-default-health-checks \
+        distrobox \
+        flatpak \
+        plasma-discover-flatpak \
+        cups \
+        plasma-print-manager \
+        system-config-printer-udev \
+        sane-backends \
+        sane-backends-drivers-scanners \
+        fwupd \
+        tuned-ppd \
+        bluez \
+        pipewire \
+        zstd \
+        tar
+
+# 2. Pinned binaries (network downloads, checksum-verified against image/pins.env).
+RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/scripts/10-pins.sh && \
+    /ctx/scripts/20-launcher.sh
+
+# 3. Base-OS overlay: systemd presets/units, update timers, Flathub enablement,
+#    container signature policy, sysctl, docs.
+COPY image/files/ /
+
+# 4-6. Sibling overlays. These directories are owned by other agents and may not
+#      exist in every checkout; the parent merges them before CI builds.
+#      /usr/lib/os-release lives in image/branding/ (branding agent) -- never here.
+COPY image/branding/ /
+COPY image/agent/ /
+COPY image/installer/ /
+
+# 7. Cleanup to a shape bootc accepts (empty /var, /opt -> var/opt, no /tmp
+#    leftovers), apply presets, commit, lint.
+RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
+    /ctx/scripts/30-cleanup.sh && \
+    ostree container commit
+
+RUN bootc container lint

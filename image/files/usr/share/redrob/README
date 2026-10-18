@@ -1,0 +1,29 @@
+Redrob OS
+=========
+
+This machine runs Redrob OS, a bootable-container (bootc) image built from
+https://github.com/redrob-labs/redrob-os and published as
+ghcr.io/redrob-labs/redrob-os. The whole operating system is one signed image;
+`bootc status` shows which one is booted and which one is staged.
+
+Where things are
+----------------
+  /usr/share/redrob/pins-installed.env   versions of the binaries baked into this image
+  /usr/bin/redrob-launcher               Redrob Launcher (installs/updates the Redrob apps)
+  /usr/libexec/gvisor/                   gVisor runsc, the agent task sandbox runtime
+  /etc/containers/policy.json            requires a signature on every Redrob OS image
+  /etc/greenboot/check/                  boot health checks (red boot -> automatic rollback)
+  /var/lib/redrob/                       machine state (first-boot markers, device id)
+
+Updates
+-------
+  System : bootc-fetch-apply-updates.timer, daily ~03:00, staged, applied at next reboot.
+           Manual: `sudo bootc upgrade` then reboot. Roll back: `sudo bootc rollback`.
+  Apps   : Flathub via Discover; redrob-flatpak-update.timer (per user, daily).
+  Redrob : Redrob Launcher keeps Redrob Browser/Office/Canvas/Code current in your home.
+
+Developer notes live in the repository under docs/image.md.
+
+Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+Upstream components keep their own licences; see /usr/share/licenses and the
+repository's NOTICE and UPSTREAM.md.
