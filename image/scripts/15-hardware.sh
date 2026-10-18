@@ -24,10 +24,11 @@ dnf5 -y install --setopt=install_weak_deps=False \
 # Codecs. Fedora's ffmpeg-free stays (Plasma links against it; a `swap` to the full
 # ffmpeg with --allowerasing tore out the whole desktop in CI). libavcodec-freeworld
 # adds the patented decoders (H.264/HEVC/AAC...) on top of ffmpeg-free, which is the
-# path Fedora itself documents. mesa-va-drivers-freeworld is the hardware-decode
-# half (declares Conflicts with the stock package, so a plain swap resolves it).
-# mesa-vdpau-drivers no longer exists in Fedora 44.
-dnf5 -y swap --setopt=install_weak_deps=False mesa-va-drivers mesa-va-drivers-freeworld
+# path Fedora itself documents. mesa-va-drivers-freeworld is NOT swapped in: it is
+# version-locked to Mesa and RPM Fusion lags the Fedora updates repo, so the swap
+# fails whenever Mesa moved (it did in CI). AMD hardware decode of patented codecs
+# therefore falls back to software; Intel (intel-media-driver) and NVIDIA
+# (libva-nvidia-driver) decode in hardware.
 dnf5 -y install --setopt=install_weak_deps=False \
   libavcodec-freeworld \
   gstreamer1-plugins-ugly \
