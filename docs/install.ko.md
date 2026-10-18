@@ -8,8 +8,8 @@
 
 | 대상 | 파일 | 방법 |
 |------|------|------|
-| PC·노트북(x86-64, UEFI) | `redrob-os-<버전>-x86_64.iso` | 설치 USB(이 문서 1~4절) |
-| 라즈베리 파이 5 | `redrob-os-<버전>-aarch64.raw.xz` | 원본 이미지(6절) |
+| PC·노트북(x86-64, UEFI) | `redrob-os-<버전>-linux-x86_64.iso` | 설치 USB(이 문서 1~4절) |
+| 라즈베리 파이 5 | `redrob-os-<버전>-linux-aarch64.img.xz` | 원본 이미지(6절) |
 
 요구 사항: 64비트 UEFI PC, RAM 4 GB(8 GB 권장), 빈 디스크 20 GB(64 GB 권장),
 4 GB 이상 USB 메모리. 보안 부팅(Secure Boot)은 켜 둔 채로 됩니다.
@@ -18,11 +18,11 @@ English: [install.md](./install.md).
 
 ## 1. 내려받기
 
-최신 릴리스에서 `.iso` 파일과 `.sha256` 파일을 받습니다. 체크섬 확인은 선택
+최신 릴리스에서 `.iso` 파일과 `SHA256SUMS` 파일을 받습니다. 체크섬 확인은 선택
 사항이지만 금방 끝납니다.
 
 ```sh
-sha256sum -c redrob-os-<버전>-x86_64.iso.sha256
+sha256sum -c --ignore-missing SHA256SUMS
 ```
 
 ## 2. USB에 설치 프로그램 굽기
@@ -40,7 +40,7 @@ sha256sum -c redrob-os-<버전>-x86_64.iso.sha256
 되돌릴 수 없습니다.
 
 ```sh
-sudo dd if=redrob-os-<버전>-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=redrob-os-<버전>-linux-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 ## 3. USB로 부팅
@@ -138,9 +138,9 @@ Launcher 앱, Flatpak이 살아남습니다. 예전 시스템의 `/etc`에 있�
 파이에는 설치 프로그램이 없습니다. 완성된 디스크 이미지를 굽고, 첫 부팅 때 계정을
 만듭니다.
 
-1. `redrob-os-<버전>-aarch64.raw.xz`(와 `.sha256`)를 받습니다.
+1. `redrob-os-<버전>-linux-aarch64.img.xz`(와 `SHA256SUMS`)를 받습니다.
 2. microSD(A2 등급, 32 GB 이상) 또는 USB/NVMe SSD에 [Raspberry Pi
-   Imager](https://www.raspberrypi.com/software/)(*사용자 지정 이미지* → `.raw.xz`
+   Imager](https://www.raspberrypi.com/software/)(*사용자 지정 이미지* → `.img.xz`
    선택)나 balenaEtcher로 굽습니다. `.xz`를 풀 필요는 없습니다.
 3. 부팅합니다. 이미지가 카드 크기로 늘어난 뒤 **첫 부팅 마법사**가 언어, 키보드,
    시간대를 묻고 사용자를 만듭니다. 그다음 바탕화면이 뜨고 [환영 창](./first-run.md)이

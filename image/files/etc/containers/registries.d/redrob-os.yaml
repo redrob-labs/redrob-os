@@ -4,3 +4,5 @@
 docker:
   ghcr.io/redrob-labs/redrob-os:
     use-sigstore-attachments: true
+  ghcr.io/redrob-labs/redrob-sandbox:
+    use-sigstore-attachments: true

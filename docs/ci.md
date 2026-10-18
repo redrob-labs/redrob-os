@@ -21,7 +21,7 @@ CI and `image/Containerfile` agree on these points. Changing one side means chan
 - Build context is the **repository root**; the Containerfile is passed with `-f image/Containerfile`.
   So the Containerfile can `COPY agent/ ...`, `COPY image/files/ /`, `COPY image/agent/ /`,
   `COPY image/branding/ /`, `COPY image/installer/ ...` using repo-relative paths.
-- The agent is compiled **inside the Containerfile**, in a `FROM rust AS agent-build` stage that
+- The agent is compiled **inside the Containerfile**, in a `FROM rust AS redrob-build` stage that
   builds `agent/` (`cargo build --release --locked` or the `dist` profile) and whose
   `/usr/bin/redrob-agent` the final stage copies in. CI does not compile the agent separately or
   inject a binary. Build it for the stage's own architecture; amd64 and arm64 each run on a native

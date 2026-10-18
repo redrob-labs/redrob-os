@@ -42,6 +42,7 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/redrob-labs/redrob-os
+  SANDBOX_IMAGE: ghcr.io/redrob-labs/redrob-sandbox
 
 jobs:
   build:
@@ -89,7 +90,7 @@ jobs:
       - name: podman build
         # Context = repository root, Containerfile = image/Containerfile (docs/ci.md, "Contract
         # with the Containerfile"). The agent is compiled inside the Containerfile's
-        # `FROM rust AS agent-build` stage from agent/.
+        # `FROM rust AS redrob-build` stage from agent/.
         run: |
           set -euo pipefail
           # shellcheck disable=SC2086
@@ -108,6 +109,49 @@ jobs:
 
       - name: Push the per-arch image
         run: podman push "${IMAGE}:sha-${{ steps.meta.outputs.short }}-${{ matrix.arch }}"
+
+  sandbox:
+    # The agent's task sandbox (image/sandbox/Containerfile). Built next to the OS image
+    # because the OS image logically binds ghcr.io/redrob-labs/redrob-sandbox:stable and a
+    # bound image that does not exist in the registry makes `bootc upgrade` fail.
+    name: sandbox ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64 # EXPERIMENTAL -- see header
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Log in to GHCR
+        run: echo "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: podman build (context = repository root)
+        run: |
+          set -euo pipefail
+          podman build \
+            --build-arg TARGETARCH="${{ matrix.arch }}" \
+            --label org.opencontainers.image.source="https://github.com/${{ github.repository }}" \
+            --label org.opencontainers.image.revision="${GITHUB_SHA}" \
+            -f image/sandbox/Containerfile \
+            -t "${SANDBOX_IMAGE}:sha-${GITHUB_SHA::7}-${{ matrix.arch }}" \
+            .
+
+      - name: Smoke test (tools present)
+        run: |
+          podman run --rm "${SANDBOX_IMAGE}:sha-${GITHUB_SHA::7}-${{ matrix.arch }}" \
+            sh -c 'git --version && python3 --version && node --version && redrob-code --version || redrob-code --help | head -n 3'
+
+      - name: Push the per-arch image
+        run: podman push "${SANDBOX_IMAGE}:sha-${GITHUB_SHA::7}-${{ matrix.arch }}"
 
   manifest:
     name: manifest + sign
@@ -161,11 +205,64 @@ jobs:
       - name: cosign sign (keyless)
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ""
         run: |
           set -euo pipefail
+          # Key signature: what devices verify (/etc/containers/policy.json + redrob-os.pub).
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${DIGEST}"
+          # Keyless signature in addition, for humans running `cosign verify`.
           cosign sign --yes "${IMAGE}@${DIGEST}"
           cosign verify \
             --certificate-identity-regexp "^https://github.com/${{ github.repository }}/" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "${IMAGE}@${DIGEST}" >/dev/null
           echo "signed and verified ${IMAGE}@${DIGEST}"
+
+  manifest-sandbox:
+    name: sandbox manifest + sign
+    needs: [sandbox, build]
+    if: always() && !cancelled() && needs.build.outputs.short != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Log in to GHCR
+        run: echo "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Assemble, push (stable, sha-<short>) and sign
+        env:
+          SHORT: ${{ needs.build.outputs.short }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ""
+        run: |
+          set -euo pipefail
+          podman manifest create redrob-sandbox
+          for arch in amd64 arm64; do
+            if skopeo inspect --raw "docker://${SANDBOX_IMAGE}:sha-${SHORT}-${arch}" >/dev/null 2>&1; then
+              podman manifest add redrob-sandbox "docker://${SANDBOX_IMAGE}:sha-${SHORT}-${arch}"
+            elif [ "$arch" = amd64 ]; then
+              echo "::error::${SANDBOX_IMAGE}:sha-${SHORT}-amd64 not found -- amd64 is required"; exit 1
+            else
+              echo "::warning::${SANDBOX_IMAGE}:sha-${SHORT}-${arch} not found -- publishing without it"
+            fi
+          done
+          digest=""
+          for tag in stable "sha-${SHORT}"; do
+            podman manifest push --all --digestfile digest.txt redrob-sandbox "docker://${SANDBOX_IMAGE}:${tag}"
+            digest="$(cat digest.txt)"
+            echo "pushed ${SANDBOX_IMAGE}:${tag} -> ${digest}"
+          done
+          # Key signature: what devices verify (/etc/containers/policy.json + redrob-os.pub).
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${SANDBOX_IMAGE}@${digest}"
+          # Keyless signature in addition, for humans running `cosign verify`.
+          cosign sign --yes "${SANDBOX_IMAGE}@${digest}"
+          cosign verify \
+            --certificate-identity-regexp "^https://github.com/${{ github.repository }}/" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "${SANDBOX_IMAGE}@${digest}" >/dev/null
+          echo "signed and verified ${SANDBOX_IMAGE}@${digest}"

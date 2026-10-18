@@ -30,6 +30,35 @@ FROM scratch AS ctx
 COPY image/pins.env /pins.env
 COPY image/scripts/ /scripts/
 
+# Our own binaries, compiled from this repository (CI builds with the repo root as
+# context, see docs/ci.md "Contract with the Containerfile"). Toolchain pinned to the
+# same version the agent's upstream CI uses; bump together with agent/.
+FROM docker.io/library/rust:1.98.0-bookworm AS redrob-build
+RUN apt-get update && \
+    apt-get install -y -q --no-install-recommends libudev-dev pkg-config libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY agent/ /src/agent/
+COPY modules/credential-broker/ /src/modules/credential-broker/
+COPY modules/usb-broker/ /src/modules/usb-broker/
+COPY tools/redrob-pairing/ /src/tools/redrob-pairing/
+RUN --mount=type=cache,dst=/usr/local/cargo/registry \
+    --mount=type=cache,dst=/src/agent/target \
+    --mount=type=cache,dst=/src/modules/credential-broker/broker/target \
+    --mount=type=cache,dst=/src/modules/usb-broker/broker/target \
+    --mount=type=cache,dst=/src/tools/redrob-pairing/target \
+    set -eu && mkdir -p /out && \
+    # the gateway embeds web/dist at compile time; the OS serves no web dashboard
+    mkdir -p agent/web/dist && touch agent/web/dist/.gitkeep && \
+    (cd agent && cargo build --release --locked --bin zeroclaw) && \
+    install -m 0755 agent/target/release/zeroclaw /out/redrob-agent && \
+    (cd modules/credential-broker/broker && cargo build --release --locked) && \
+    install -m 0755 modules/credential-broker/broker/target/release/redrob-broker /out/ && \
+    (cd modules/usb-broker/broker && cargo build --release --locked) && \
+    install -m 0755 modules/usb-broker/broker/target/release/redrob-usb-broker /out/ && \
+    (cd tools/redrob-pairing && cargo build --release --locked) && \
+    install -m 0755 tools/redrob-pairing/target/release/redrob-pairing /out/
+
 FROM ${BASE_IMAGE}:${BASE_TAG}
 
 ARG BASE_IMAGE
@@ -65,6 +94,14 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         naver-nanum-fonts-all \
         ibus-hangul \
         podman \
+        podman-docker \
+        catatonit \
+        libnotify \
+        openssl \
+        curl \
+        initial-setup \
+        initial-setup-gui \
+        plymouth-theme-script \
         greenboot \
         greenboot-default-health-checks \
         distrobox \
@@ -88,7 +125,10 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     /ctx/scripts/10-pins.sh && \
     /ctx/scripts/20-launcher.sh
 
-# 3. Base-OS overlay: systemd presets/units, update timers, Flathub enablement,
+# 3. Our binaries (agent, credential broker, USB broker, pairing) from the build stage.
+COPY --from=redrob-build /out/ /usr/bin/
+
+# 3b. Base-OS overlay: systemd presets/units, update timers, Flathub enablement,
 #    container signature policy, sysctl, docs.
 COPY image/files/ /
 
@@ -98,6 +138,23 @@ COPY image/files/ /
 COPY image/branding/ /
 COPY image/agent/ /
 COPY image/installer/ /
+
+# 6b. Boot splash: the branding overlay ships the `redrob` Plymouth theme, but the
+#     initramfs is prebuilt in the base, so it has to be regenerated to carry it
+#     (the same step Universal Blue runs after Plymouth changes).
+RUN --mount=type=tmpfs,dst=/tmp \
+    --mount=type=tmpfs,dst=/var/tmp \
+    plymouth-set-default-theme redrob && \
+    KVER="$(ls /usr/lib/modules | head -n1)" && \
+    dracut --force --no-hostonly --reproducible --zstd \
+           --add "plymouth" \
+           --kver "$KVER" "/usr/lib/modules/$KVER/initramfs.img"
+
+# 6c. The agent's task sandbox image is logically bound to this OS image, so bootc
+#     pulls it together with every update and first boot works offline.
+RUN mkdir -p /usr/lib/bootc/bound-images.d && \
+    ln -sf /etc/containers/systemd/redrob-sandbox.image \
+           /usr/lib/bootc/bound-images.d/redrob-sandbox.image
 
 # 7. Cleanup to a shape bootc accepts (empty /var, /opt -> var/opt, no /tmp
 #    leftovers), apply presets, commit, lint.

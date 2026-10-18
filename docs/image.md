@@ -149,17 +149,18 @@ Actions certificates carry a workflow URI, not an email, so podman/bootc would r
 every keyless signature. This is the same reason Universal Blue signs with a key pair.
 So:
 
-1. Once: `cosign generate-key-pair` (no password or password in a second secret).
-   Private key -> repository secret `COSIGN_PRIVATE_KEY`; `cosign.pub` -> commit it as
-   `image/files/etc/pki/containers/redrob-os.pub`, replacing the placeholder.
-2. CI, after push: `cosign sign --yes --key env://COSIGN_PRIVATE_KEY ghcr.io/redrob-labs/redrob-os@<digest>`.
-   Keyless signing may be done *in addition* (nice for `cosign verify` by humans) but
-   does not satisfy the device policy.
+1. Done 2026-10-18: a cosign key pair was generated (no password). The private key is the
+   repository secret `COSIGN_PRIVATE_KEY`; the public key is committed as
+   `image/files/etc/pki/containers/redrob-os.pub`. The same key signs the task sandbox
+   image `ghcr.io/redrob-labs/redrob-sandbox` (policy.json lists both repositories).
+2. CI, after push: `cosign sign --yes --key env://COSIGN_PRIVATE_KEY <image>@<digest>`,
+   then a keyless signature *in addition* (nice for `cosign verify` by humans; it does not
+   satisfy the device policy).
 3. Rotating the key = shipping the new `.pub` in an image signed with the **old** key
    first, then switching CI to the new key.
 
-Until the real public key is committed, the placeholder keeps the policy fail-closed:
-devices refuse to pull the image rather than accept an unsigned one.
+If the public key ever goes missing or mismatches, the policy fails closed: devices refuse
+to pull the image rather than accept an unsigned one.
 
 ## Owned files
 

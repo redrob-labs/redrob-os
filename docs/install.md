@@ -8,8 +8,8 @@ Latest download: [Releases](https://github.com/redrob-labs/redrob-os/releases/la
 
 | Target | File | Path |
 |--------|------|------|
-| PC / laptop (x86-64, UEFI) | `redrob-os-<version>-x86_64.iso` | Installer USB (this page, sections 1–4) |
-| Raspberry Pi 5 | `redrob-os-<version>-aarch64.raw.xz` | Raw image (section 6) |
+| PC / laptop (x86-64, UEFI) | `redrob-os-<version>-linux-x86_64.iso` | Installer USB (this page, sections 1–4) |
+| Raspberry Pi 5 | `redrob-os-<version>-linux-aarch64.img.xz` | Raw image (section 6) |
 
 Requirements: 64-bit UEFI PC, 4 GB RAM (8 GB recommended), 20 GB of free disk
 (64 GB recommended), a 4 GB+ USB stick. Secure Boot can stay on.
@@ -18,11 +18,11 @@ Requirements: 64-bit UEFI PC, 4 GB RAM (8 GB recommended), 20 GB of free disk
 
 ## 1. Download
 
-From the latest release grab the `.iso` and its `.sha256` file. Checking the
+From the latest release grab the `.iso` and the `SHA256SUMS` file. Checking the
 checksum is optional but quick:
 
 ```sh
-sha256sum -c redrob-os-<version>-x86_64.iso.sha256
+sha256sum -c --ignore-missing SHA256SUMS
 ```
 
 ## 2. Write the installer to a USB stick
@@ -40,7 +40,7 @@ Command line (Linux/macOS) — find the device with `lsblk` / `diskutil list`
 first; `dd` has no undo:
 
 ```sh
-sudo dd if=redrob-os-<version>-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
+sudo dd if=redrob-os-<version>-linux-x86_64.iso of=/dev/sdX bs=4M status=progress oflag=sync
 ```
 
 ## 3. Boot from the stick
@@ -149,10 +149,10 @@ when you open it in *Manual Partitioning*.
 There is no installer on the Pi: you write a ready-made disk image and the
 first boot asks for your account.
 
-1. Download `redrob-os-<version>-aarch64.raw.xz` (and its `.sha256`).
+1. Download `redrob-os-<version>-linux-aarch64.img.xz` (and `SHA256SUMS`).
 2. Write it to a microSD (A2-class, 32 GB+) or a USB/NVMe SSD with
    [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (*Use custom* →
-   pick the `.raw.xz`) or balenaEtcher. No need to unpack the `.xz`.
+   pick the `.img.xz`) or balenaEtcher. No need to unpack the `.xz`.
 3. Boot. The image grows to fill the card, then a **first-boot wizard** asks
    for language, keyboard, time zone and creates your user. After that the
    desktop starts and the [welcome dialog](./first-run.md) appears.

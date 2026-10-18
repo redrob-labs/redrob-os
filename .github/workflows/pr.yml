@@ -102,7 +102,7 @@ jobs:
           echo "build args:$args"
       - name: podman build
         # Context is the repository root so the Containerfile can COPY agent/ (compiled in its own
-        # `FROM rust AS agent-build` stage) and image/* overlays. See docs/ci.md, "Contract with
+        # `FROM rust AS redrob-build` stage) and image/* overlays. See docs/ci.md, "Contract with
         # the Containerfile".
         run: |
           set -euo pipefail
@@ -115,6 +115,11 @@ jobs:
             .
       - name: bootc container lint
         run: podman run --rm localhost/redrob-os:pr bootc container lint
+      - name: podman build (task sandbox image)
+        run: |
+          set -euo pipefail
+          podman build --build-arg TARGETARCH=amd64 -f image/sandbox/Containerfile -t localhost/redrob-sandbox:pr .
+          podman run --rm localhost/redrob-sandbox:pr sh -c 'git --version && python3 --version && node --version && test -x /usr/local/bin/redrob-code'
 
   scripts:
     name: scripts (shellcheck + py_compile)

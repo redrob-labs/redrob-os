@@ -154,9 +154,15 @@ jobs:
           done
           podman manifest push --all --digestfile digest.txt redrob-os "docker://${IMAGE}:${VER}"
           echo "DIGEST=$(cat digest.txt)" >> "$GITHUB_ENV"
-      - name: cosign sign (keyless)
+      - name: cosign sign (key for devices + keyless)
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ""
         run: |
           set -euo pipefail
+          # Key signature: what devices verify (/etc/containers/policy.json + redrob-os.pub).
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${DIGEST}"
+          # Keyless signature in addition, for humans running `cosign verify`.
           cosign sign --yes "${IMAGE}@${DIGEST}"
           cosign verify \
             --certificate-identity-regexp "^https://github.com/${{ github.repository }}/" \

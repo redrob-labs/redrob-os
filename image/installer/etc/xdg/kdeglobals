@@ -5,6 +5,8 @@
 # overlay; only behaviour and fonts live here.
 
 [KDE]
+# Default global theme: the Redrob look-and-feel package shipped by image/branding.
+LookAndFeelPackage=ai.redrob.desktop
 # Windows-style: single click selects, double click opens.
 SingleClick=false
 AnimationDurationFactor=0.5

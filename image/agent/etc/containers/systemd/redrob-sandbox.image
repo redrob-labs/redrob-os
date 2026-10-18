@@ -3,12 +3,10 @@
 # storage, which is where podman.service -- the socket the agent's `docker run`
 # reaches -- looks for it. Without this the first task waits on a registry pull.
 #
-# TODO(ci): once CI publishes ghcr.io/redrob-labs/redrob-sandbox, make this a
-# bootc logically-bound image so it ships with the OS image and is present
-# offline at first boot: ln -s /etc/containers/systemd/redrob-sandbox.image
-# /usr/lib/bootc/bound-images.d/redrob-sandbox.image (image/Containerfile).
-# Not done yet because a bound image that does not exist in the registry makes
-# `bootc upgrade` fail; a failing pull in this unit only logs.
+# CI publishes ghcr.io/redrob-labs/redrob-sandbox next to the OS image
+# (.github/workflows/build-image.yml, job `sandbox`), and image/Containerfile links
+# this unit into /usr/lib/bootc/bound-images.d/ so bootc pulls the sandbox together
+# with every OS update and it is present offline at first boot.
 
 [Unit]
 Description=Redrob task sandbox image (pull into root podman storage)
