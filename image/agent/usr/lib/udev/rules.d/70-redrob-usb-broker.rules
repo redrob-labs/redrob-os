@@ -1,0 +1,19 @@
+# Redrob USB broker (modules/usb-broker): default-deny USB admission.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# The broker (redrob-usb-broker.service, root) sets authorized_default=0 on every
+# host controller when it starts and approves devices over /run/redrob/usb.sock.
+# These rules close the two gaps around it:
+#
+# 1. A host controller that appears AFTER the broker started (hot-plugged hub,
+#    Thunderbolt dock, module reload) is armed by udev the moment it shows up,
+#    so no device can slip in before the broker's next sysfs sweep.
+ACTION=="add", SUBSYSTEM=="usb", DEVTYPE=="usb_device", KERNEL=="usb[0-9]*", ATTR{authorized_default}="0"
+
+# 2. Removable storage the broker has admitted is mounted read-only by the broker
+#    itself under /run/media/redrob. Tell the desktop (udisks2 -> Plasma device
+#    notifier) not to auto-mount it read-write on top. The device stays visible
+#    in Dolphin; the user can still mount it by hand (that goes through polkit).
+SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ATTR{removable}=="1", ENV{UDISKS_AUTO}="0"
+SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ATTRS{removable}=="1", ENV{UDISKS_AUTO}="0"

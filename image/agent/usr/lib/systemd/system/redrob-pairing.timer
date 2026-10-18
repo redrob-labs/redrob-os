@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the Redrob pairing banner (the code is one-time and changes after pairing)
+
+[Timer]
+OnBootSec=20s
+OnUnitActiveSec=30s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

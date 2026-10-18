@@ -1,0 +1,63 @@
+# Redrob local inference (modules/local-inference) as a podman quadlet.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Serves the ~1B router model on loopback so the agent has an offline fallback
+# when Redrob Console is unreachable (agent.toml provider `llamacpp.router`,
+# http://127.0.0.1:8081, model alias "router"). Replaces the Buildroot supervisor
+# (redrob-local-inference.service + /usr/bin/llama-server): on bootc the server
+# is the upstream llama.cpp container, pulled on first start.
+#
+# Off by default. Turn on:  touch /var/lib/redrob/inference/enabled
+#                           cp router.gguf /var/lib/redrob/inference/models/
+#                           systemctl restart redrob-inference.service
+# Turn off:                 rm /var/lib/redrob/inference/enabled; systemctl stop redrob-inference
+# The model file is provisioned separately from OS updates (bootc keeps /var).
+
+[Unit]
+Description=Redrob local-inference (llama.cpp router model on loopback)
+Documentation=https://github.com/redrob-labs/redrob-os/blob/develop/docs/agent-on-bootc.md
+After=network-online.target
+Wants=network-online.target
+# Started before the agent so the fallback provider is up when the agent boots.
+Before=redrob-agent.service
+ConditionPathExists=/var/lib/redrob/inference/enabled
+ConditionPathExists=/var/lib/redrob/inference/models/router.gguf
+
+[Container]
+# ghcr.io/ggml-org/llama.cpp:server-b11718 (== :server on 2026-10-18), pinned by
+# the multi-arch index digest (linux/amd64 + linux/arm64). Bump deliberately.
+Image=ghcr.io/ggml-org/llama.cpp@sha256:4b7be0376002b4450a357a109bab804093ff9251193cc75ed4ce0cb39953ff5c
+ContainerName=redrob-inference
+# Host network + loopback bind: the router answers raw prompts with no auth and
+# must never bind a routable interface. Egress is cut in [Service] below.
+Network=host
+Environment=LLAMA_ARG_HOST=127.0.0.1
+Environment=LLAMA_ARG_PORT=8081
+# Entrypoint is /app/llama-server; these are its arguments. --alias MUST match
+# agent.toml provider `model` = "router". --no-webui keeps the surface to the API.
+Exec=--model /models/router.gguf --alias router --ctx-size 8192 --threads 4 --no-webui
+Volume=/var/lib/redrob/inference/models:/models:ro,z
+ReadOnly=true
+# Nothing in the image needs root; 65534 = nobody.
+User=65534
+Group=65534
+NoNewPrivileges=true
+DropCapability=ALL
+# The server does not fork; podman's --init is not needed.
+HealthCmd=none
+
+[Service]
+Restart=always
+RestartSec=5
+TimeoutStartSec=300
+# Egress lockdown on the unit's cgroup (quadlet runs the container in it): the
+# model may bind loopback but can reach nothing off-box.
+IPAddressAllow=localhost
+IPAddressDeny=any
+# A ~1B Q4 model plus an 8k KV cache fits well under this; tune per board.
+MemoryHigh=1500M
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target

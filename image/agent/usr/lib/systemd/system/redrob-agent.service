@@ -1,0 +1,63 @@
+[Unit]
+Description=Redrob Agent (resident agent runtime)
+Documentation=https://github.com/redrob-labs/redrob-os/blob/develop/docs/agent-on-bootc.md
+After=network-online.target redrob-firstboot.service redrob-broker.service podman.socket
+Wants=network-online.target redrob-broker.service podman.socket
+# firstboot is a oneshot with a path condition: once the device has an identity
+# the unit is "inactive (condition failed)" and Requires= would still be satisfied
+# through After=; Wants= keeps the agent up even if firstboot is masked by hand.
+Wants=redrob-firstboot.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=redrob-agent
+Group=redrob-agent
+# redrob-broker: /run/redrob/{broker,usb}.sock. redrob-sandbox: /run/podman/podman.sock.
+SupplementaryGroups=redrob-broker redrob-sandbox
+Environment=ZEROCLAW_CONFIG_DIR=/var/lib/redrob/agent
+Environment=ZEROCLAW_DATA_DIR=/var/lib/redrob/agent/data
+Environment=ZEROCLAW_WORKSPACE=/var/lib/redrob/agent/work
+# Task sandbox. The agent only knows the `docker` CLI (it resolves "docker" on
+# PATH and runs `docker run --rm --init --interactive --network none --memory ..
+# --cpus .. --read-only --volume <workspace>:/workspace:rw --workdir /workspace
+# <image> sh -c <cmd>`; no --runtime flag). On Redrob OS `docker` is the
+# podman-docker shim, DOCKER_HOST sends it to the root podman API socket, and
+# podman.service's drop-in (podman.service.d/50-redrob-sandbox.conf) makes
+# gVisor runsc the default OCI runtime of that service only.
+Environment=DOCKER_HOST=unix:///run/podman/podman.sock
+Environment=RUST_LOG=info
+ExecStart=/usr/bin/redrob-agent daemon
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+# Writable state lives only under /var/lib/redrob/agent.
+StateDirectory=
+ReadWritePaths=/var/lib/redrob/agent
+ReadOnlyPaths=/var/lib/redrob/inference/models
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+
+# Idle budget (F-NFR: OS + agent idle <= 1 GiB); sandboxes are accounted to
+# podman.service, not here.
+MemoryHigh=512M
+MemoryMax=1G
+CPUWeight=100
+
+[Install]
+WantedBy=multi-user.target

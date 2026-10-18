@@ -1,0 +1,23 @@
+# Redrob task sandbox image (podman quadlet, .image): pre-pulls the container the
+# agent runs tasks in (agent.toml [runtime.docker] image) into root podman
+# storage, which is where podman.service -- the socket the agent's `docker run`
+# reaches -- looks for it. Without this the first task waits on a registry pull.
+#
+# TODO(ci): once CI publishes ghcr.io/redrob-labs/redrob-sandbox, make this a
+# bootc logically-bound image so it ships with the OS image and is present
+# offline at first boot: ln -s /etc/containers/systemd/redrob-sandbox.image
+# /usr/lib/bootc/bound-images.d/redrob-sandbox.image (image/Containerfile).
+# Not done yet because a bound image that does not exist in the registry makes
+# `bootc upgrade` fail; a failing pull in this unit only logs.
+
+[Unit]
+Description=Redrob task sandbox image (pull into root podman storage)
+After=network-online.target
+Wants=network-online.target
+
+[Image]
+Image=ghcr.io/redrob-labs/redrob-sandbox:stable
+# Quadlet .image units pull with --policy missing by default: no re-pull on boot.
+
+[Install]
+WantedBy=multi-user.target

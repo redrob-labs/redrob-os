@@ -1,0 +1,138 @@
+# Redrob Agent config (Redrob OS, bootc image).
+# Lives in /etc/redrob/agent.toml (persistent, admin-editable). redrob-firstboot
+# copies it ONCE to /var/lib/redrob/agent/config.toml, which is the file the agent
+# reads and edits (`redrob-agent config set ...`). Edit that copy on a running
+# device; edit this one to change what NEW devices start from.
+# Ported from deploy/config/agent.toml: /mnt/data/redrob -> /var/lib/redrob.
+
+schema_version = 3
+
+# ---------------------------------------------------------------------------
+# Inference: Redrob Console is the default. OpenAI-compatible base URL.
+# The key is NOT in this file: pairing writes it into the encrypted secrets
+# store (`redrob-agent config set providers.models.custom.console.api_key ...`).
+# ---------------------------------------------------------------------------
+[providers.models.custom.console]
+uri = "https://console.redrob.ai/api/backend/v1"
+model = "auto"
+wire_api = "chat_completions"
+context_window = 1000000
+timeout_secs = 120
+fallback = ["llamacpp.router"]
+
+# Local router model (F6). Served on loopback by the local-inference quadlet
+# (redrob-inference.container) when /var/lib/redrob/inference/enabled exists;
+# otherwise this provider is simply unreachable and the fallback is skipped.
+[providers.models.llamacpp.router]
+uri = "http://127.0.0.1:8081"
+model = "router"
+context_window = 32000
+vision = false
+
+[agents.default]
+enabled = true
+model_provider = "custom.console"
+risk_profile = "default"
+runtime_profile = "default"
+
+[agents.default.workspace]
+path = "/var/lib/redrob/agent/work"
+
+# ---------------------------------------------------------------------------
+# Autonomy: read-only tools auto-approved, everything that writes outside the
+# workspace or leaves the device goes through the approval gate (F4).
+# ---------------------------------------------------------------------------
+[risk_profiles.default]
+level = "supervised"
+auto_approve = [
+  "file_read", "glob_search", "content_search", "image_info",
+  "memory_recall", "memory_store", "calculator",
+]
+forbidden_paths = [
+  "/var/lib/redrob/broker",
+  "/var/lib/redrob/identity/device.key",
+  "/var/lib/redrob/agent/config.toml",
+  "/var/lib/redrob/agent/.secret_key",
+  "/run/podman/podman.sock",
+]
+shell_env_passthrough = ["LANG", "TZ", "PATH"]
+# In-process sandbox for tools that do not go through the container runtime
+# (landlock/bubblewrap, auto-detected). Task shells go through [runtime] below.
+sandbox_enabled = true
+sandbox_backend = "auto"
+
+[runtime_profiles.default]
+max_tool_iterations = 50
+max_tool_result_chars = 50000
+max_context_tokens = 200000
+
+# ---------------------------------------------------------------------------
+# Tool sandbox (F4): podman + gVisor.
+# The agent speaks only the `docker` CLI: it resolves `docker` on PATH and runs
+#   docker run --rm --init --interactive --network <network> --memory <mb>m
+#     --cpus <n> --read-only --env <passthrough...>
+#     --volume <workspace>:/workspace:rw --workdir /workspace <image> sh -c <cmd>
+# with NO --runtime flag. On Redrob OS: `docker` = podman-docker shim,
+# DOCKER_HOST=unix:///run/podman/podman.sock (redrob-agent.service) sends it to
+# the root podman API service, and that service's containers.conf override
+# (/etc/redrob/containers-sandbox.conf) makes runsc the default runtime.
+# ---------------------------------------------------------------------------
+[runtime]
+kind = "docker"
+shell = "bash"
+
+[runtime.docker]
+# Built and pushed by CI next to the OS image; pulled on first use.
+image = "ghcr.io/redrob-labs/redrob-sandbox:stable"
+network = "none"
+memory_limit_mb = 2048
+cpu_limit = 2.0
+read_only_rootfs = true
+mount_workspace = true
+allowed_workspace_roots = ["/var/lib/redrob/agent/work"]
+
+[http_request]
+allowed_domains = []          # filled per-task by the credential broker policy
+
+# ---------------------------------------------------------------------------
+# Egress (F4/F5): every HTTP call the agent makes goes through the credential
+# broker's forward proxy on loopback. The broker allow-lists hosts
+# (/etc/redrob/broker.toml [egress]) and writes the audit log; the local router
+# model and the broker socket are reached directly.
+# ---------------------------------------------------------------------------
+[proxy]
+enabled = true
+http_proxy = "http://127.0.0.1:3128"
+https_proxy = "http://127.0.0.1:3128"
+no_proxy = ["127.0.0.1", "localhost"]
+scope = "zeroclaw"
+
+[web_fetch]
+allowed_domains = []
+
+# ---------------------------------------------------------------------------
+# Local gateway (pairing + dashboard). Bound to all interfaces so a paired
+# phone on the SAME NETWORK can reach it directly (QR carries the LAN address).
+# Every route is gated by the one-time pairing token (require_pairing), so an
+# unpaired host on the LAN gets nothing. Caveat: this listener is plain HTTP,
+# so dashboard traffic is unencrypted on the local network -- fine for a trusted
+# home/office LAN, not for a hostile one. For off-LAN/remote access use the
+# [relay] bridge instead (docs/remote-access.md).
+# ---------------------------------------------------------------------------
+[gateway]
+host = "0.0.0.0"
+port = 42617
+allow_public_bind = true
+require_pairing = true
+
+[memory]
+backend = "sqlite"
+auto_save = true
+hygiene_enabled = true
+archive_after_days = 7
+purge_after_days = 30
+embedding_provider = "none"
+search_mode = "bm25"
+
+[secrets]
+encrypt = true
