@@ -1,0 +1,34 @@
+[Unit]
+Description=Redrob pairing banner (device id, address, one-time code, QR on the console)
+Documentation=https://github.com/redrob-labs/redrob-os/blob/develop/docs/agent-on-bootc.md
+After=redrob-agent.service network-online.target
+Wants=redrob-agent.service
+ConditionPathExists=/var/lib/redrob/identity/device-id
+
+[Service]
+Type=oneshot
+# Root only to read the agent's 0600 admin token and write /run/issue.d.
+# --stdout: the banner also lands in the journal (journalctl -u redrob-pairing).
+# Desktop sessions do not see /etc/issue; there the user-side autostart
+# (/etc/xdg/autostart/redrob-pairing-notify.desktop) reads the JSON this writes.
+ExecStart=/usr/bin/redrob-pairing --stdout \
+    --data-dir /var/lib/redrob/agent/data \
+    --identity-dir /var/lib/redrob/identity \
+    --gateway 127.0.0.1:42617 \
+    --issue /run/issue.d/50-redrob-pairing.issue \
+    --json /run/redrob-pairing/pairing.json
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/run/issue.d /run/redrob-pairing
+# Not /run/redrob: that directory belongs to redrob-broker (0750, its own user).
+# /run/redrob-pairing is 0755 so the logged-in desktop user can read pairing.json.
+RuntimeDirectory=issue.d redrob-pairing
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+MemoryMax=32M

@@ -1,0 +1,45 @@
+[Unit]
+Description=Redrob Credential Broker (holds tokens outside the sandbox)
+Documentation=https://github.com/redrob-labs/redrob-os/blob/develop/docs/agent-on-bootc.md
+After=network-online.target redrob-firstboot.service systemd-tmpfiles-setup.service
+Wants=network-online.target redrob-firstboot.service
+Before=redrob-agent.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=redrob-broker
+Group=redrob-broker
+Environment=RUST_LOG=info
+ExecStart=/usr/bin/redrob-broker --config /etc/redrob/broker.toml
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+# /run/redrob/broker.sock: dir owned by the broker, group redrob-broker (the agent
+# is a member). tmpfiles.d/redrob.conf creates it with the same owner and mode.
+RuntimeDirectory=redrob
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+ReadWritePaths=/var/lib/redrob/broker /var/lib/redrob/audit
+ReadOnlyPaths=/var/lib/redrob/identity
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+MemoryHigh=96M
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target
