@@ -18,7 +18,8 @@ Each pull request runs the full CI build of the image. If CI is green, merge. If
 red, the pull request itself is the report: read the failing step, fix or close.
 
 Base content *within* a release (kernel, desktop, security updates) needs no pull request
-at all: the tag is a moving tag, so the next scheduled CI build picks it up.
+at all: the tag is a moving tag, so the next `build-image` run (a merge to `main` or a
+manual dispatch) picks it up.
 
 ## 2. Bump the Fedora major once a year
 
@@ -39,7 +40,7 @@ Do not skip two releases: the gap in base updates would exceed the support windo
 
 - **CI** (`.github/workflows/`): the image build on pull requests and on `develop`, the
   signed publish to `ghcr.io/redrob-labs/redrob-os`, and the installer build on release
-  tags. A red scheduled build means the base moved under us; the log says where.
+  tags. A red `build-image` run means the base moved under us; the log says where.
 - **greenboot** on devices: after each update the health checks run at boot; a failing
   check makes the device roll back to the previous image and record it. Users see
   "rolled back" in Settings → Updates. If several devices report the same rollback,

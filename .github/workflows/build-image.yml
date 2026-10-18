@@ -2,11 +2,9 @@
 #
 # Runs on:
 #   - push to main            the merge of a release or hotfix pull request
-#   - schedule, weekly        Tuesday 03:00 KST (Monday 18:00 UTC). The base image
-#                             (quay.io/fedora-ostree-desktops/kinoite) is rebuilt by Fedora with
-#                             security fixes; nothing in this repository changes, but devices only
-#                             receive those fixes when OUR image is rebuilt on top of the new base.
-#                             Agreed with Janghoon 2026-10-18.
+#   (no schedule: Janghoon declined a weekly rebuild. Base-image security refreshes reach
+#    devices when a Renovate PR bumps the base pin or when a release/hotfix lands on main;
+#    `workflow_dispatch` rebuilds on demand.)
 #   - workflow_dispatch       a manual rebuild
 #
 # Shape: one native build per architecture (amd64 on ubuntu-24.04, arm64 on ubuntu-24.04-arm --
@@ -29,8 +27,6 @@ name: build-image
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: "0 18 * * 1" # Tue 03:00 KST -- weekly rebuild on the upstream security-refreshed base
   workflow_dispatch:
 
 permissions:

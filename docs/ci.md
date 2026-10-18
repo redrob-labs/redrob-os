@@ -8,7 +8,7 @@ it to `ghcr.io/redrob-labs/redrob-os`; installed devices pull it from there. Fou
 |---|---|---|
 | `pr.yml` | pull request | `agent` fmt + clippy (skipped when no Rust changed), `image` podman build + `bootc container lint` (never pushed), `scripts` shellcheck + `py_compile` |
 | `pr-policy.yml` | pull request (target) | org rules from `redrob-labs/.github`: open-PR cap, self-review before requesting a maintainer |
-| `build-image.yml` | push to `main`, weekly, manual | build amd64 (+ experimental arm64), manifest list tagged `stable`, `44`, `sha-<short>`, push to GHCR, cosign sign |
+| `build-image.yml` | push to `main`, manual | build amd64 (+ experimental arm64), manifest list tagged `stable`, `44`, `sha-<short>`, push to GHCR, cosign sign |
 | `release.yml` | tag `v*`, manual dry run | image tagged `<version>` + installer ISO (x86_64) + raw image (aarch64) on a GitHub Release |
 
 Nothing runs on an ordinary push: a push to `main` is the merge of a pull request that already
@@ -59,11 +59,10 @@ no root filesystem, the image needs `/usr/lib/bootc/install/20-redrob.toml` with
 
 ## build-image.yml
 
-Runs on push to `main`, on `workflow_dispatch`, and weekly on `0 18 * * 1` UTC (Tuesday 03:00 KST).
-The weekly rebuild exists because the base image `quay.io/fedora-ostree-desktops/kinoite:44` is
-rebuilt by Fedora with security fixes; nothing in this repository changes, but devices receive
-those fixes only when our image is rebuilt on top of the new base. Janghoon agreed to the schedule
-on 2026-10-18.
+Runs on push to `main` and on `workflow_dispatch`. There is no scheduled rebuild (Janghoon
+declined one on 2026-10-18): base-image security refreshes reach devices when a Renovate PR
+bumps the base pin or when a release/hotfix lands on `main`; run the workflow by hand for an
+out-of-band rebuild.
 
 1. `build` matrix: `amd64` on `ubuntu-24.04`, `arm64` on `ubuntu-24.04-arm` (native, no qemu --
    compiling the agent under emulation would take hours). Each pushes `sha-<short>-<arch>`.
