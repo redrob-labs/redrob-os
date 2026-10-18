@@ -187,11 +187,11 @@ RUN --mount=type=tmpfs,dst=/tmp \
            --add "plymouth" \
            --kver "$KVER" "/usr/lib/modules/$KVER/initramfs.img"
 
-# 6c. The agent's task sandbox image is logically bound to this OS image, so bootc
-#     pulls it together with every update and first boot works offline.
-RUN mkdir -p /usr/lib/bootc/bound-images.d && \
-    ln -sf /etc/containers/systemd/redrob-sandbox.image \
-           /usr/lib/bootc/bound-images.d/redrob-sandbox.image
+# 6c. The task sandbox image is NOT logically bound (no /usr/lib/bootc/bound-images.d
+#     entry): `bootc install` resolves bound images at install time, which breaks
+#     bootc-image-builder's read-only store and any offline Anaconda install. The
+#     quadlet unit image/agent/etc/containers/systemd/redrob-sandbox.image pulls it on
+#     first boot instead; a failed pull only logs and the first task retries.
 
 # 7. Cleanup to a shape bootc accepts (empty /var, /opt -> var/opt, no /tmp
 #    leftovers), apply presets, commit, lint.

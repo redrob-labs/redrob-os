@@ -3,10 +3,11 @@
 # storage, which is where podman.service -- the socket the agent's `docker run`
 # reaches -- looks for it. Without this the first task waits on a registry pull.
 #
-# CI publishes ghcr.io/redrob-labs/redrob-sandbox next to the OS image
-# (.github/workflows/build-image.yml, job `sandbox`), and image/Containerfile links
-# this unit into /usr/lib/bootc/bound-images.d/ so bootc pulls the sandbox together
-# with every OS update and it is present offline at first boot.
+# CI publishes ghcr.io/redrob-labs/redrob-os:sandbox next to the OS image
+# (.github/workflows/build-image.yml, job `sandbox`). It is deliberately NOT a
+# bootc logically-bound image: bootc resolves bound images at install time, which
+# breaks bootc-image-builder and offline Anaconda installs. This unit pulls it on
+# first boot; a failed pull only logs and the first task retries the pull.
 
 [Unit]
 Description=Redrob task sandbox image (pull into root podman storage)
