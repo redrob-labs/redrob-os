@@ -1,5 +1,7 @@
 # Credential broker verification (L0, dev host)
 
+> Historical record (2026-10-18): measured against the former Buildroot image and its `deploy/` paths, both removed when the image moved to bootc (`docs/decisions/0001-bootc-base.md`). The module code under `modules/` is unchanged; paths and harness names below are as they were on that date.
+
 Date: 2026-10-08. Binary: `modules/credential-broker/broker` release build (24.9 s).
 Device image not rebuilt for this stage; the unit is verified with `systemd-analyze` only
 (`scripts/verify-units.sh`, 4 units) and ships with the next image build.

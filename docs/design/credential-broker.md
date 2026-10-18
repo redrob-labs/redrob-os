@@ -1,9 +1,15 @@
 # Credential broker (F5)
 
 Status: **phase 1 implemented, 2026-10-08** -- `modules/credential-broker/broker/`
-(`redrob-broker`, Rust), unit `deploy/systemd/redrob-broker.service`, config
-`deploy/config/broker.toml`, verification in `../verification/credential-broker.md`.
+(`redrob-broker`, Rust), verification in `../verification/credential-broker.md`.
 Implements requirement F5 and the egress half of F4.
+
+> Superseded paths (2026-10-18): `deploy/systemd/redrob-broker.service` and
+> `deploy/config/broker.toml` were removed with the Buildroot image; the unit and
+> config now live at their final absolute paths under `image/agent/` and are
+> copied onto `/` by the Containerfile (`docs/decisions/0001-bootc-base.md`). The
+> on-device state root `/mnt/data/redrob/...` below is Buildroot-era; on the
+> bootc image persistent state is under `/var` (see `docs/agent-on-bootc.md`).
 
 ## What phase 1 ships, and where it deviates from the design below
 

@@ -47,6 +47,13 @@ redrob-agent, llama.cpp)는 4K 페이지 전제로 빌드/검증한다. 실기�
 `getconf PAGESIZE`가 4096인지, gVisor `runsc install`이 통과하는지 가장 먼저 측정한다.
 → 사용자 확인 필요: 16K 성능을 포기하는 트레이드오프에 동의하는지.
 
+**2026-10-18 추가 — 베이스 변경으로 해소(resolved by base change).** 이미지가 Buildroot
+에서 bootc(Fedora Kinoite 기반 부팅 가능 컨테이너)로 바뀌었다
+(`docs/decisions/0001-bootc-base.md`). 커널은 이제 베이스 배포판이 공급하며, 그
+aarch64 커널은 4K 페이지다. 따라서 `kernel=kernel8` 고정, 4K 전제 바이너리 빌드,
+Buildroot 커널 config 관리라는 위 결정은 전부 할 일이 없어졌다. 파이5 지원 자체는
+베이스 배포판 커널의 파이5 지원 여부에 따른다(ADR의 Consequences 참고).
+
 ## Q3. AI HAT+ 2(Hailo)에 자체 모델을 올릴 수 있는지
 
 **결론: 비전/CNN 모델(YOLO 류)은 변환해 올릴 수 있다. 변환 툴체인은 x86 전용이고,
