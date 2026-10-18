@@ -25,8 +25,13 @@ preset_units() {
     fi
   done
 }
-mapfile -t system_units < <(sed -n 's/^enable[[:space:]]\+//p' /usr/lib/systemd/system-preset/90-redrob.preset)
-mapfile -t user_units   < <(sed -n 's/^enable[[:space:]]\+//p' /usr/lib/systemd/user-preset/90-redrob.preset)
+#    Read every redrob-owned preset file (base OS 90-redrob, agent 80-redrob-agent,
+#    installer 85-redrob-initial-setup...): on the v0.2.6 QEMU install the agent
+#    stack stayed disabled because only 90-redrob.preset was applied here.
+mapfile -t system_units < <(cat /usr/lib/systemd/system-preset/*redrob*.preset 2>/dev/null | sed -n 's/^enable[[:space:]]\+//p')
+mapfile -t user_units   < <(cat /usr/lib/systemd/user-preset/*redrob*.preset 2>/dev/null | sed -n 's/^enable[[:space:]]\+//p')
+echo "presets: system=${system_units[*]}"
+echo "presets: user=${user_units[*]}"
 preset_units system "${system_units[@]}"
 preset_units user   "${user_units[@]}"
 
