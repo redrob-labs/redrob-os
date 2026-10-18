@@ -8,6 +8,11 @@
 //! same code over the agent's channels.
 //!
 //! The QR encodes `redrob://pair?device=<id>&host=<ip>:<port>&code=<code>`.
+//!
+//! `--notify` is the desktop half (Redrob OS bootc image, KDE): run from the user's
+//! session autostart, it reads the `pairing.json` the root service keeps fresh and
+//! shows a desktop notification (`notify-send`) while a pairing code exists. It
+//! exits by itself once the device is paired, so nothing lingers in the tray.
 use qrcodegen::{QrCode, QrCodeEcc};
 use std::fs;
 use std::io::{Read, Write};
@@ -22,11 +27,12 @@ struct Opts {
     issue_path: PathBuf,
     json_path: PathBuf,
     stdout: bool,
+    notify: bool,
 }
 
 fn usage() -> ! {
     eprintln!(
-        "usage: redrob-pairing [--data-dir D] [--identity-dir D] [--gateway host:port] [--issue PATH] [--json PATH] [--stdout]"
+        "usage: redrob-pairing [--data-dir D] [--identity-dir D] [--gateway host:port] [--issue PATH] [--json PATH] [--stdout]\n       redrob-pairing --notify [--json PATH]   (desktop session: notification while unpaired)"
     );
     std::process::exit(2)
 }
@@ -123,6 +129,143 @@ pub fn pairing_uri(device: &str, host: &str, code: &str) -> String {
     format!("redrob://pair?device={device}&host={host}&code={code}")
 }
 
+/// What `pairing.json` says right now, as far as the desktop notification cares.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PairingState {
+    pub device: String,
+    pub host: String,
+    pub code: Option<String>,
+}
+
+/// First address from the flat `"addresses":["a","b"]` array, if any.
+fn json_first_addr(body: &str) -> Option<String> {
+    let needle = "\"addresses\":[";
+    let i = body.find(needle)? + needle.len();
+    let rest = body[i..].trim_start();
+    let rest = rest.strip_prefix('"')?;
+    Some(rest.split('"').next()?.to_string()).filter(|s| !s.is_empty())
+}
+
+/// Bare integer after `"port":`.
+fn json_port(body: &str) -> Option<String> {
+    let needle = "\"port\":";
+    let i = body.find(needle)? + needle.len();
+    let digits: String = body[i..]
+        .trim_start()
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    (!digits.is_empty()).then_some(digits)
+}
+
+/// Parse the `pairing.json` this tool writes in service mode.
+pub fn parse_pairing_json(body: &str) -> Option<PairingState> {
+    let device = json_str(body, "device")?;
+    let port = json_port(body).unwrap_or_else(|| "42617".into());
+    let host = json_first_addr(body)
+        .map(|a| format!("{a}:{port}"))
+        .unwrap_or_else(|| format!("<no address yet>:{port}"));
+    Some(PairingState {
+        device,
+        host,
+        code: json_str(body, "code"),
+    })
+}
+
+/// Body of the desktop notification shown while unpaired.
+pub fn notify_body(st: &PairingState, code: &str) -> String {
+    format!(
+        "Open the Redrob app on your phone (same Wi-Fi) and enter\n\
+         code  {code}\n\
+         device at  {host}\n\
+         or open  {uri}",
+        host = st.host,
+        uri = pairing_uri(&st.device, &st.host, code)
+    )
+}
+
+/// Send (or replace) a desktop notification via `notify-send`; returns the id
+/// `notify-send -p` printed, so the next call can replace this one in place.
+fn notify_send(summary: &str, body: &str, urgency: &str, replace: Option<u32>) -> Option<u32> {
+    let mut cmd = std::process::Command::new("notify-send");
+    cmd.args(["--app-name=Redrob OS", "--icon=redrob-os", "--print-id"])
+        .arg(format!("--urgency={urgency}"));
+    if let Some(id) = replace {
+        cmd.arg(format!("--replace-id={id}"));
+    }
+    if urgency == "low" {
+        cmd.arg("--expire-time=8000");
+    }
+    cmd.arg(summary).arg(body);
+    let out = cmd.output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    String::from_utf8_lossy(&out.stdout)
+        .trim()
+        .parse::<u32>()
+        .ok()
+}
+
+/// Desktop-session loop: poll `pairing.json` every 30 s, keep ONE notification
+/// up to date while a code exists, replace it with a short "paired" note and exit
+/// once the code is gone. Exits quietly if the agent never produces a code
+/// (already paired before login, pairing disabled, or the service is not running).
+fn run_notify(json_path: &Path) -> ! {
+    const POLL: Duration = Duration::from_secs(30);
+    const MAX_WAIT_FOR_FILE: u32 = 40; // 20 min: service not up / not a Redrob OS box
+    const MAX_QUIET: u32 = 4; // 2 min of "no code" before shown -> paired or disabled
+
+    let mut shown: Option<(String, Option<u32>)> = None; // (code, notification id)
+    let mut missing = 0u32;
+    let mut quiet = 0u32;
+    loop {
+        match fs::read_to_string(json_path)
+            .ok()
+            .and_then(|b| parse_pairing_json(&b))
+        {
+            None => {
+                missing += 1;
+                if missing >= MAX_WAIT_FOR_FILE {
+                    std::process::exit(0);
+                }
+            }
+            Some(st) => {
+                let prev_code = shown.as_ref().map(|(c, _)| c.clone());
+                let prev_id = shown.as_ref().and_then(|(_, id)| *id);
+                match st.code.as_deref() {
+                    Some(code) if prev_code.as_deref() == Some(code) => {}
+                    Some(code) => {
+                        let id = notify_send(
+                            "Redrob OS -- pair this device",
+                            &notify_body(&st, code),
+                            "critical",
+                            prev_id,
+                        );
+                        shown = Some((code.to_string(), id));
+                    }
+                    None if shown.is_some() => {
+                        notify_send(
+                            "Redrob OS -- paired",
+                            "This device is now paired with your phone.",
+                            "low",
+                            prev_id,
+                        );
+                        std::process::exit(0);
+                    }
+                    None => {
+                        quiet += 1;
+                        if quiet >= MAX_QUIET {
+                            std::process::exit(0);
+                        }
+                    }
+                }
+            }
+        }
+        std::thread::sleep(POLL);
+    }
+}
+
 pub fn banner(
     device: &str,
     hostname: &str,
@@ -165,6 +308,7 @@ fn main() {
         issue_path: PathBuf::from("/run/issue.d/50-redrob-pairing.issue"),
         json_path: PathBuf::from("/run/redrob-pairing/pairing.json"),
         stdout: false,
+        notify: false,
     };
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -177,8 +321,13 @@ fn main() {
             "--issue" => o.issue_path = args.next().map(PathBuf::from).unwrap_or_else(|| usage()),
             "--json" => o.json_path = args.next().map(PathBuf::from).unwrap_or_else(|| usage()),
             "--stdout" => o.stdout = true,
+            "--notify" => o.notify = true,
             _ => usage(),
         }
+    }
+    if o.notify {
+        // Unprivileged desktop session: only the world-readable JSON is touched.
+        run_notify(&o.json_path);
     }
     let device = read_trim(&o.identity_dir.join("device-id")).unwrap_or_else(|| "unknown".into());
     let hostname = read_trim(Path::new("/etc/hostname"))
@@ -282,5 +431,24 @@ mod tests {
         assert_eq!(json_str(body, "pairing_code").as_deref(), Some("AbC123"));
         assert_eq!(json_str(r#"{"pairing_code":null}"#, "pairing_code"), None);
         assert_eq!(json_str(r#"{"other":"v"}"#, "pairing_code"), None);
+    }
+
+    #[test]
+    fn pairing_json_roundtrip_for_notify() {
+        // Exactly the shape the service mode writes.
+        let body = r#"{"device":"dev-1","hostname":"redrob-abc123","addresses":["192.168.1.9","10.0.0.2"],"port":42617,"code":"XYZ"}"#;
+        let st = parse_pairing_json(body).unwrap();
+        assert_eq!(st.device, "dev-1");
+        assert_eq!(st.host, "192.168.1.9:42617");
+        assert_eq!(st.code.as_deref(), Some("XYZ"));
+        let text = notify_body(&st, "XYZ");
+        assert!(text.contains("code  XYZ"));
+        assert!(text.contains("redrob://pair?device=dev-1&host=192.168.1.9:42617&code=XYZ"));
+
+        let paired = r#"{"device":"dev-1","hostname":"h","addresses":[],"port":42617,"code":null}"#;
+        let st = parse_pairing_json(paired).unwrap();
+        assert_eq!(st.code, None);
+        assert_eq!(st.host, "<no address yet>:42617");
+        assert!(parse_pairing_json("not json").is_none());
     }
 }
