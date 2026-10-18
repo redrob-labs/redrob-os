@@ -18,8 +18,21 @@ English: [install.md](./install.md).
 
 ## 1. 내려받기
 
-최신 릴리스에서 `.iso` 파일과 `SHA256SUMS` 파일을 받습니다. 체크섬 확인은 선택
-사항이지만 금방 끝납니다.
+최신 릴리스에서 설치 파일과 `SHA256SUMS` 파일을 받습니다. GitHub는 릴리스 파일을
+2 GiB까지만 받기 때문에 ISO가 `.iso.part0`, `.iso.part1`, ... 로 나뉘어 있습니다.
+조각을 모두 한 폴더에 받고 하나로 합칩니다.
+
+```sh
+# Linux / macOS
+cat redrob-os-<버전>-linux-x86_64.iso.part* > redrob-os-<버전>-linux-x86_64.iso
+```
+
+```powershell
+# Windows (PowerShell) -- 받은 조각을 모두 적습니다
+cmd /c copy /b redrob-os-<버전>-linux-x86_64.iso.part0+redrob-os-<버전>-linux-x86_64.iso.part1+redrob-os-<버전>-linux-x86_64.iso.part2 redrob-os-<버전>-linux-x86_64.iso
+```
+
+체크섬 확인은 선택 사항이지만 금방 끝납니다.
 
 ```sh
 sha256sum -c --ignore-missing SHA256SUMS

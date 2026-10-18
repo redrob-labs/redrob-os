@@ -18,8 +18,21 @@ Requirements: 64-bit UEFI PC, 4 GB RAM (8 GB recommended), 20 GB of free disk
 
 ## 1. Download
 
-From the latest release grab the `.iso` and the `SHA256SUMS` file. Checking the
-checksum is optional but quick:
+From the latest release grab the installer and the `SHA256SUMS` file. GitHub caps
+release files at 2 GiB, so the ISO comes as `.iso.part0`, `.iso.part1`, ... --
+download every part into one folder and join them:
+
+```sh
+# Linux / macOS
+cat redrob-os-<version>-linux-x86_64.iso.part* > redrob-os-<version>-linux-x86_64.iso
+```
+
+```powershell
+# Windows (PowerShell) -- list every part you downloaded
+cmd /c copy /b redrob-os-<version>-linux-x86_64.iso.part0+redrob-os-<version>-linux-x86_64.iso.part1+redrob-os-<version>-linux-x86_64.iso.part2 redrob-os-<version>-linux-x86_64.iso
+```
+
+Checking the checksum is optional but quick:
 
 ```sh
 sha256sum -c --ignore-missing SHA256SUMS
