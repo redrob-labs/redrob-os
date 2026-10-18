@@ -1,0 +1,8 @@
+-----BEGIN PUBLIC KEY-----
+TODO-REPLACE-BEFORE-FIRST-RELEASE: this file must be the cosign PUBLIC key
+whose private half signs ghcr.io/redrob-labs/redrob-os in CI
+(cosign generate-key-pair; private key -> repo secret COSIGN_PRIVATE_KEY,
+cosign.pub -> this file). Until then every pull of our image is refused by
+/etc/containers/policy.json, which is the intended fail-closed behaviour.
+See docs/image.md "Signing".
+-----END PUBLIC KEY-----
