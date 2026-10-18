@@ -41,9 +41,16 @@ dnf5 -y install --setopt=install_weak_deps=False \
   fprintd fprintd-pam \
   kde-connect
 
-# NVIDIA userspace (x86_64 only -- RPM Fusion ships no aarch64 build).
+# NVIDIA (x86_64 only -- RPM Fusion ships no aarch64 build). The kernel module rpm
+# built by the `akmods` stage is bind-mounted at /akmods; install it in the SAME
+# transaction as the userspace so `nvidia-kmod` is satisfied by it and dnf does not
+# pull akmod-nvidia (whose %post tries to build as root and fails).
 if [ "${ARCH}" = "x86_64" ]; then
-  dnf5 -y install --setopt=install_weak_deps=False \
+  kmods=()
+  for f in /akmods/kmod-nvidia-*.rpm; do [ -e "$f" ] && kmods+=("$f"); done
+  [ "${#kmods[@]}" -gt 0 ] || { echo "error: no kmod-nvidia rpm from the akmods stage" >&2; exit 1; }
+  dnf5 -y install --setopt=install_weak_deps=False --exclude=akmod-nvidia \
+    "${kmods[@]}" \
     intel-media-driver \
     xorg-x11-drv-nvidia \
     xorg-x11-drv-nvidia-libs \

@@ -154,16 +154,13 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     /ctx/scripts/10-pins.sh && \
     /ctx/scripts/20-launcher.sh
 
-# 2b. Hardware layer: RPM Fusion codecs + VA-API, NVIDIA userspace, fingerprint,
-#     KDE Connect; then the NVIDIA kernel module built in the `akmods` stage.
+# 2b. Hardware layer: RPM Fusion codecs, NVIDIA (userspace + the kernel module built
+#     in the `akmods` stage, one transaction), fingerprint, KDE Connect.
 RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     --mount=type=bind,from=akmods,src=/out,dst=/akmods,ro \
     --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=tmpfs,dst=/tmp \
-    /ctx/scripts/15-hardware.sh && \
-    if ls /akmods/*.rpm >/dev/null 2>&1; then \
-      dnf5 -y install --setopt=install_weak_deps=False /akmods/*.rpm; \
-    fi && dnf5 clean all
+    /ctx/scripts/15-hardware.sh
 
 # 3. Our binaries (agent, credential broker, USB broker, pairing) from the build stage.
 COPY --from=redrob-build /out/ /usr/bin/
