@@ -1,0 +1,19 @@
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+# Redrob OS power defaults (Plasma 6 layout). Users override in ~/.config/powerdevilrc.
+# LidAction: 0 = do nothing, 1 = suspend, 2 = hibernate, 8 = shut down, 32 = lock.
+
+[AC][SuspendAndShutdown]
+LidAction=1
+PowerButtonAction=16
+
+[Battery][SuspendAndShutdown]
+LidAction=1
+PowerButtonAction=16
+AutoSuspendAction=1
+AutoSuspendIdleTimeoutSec=900
+
+[LowBattery][SuspendAndShutdown]
+LidAction=1
+AutoSuspendAction=1
+AutoSuspendIdleTimeoutSec=300

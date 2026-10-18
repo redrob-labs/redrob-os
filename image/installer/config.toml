@@ -1,0 +1,64 @@
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# bootc-image-builder / image-builder blueprint for the Redrob OS installer ISO
+# (x86_64, `--type anaconda-iso`). The ISO embeds ghcr.io/redrob-labs/redrob-os
+# and Anaconda deploys it with `ostreecontainer`; the builder appends that line
+# itself, so it must NOT appear below.
+#
+# Build (CI, release tags only — never on a developer machine):
+#   sudo podman run --rm -it --privileged --security-opt label=type:unconfined_t \
+#     -v ./image/installer/config.toml:/config.toml:ro -v ./out:/output \
+#     -v /var/lib/containers/storage:/var/lib/containers/storage \
+#     quay.io/centos-bootc/bootc-image-builder:latest \
+#     --type anaconda-iso --rootfs btrfs ghcr.io/redrob-labs/redrob-os:stable
+#
+# The same TOML is a valid `image-builder --blueprint` for the successor CLI
+# (bootc-image-builder is deprecated upstream in favour of
+# `image-builder build --bootc-ref ... anaconda-iso`); keep it portable.
+#
+# Interactive by design. We deliberately do NOT set `lang`, `keyboard`,
+# `timezone` or pick a disk: Anaconda then shows the Welcome (language) screen
+# so the user can choose 한국어, asks for the keyboard/timezone, and lets them
+# choose the disk, dual-boot reclaim and the "Encrypt my data" (LUKS) box.
+# `[customizations.installer.kickstart]` cannot be combined with other
+# `installer.*` keys, so everything installer-side lives in the kickstart.
+
+[customizations.installer.kickstart]
+contents = """
+# Redrob OS — Anaconda kickstart (interactive)
+graphical
+# Partitioning preset: "Automatic" is pre-selected, the user still picks the
+# disk(s) and may tick "Encrypt my data" (LUKS2) in the Installation Destination
+# screen. btrfs matches the base image's layout (/, /home, /var subvolumes).
+autopart --type=btrfs --noswap
+# Quiet boot with the Plymouth splash on the installed system.
+bootloader --append="quiet splash"
+# Firewall on; the agent only listens on loopback, the relay is outbound.
+firewall --enabled
+# Default network: first wired link with DHCP, Wi-Fi is set up in Plasma.
+network --bootproto=dhcp --device=link --activate --onboot=on
+# Anaconda creates the user, so the Raspberry Pi first-boot wizard
+# (initial-setup, see config-rpi5.toml) must not run on an ISO install.
+firstboot --disable
+# Eject the stick and reboot into the new system when the install is done.
+reboot --eject
+
+%post --erroronfail --log=/var/log/redrob-installed-by.log
+install -d -m 0755 /var/lib/redrob
+printf 'anaconda\\n' > /var/lib/redrob/installed-by
+chmod 0644 /var/lib/redrob/installed-by
+%end
+"""
+
+# ISO volume label (also used by boot/grub.cfg). Letters, digits, - and _ only.
+[customizations.iso]
+volume_id = "Redrob-OS"
+application_id = "Redrob OS"
+publisher = "Redrob"
+
+# No `[[customizations.filesystem]]` here: filesystem/disk customizations are
+# not honoured by installer image types (the kickstart `autopart` above decides
+# the layout at install time). The 20 GiB root floor is documented in
+# docs/install.md as a hardware requirement; Anaconda refuses smaller disks on
+# its own via its minimum-size checks.
