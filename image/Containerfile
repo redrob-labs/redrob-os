@@ -178,13 +178,16 @@ COPY image/installer/ /
 
 # 6b. Boot splash: the branding overlay ships the `redrob` Plymouth theme, but the
 #     initramfs is prebuilt in the base, so it has to be regenerated to carry it
-#     (the same step Universal Blue runs after Plymouth changes).
+#     (the same step Universal Blue runs after Plymouth changes). `ostree` must be
+#     added explicitly: a --no-hostonly dracut inside a container does not detect an
+#     ostree system and leaves the module out, and the installed system then fails
+#     at "Switch Root" (seen on the v0.2.5 QEMU install).
 RUN --mount=type=tmpfs,dst=/tmp \
     --mount=type=tmpfs,dst=/var/tmp \
     plymouth-set-default-theme redrob && \
     KVER="$(ls /usr/lib/modules | head -n1)" && \
     dracut --force --no-hostonly --reproducible --zstd \
-           --add "plymouth" \
+           --add "plymouth ostree" \
            --kver "$KVER" "/usr/lib/modules/$KVER/initramfs.img"
 
 # 6c. The task sandbox image is NOT logically bound (no /usr/lib/bootc/bound-images.d
