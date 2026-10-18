@@ -290,13 +290,40 @@ jobs:
           ls -la
           sha256sum redrob-os-* > SHA256SUMS
           cat SHA256SUMS
+      - name: Split assets over GitHub's 2 GiB release limit
+        # The ISO embeds the whole OS image and is ~5 GB; GitHub refuses release assets
+        # >= 2 GiB. Ship it as 1900 MiB parts (.part0, .part1, ...) plus the whole-file
+        # hash in SHA256SUMS; the notes carry the one-line join command per OS.
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          for f in redrob-os-*; do
+            [ -f "$f" ] || continue
+            size=$(stat -c %s "$f")
+            if [ "$size" -ge 2000000000 ]; then
+              split -b 1900M -d -a 1 "$f" "$f.part"
+              rm -f "$f"
+              echo "split $f ($size bytes) into:"; ls -la "$f".part*
+            fi
+          done
+          sha256sum redrob-os-*.part* >> SHA256SUMS || true
+          cat SHA256SUMS
       - name: Release notes
         run: |
           set -euo pipefail
           {
             echo "Image: \`${IMAGE}:${VER}\` (cosign-signed, GitHub OIDC)."
             echo
-            echo "- \`redrob-os-${VER}-linux-x86_64.iso\` -- installer for PCs (Anaconda)"
+            echo "- \`redrob-os-${VER}-linux-x86_64.iso\` -- installer for PCs (Anaconda)."
+            if ls "dist/redrob-os-${VER}-linux-x86_64.iso.part"* >/dev/null 2>&1; then
+              echo "  GitHub caps release files at 2 GiB, so the ISO comes in parts. Download every"
+              echo "  \`.iso.part*\` file into one folder and join them:"
+              echo
+              echo "  - Linux / macOS: \`cat redrob-os-${VER}-linux-x86_64.iso.part* > redrob-os-${VER}-linux-x86_64.iso\`"
+              echo "  - Windows (PowerShell): \`cmd /c copy /b redrob-os-${VER}-linux-x86_64.iso.part0+redrob-os-${VER}-linux-x86_64.iso.part1+redrob-os-${VER}-linux-x86_64.iso.part2 redrob-os-${VER}-linux-x86_64.iso\` (list every part you downloaded)"
+              echo
+              echo "  Then write the joined \`.iso\` with balenaEtcher, Rufus or Ventoy."
+            fi
             if [ -f "dist/redrob-os-${VER}-linux-aarch64.img.xz" ]; then
               echo "- \`redrob-os-${VER}-linux-aarch64.img.xz\` -- raw disk image for aarch64 boards (experimental)"
             else
