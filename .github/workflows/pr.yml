@@ -47,7 +47,8 @@ jobs:
   agent:
     name: agent (fmt + clippy)
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    # Skip on promotion PRs to main: develop already ran this on the same commits.
+    if: needs.changes.outputs.rust == 'true' && github.base_ref != 'main'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     defaults:
@@ -81,6 +82,7 @@ jobs:
 
   image:
     name: image (podman build + bootc lint)
+    if: github.base_ref != 'main' # promotion PRs to main are already built on develop
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
