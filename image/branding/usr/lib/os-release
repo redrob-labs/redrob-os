@@ -1,7 +1,6 @@
 NAME="Redrob OS"
 ID=redrob-os
 ID_LIKE=fedora
-# CI may rewrite VERSION / VERSION_ID / BUILD_ID with sed at image build time.
 VERSION="44"
 VERSION_ID=44
 BUILD_ID=dev
