@@ -204,7 +204,7 @@ jobs:
             -v "$PWD/output:/output" \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             "${BIB}" \
-            --type anaconda-iso \
+            --type anaconda-iso --rootfs btrfs \
             --config /config.toml \
             --chown "$(id -u):$(id -g)" \
             "${IMAGE}:${VER}"
@@ -248,7 +248,7 @@ jobs:
             -v "$PWD/output:/output" \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             "${BIB}" \
-            --type raw \
+            --type raw --rootfs btrfs \
             --config /config.toml \
             --chown "$(id -u):$(id -g)" \
             "${IMAGE}:${VER}"

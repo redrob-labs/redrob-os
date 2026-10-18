@@ -1,0 +1,4 @@
+# Default root filesystem for disk images and installs made from this image
+# (bootc-image-builder refuses to guess; Fedora desktops default to btrfs).
+[install.filesystem.root]
+type = "btrfs"
