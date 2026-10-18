@@ -21,15 +21,18 @@ dnf5 -y install --setopt=install_weak_deps=False \
   "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA}.noarch.rpm" \
   "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA}.noarch.rpm"
 
-# Codecs. `swap` replaces the crippled free builds with the full ones.
-dnf5 -y swap --setopt=install_weak_deps=False --allowerasing ffmpeg-free ffmpeg
-dnf5 -y swap --setopt=install_weak_deps=False --allowerasing mesa-va-drivers mesa-va-drivers-freeworld
-dnf5 -y swap --setopt=install_weak_deps=False --allowerasing mesa-vdpau-drivers mesa-vdpau-drivers-freeworld
+# Codecs. Fedora's ffmpeg-free stays (Plasma links against it; a `swap` to the full
+# ffmpeg with --allowerasing tore out the whole desktop in CI). libavcodec-freeworld
+# adds the patented decoders (H.264/HEVC/AAC...) on top of ffmpeg-free, which is the
+# path Fedora itself documents. mesa-va-drivers-freeworld is the hardware-decode
+# half (declares Conflicts with the stock package, so a plain swap resolves it).
+# mesa-vdpau-drivers no longer exists in Fedora 44.
+dnf5 -y swap --setopt=install_weak_deps=False mesa-va-drivers mesa-va-drivers-freeworld
 dnf5 -y install --setopt=install_weak_deps=False \
+  libavcodec-freeworld \
   gstreamer1-plugins-ugly \
   gstreamer1-plugins-bad-free-extras \
   gstreamer1-plugin-libav \
-  libavcodec-freeworld \
   libva-utils
 
 # Fingerprint login, phone integration.

@@ -74,6 +74,10 @@ for f in /usr/bin/redrob-launcher /usr/libexec/gvisor/runsc /usr/bin/bootc \
   [ -e "${f}" ] || { echo "error: expected ${f} missing after build" >&2; exit 1; }
 done
 rpm -q generic-logos >/dev/null || { echo "error: generic-logos not installed" >&2; exit 1; }
+# A dnf transaction with --allowerasing once removed the whole desktop; never ship that.
+for p in plasma-desktop kwin plasma-workspace plasma-discover; do
+  rpm -q "${p}" >/dev/null || { echo "error: desktop package ${p} missing after build" >&2; exit 1; }
+done
 if rpm -q fedora-logos >/dev/null 2>&1; then echo "error: fedora-logos still installed" >&2; exit 1; fi
 
 echo "cleanup done"
