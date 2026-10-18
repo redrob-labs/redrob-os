@@ -45,7 +45,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
 ARG TARGETARCH
 RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     --mount=type=tmpfs,dst=/tmp \
-    TARGETARCH="${TARGETARCH}" /ctx/scripts/install-redrob-code.sh
+    TARGETARCH="${TARGETARCH}" bash /ctx/scripts/install-redrob-code.sh
 
 # Unprivileged task user; /workspace is the only writable mount at run time.
 RUN useradd --uid 1000 --user-group --create-home --shell /bin/bash task && \
