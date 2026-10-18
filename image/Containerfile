@@ -59,6 +59,29 @@ RUN --mount=type=cache,dst=/usr/local/cargo/registry \
     (cd tools/redrob-pairing && cargo build --release --locked) && \
     install -m 0755 tools/redrob-pairing/target/release/redrob-pairing /out/
 
+# NVIDIA kernel module, built against the exact kernel the base image ships (the
+# akmods pattern Universal Blue uses; a bootc image cannot build modules on the
+# device because /usr is read-only). x86_64 only: RPM Fusion has no aarch64 build.
+# Output: /out/kmod-nvidia-<kver>-<ver>.rpm (empty on aarch64).
+FROM ${BASE_IMAGE}:${BASE_TAG} AS akmods
+ARG TARGETARCH
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    set -euo pipefail; mkdir -p /out; \
+    if [ "${TARGETARCH:-amd64}" != "amd64" ]; then echo "akmods: skipped on ${TARGETARCH}"; exit 0; fi; \
+    FEDORA="$(. /usr/lib/os-release && echo "${VERSION_ID}")"; \
+    KVER="$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}')"; \
+    KV="$(rpm -q kernel-core --qf '%{VERSION}')"; KR="$(rpm -q kernel-core --qf '%{RELEASE}')"; \
+    dnf5 -y install --setopt=install_weak_deps=False \
+      "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA}.noarch.rpm" \
+      "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA}.noarch.rpm"; \
+    dnf5 -y install --setopt=install_weak_deps=False "kernel-devel-${KVER}" \
+      || dnf5 -y install --setopt=install_weak_deps=False \
+           "https://kojipkgs.fedoraproject.org/packages/kernel/${KV}/${KR}/x86_64/kernel-devel-${KVER}.rpm" \
+           "https://kojipkgs.fedoraproject.org/packages/kernel/${KV}/${KR}/x86_64/kernel-devel-matched-${KVER}.rpm"; \
+    dnf5 -y install --setopt=install_weak_deps=False akmods akmod-nvidia; \
+    akmods --force --kernels "${KVER}"; \
+    cp /var/cache/akmods/nvidia/kmod-nvidia-*.rpm /out/; ls -l /out
+
 FROM ${BASE_IMAGE}:${BASE_TAG}
 
 ARG BASE_IMAGE
@@ -124,6 +147,17 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/scripts/10-pins.sh && \
     /ctx/scripts/20-launcher.sh
+
+# 2b. Hardware layer: RPM Fusion codecs + VA-API, NVIDIA userspace, fingerprint,
+#     KDE Connect; then the NVIDIA kernel module built in the `akmods` stage.
+RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
+    --mount=type=bind,from=akmods,src=/out,dst=/akmods,ro \
+    --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/scripts/15-hardware.sh && \
+    if ls /akmods/*.rpm >/dev/null 2>&1; then \
+      dnf5 -y install --setopt=install_weak_deps=False /akmods/*.rpm; \
+    fi && dnf5 clean all
 
 # 3. Our binaries (agent, credential broker, USB broker, pairing) from the build stage.
 COPY --from=redrob-build /out/ /usr/bin/

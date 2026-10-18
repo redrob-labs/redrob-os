@@ -14,7 +14,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Image]
-Image=ghcr.io/redrob-labs/redrob-sandbox:stable
+Image=ghcr.io/redrob-labs/redrob-os:sandbox
 # Quadlet .image units pull with --policy missing by default: no re-pull on boot.
 
 [Install]

@@ -8,7 +8,7 @@
 # and only /workspace writable (image/agent/etc/redrob/agent.toml).
 #
 # Build context is the REPOSITORY ROOT:
-#   podman build -f image/sandbox/Containerfile -t ghcr.io/redrob-labs/redrob-sandbox:stable .
+#   podman build -f image/sandbox/Containerfile -t ghcr.io/redrob-labs/redrob-os:sandbox .
 #
 # Contents: a plain developer userland (shell, git, Python, Node.js, C toolchain,
 # search tools) plus Redrob Code headless. Nothing here holds a credential: model

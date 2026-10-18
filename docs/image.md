@@ -152,7 +152,8 @@ So:
 1. Done 2026-10-18: a cosign key pair was generated (no password). The private key is the
    repository secret `COSIGN_PRIVATE_KEY`; the public key is committed as
    `image/files/etc/pki/containers/redrob-os.pub`. The same key signs the task sandbox
-   image `ghcr.io/redrob-labs/redrob-sandbox` (policy.json lists both repositories).
+   image, published in the same package as `ghcr.io/redrob-labs/redrob-os:sandbox`
+   (so policy.json needs one repository entry).
 2. CI, after push: `cosign sign --yes --key env://COSIGN_PRIVATE_KEY <image>@<digest>`,
    then a keyless signature *in addition* (nice for `cosign verify` by humans; it does not
    satisfy the device policy).

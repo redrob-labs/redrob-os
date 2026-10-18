@@ -14,15 +14,6 @@
             "type": "matchRepository"
           }
         }
-      ],
-      "ghcr.io/redrob-labs/redrob-sandbox": [
-        {
-          "type": "sigstoreSigned",
-          "keyPath": "/etc/pki/containers/redrob-os.pub",
-          "signedIdentity": {
-            "type": "matchRepository"
-          }
-        }
       ]
     },
     "docker-daemon": {

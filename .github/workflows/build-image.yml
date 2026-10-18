@@ -38,7 +38,9 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/redrob-labs/redrob-os
-  SANDBOX_IMAGE: ghcr.io/redrob-labs/redrob-sandbox
+  # The task sandbox is published in the SAME package under sandbox* tags (one GHCR
+  # package to make public, one signing policy entry on devices).
+  SANDBOX_IMAGE: ghcr.io/redrob-labs/redrob-os
 
 jobs:
   build:
@@ -108,7 +110,7 @@ jobs:
 
   sandbox:
     # The agent's task sandbox (image/sandbox/Containerfile). Built next to the OS image
-    # because the OS image logically binds ghcr.io/redrob-labs/redrob-sandbox:stable and a
+    # because the OS image logically binds ghcr.io/redrob-labs/redrob-os:sandbox and a
     # bound image that does not exist in the registry makes `bootc upgrade` fail.
     name: sandbox ${{ matrix.arch }}
     strategy:
@@ -138,16 +140,16 @@ jobs:
             --label org.opencontainers.image.source="https://github.com/${{ github.repository }}" \
             --label org.opencontainers.image.revision="${GITHUB_SHA}" \
             -f image/sandbox/Containerfile \
-            -t "${SANDBOX_IMAGE}:sha-${GITHUB_SHA::7}-${{ matrix.arch }}" \
+            -t "${SANDBOX_IMAGE}:sandbox-sha-${GITHUB_SHA::7}-${{ matrix.arch }}" \
             .
 
       - name: Smoke test (tools present)
         run: |
-          podman run --rm "${SANDBOX_IMAGE}:sha-${GITHUB_SHA::7}-${{ matrix.arch }}" \
+          podman run --rm "${SANDBOX_IMAGE}:sandbox-sha-${GITHUB_SHA::7}-${{ matrix.arch }}" \
             sh -c 'git --version && python3 --version && node --version && redrob-code --version || redrob-code --help | head -n 3'
 
       - name: Push the per-arch image
-        run: podman push "${SANDBOX_IMAGE}:sha-${GITHUB_SHA::7}-${{ matrix.arch }}"
+        run: podman push "${SANDBOX_IMAGE}:sandbox-sha-${GITHUB_SHA::7}-${{ matrix.arch }}"
 
   manifest:
     name: manifest + sign
@@ -230,7 +232,7 @@ jobs:
       - name: Log in to GHCR
         run: echo "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Assemble, push (stable, sha-<short>) and sign
+      - name: Assemble, push (sandbox, sandbox-sha-<short>) and sign
         env:
           SHORT: ${{ needs.build.outputs.short }}
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
@@ -239,16 +241,16 @@ jobs:
           set -euo pipefail
           podman manifest create redrob-sandbox
           for arch in amd64 arm64; do
-            if skopeo inspect --raw "docker://${SANDBOX_IMAGE}:sha-${SHORT}-${arch}" >/dev/null 2>&1; then
-              podman manifest add redrob-sandbox "docker://${SANDBOX_IMAGE}:sha-${SHORT}-${arch}"
+            if skopeo inspect --raw "docker://${SANDBOX_IMAGE}:sandbox-sha-${SHORT}-${arch}" >/dev/null 2>&1; then
+              podman manifest add redrob-sandbox "docker://${SANDBOX_IMAGE}:sandbox-sha-${SHORT}-${arch}"
             elif [ "$arch" = amd64 ]; then
-              echo "::error::${SANDBOX_IMAGE}:sha-${SHORT}-amd64 not found -- amd64 is required"; exit 1
+              echo "::error::${SANDBOX_IMAGE}:sandbox-sha-${SHORT}-amd64 not found -- amd64 is required"; exit 1
             else
-              echo "::warning::${SANDBOX_IMAGE}:sha-${SHORT}-${arch} not found -- publishing without it"
+              echo "::warning::${SANDBOX_IMAGE}:sandbox-sha-${SHORT}-${arch} not found -- publishing without it"
             fi
           done
           digest=""
-          for tag in stable "sha-${SHORT}"; do
+          for tag in sandbox "sandbox-sha-${SHORT}"; do
             podman manifest push --all --digestfile digest.txt redrob-sandbox "docker://${SANDBOX_IMAGE}:${tag}"
             digest="$(cat digest.txt)"
             echo "pushed ${SANDBOX_IMAGE}:${tag} -> ${digest}"

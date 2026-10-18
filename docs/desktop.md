@@ -59,6 +59,21 @@ language at install time, and can be added later in Settings → Keyboard → In
 - The tray indicator shows `한` when Korean is active and `A` for English.
 - Hanja conversion: **F9** (or the 한자 key) while a Korean syllable is selected.
 
+## Hardware, codecs, phone
+
+Things a PC user expects that stock Fedora leaves out are in the image:
+
+- Video: full ffmpeg and the "freeworld" VA-API/VDPAU drivers, so H.264/HEVC/AAC
+  play in Plasma, browsers and mpv with hardware decode (Intel, AMD, NVIDIA).
+- NVIDIA: the proprietary driver is built in (x86-64). Nothing to install. With
+  Secure Boot ON the module is not signed and the card falls back to the open
+  driver; turn Secure Boot off in firmware or accept the fallback.
+- Fingerprint login: Settings -> Users -> Configure fingerprint; works at the
+  login screen, lock screen and for password prompts.
+- Phone: KDE Connect is installed. Install the KDE Connect app on your phone, pair
+  on the same Wi-Fi, and you get notifications, file transfer, clipboard and
+  remote input.
+
 ## Updates and rollback
 
 You do not have to do anything. Once a day the device checks for a new OS image,

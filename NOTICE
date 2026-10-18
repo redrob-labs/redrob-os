@@ -54,6 +54,18 @@ gVisor (runsc) -- sandbox runtime for agent tasks
   Installed as a prebuilt binary from the upstream release channel;
   version and hash are pinned in image/pins.env.
 
+RPM Fusion (free and nonfree repositories) -- media codecs and drivers
+  https://rpmfusion.org
+  Packages are installed at image build time from the RPM Fusion repositories
+  under their own licenses: ffmpeg and libavcodec-freeworld (LGPL/GPL),
+  mesa-va-drivers-freeworld and mesa-vdpau-drivers-freeworld (MIT), the
+  GStreamer "ugly"/"bad" plugin sets (LGPL), and the NVIDIA proprietary
+  driver (akmod-nvidia, xorg-x11-drv-nvidia, libva-nvidia-driver) under the
+  NVIDIA Software License Agreement, redistributed as RPM Fusion ships it.
+  Redrob OS does not modify these packages. The NVIDIA kernel module is
+  compiled during the image build against the shipped kernel; it is not
+  signed for Secure Boot (see docs/desktop.md).
+
 Podman and container tools (containers/*)
   https://github.com/containers
   Copyright (c) the containers/* authors.
