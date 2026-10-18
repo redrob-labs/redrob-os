@@ -1,0 +1,10 @@
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Redrob OS: run the graphical first-boot wizard (initial-setup) on images that
+# were written raw (Raspberry Pi 5) and therefore never saw Anaconda. The unit
+# is only *enabled* here; initial-setup itself skips and disables itself when
+# /etc/sysconfig/initial-setup says RUN_INITIAL_SETUP=NO, which is what the
+# ISO kickstart's `firstboot --disable` writes, and once a first account exists.
+# Preset numbers below 90-default-*.preset so it wins over the distro default.
+enable initial-setup.service

@@ -1,6 +1,6 @@
 name: usb-broker
 version: 0.0.1
-description: USBGuard policy, user approval for new devices, read-only automount, scoped path exposure to the agent sandbox.
+description: Default-deny for new USB devices (kernel authorized_default), user approval over /run/redrob/usb.sock, BadUSB rejection, read-only automount under /run/media/redrob.
 capabilities:
   - storage
 devices:
@@ -9,7 +9,7 @@ devices:
     attrs:
       removable: "1"
 policy:
-  default: block            # USBGuard default
+  default: block            # authorized_default=0 on every host controller
   mount: read-only          # after approval
   write: per-task           # agent writes need per-task approval
   badusb: reject            # storage device that also presents an HID interface

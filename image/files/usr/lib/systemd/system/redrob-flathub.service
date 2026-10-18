@@ -1,0 +1,19 @@
+[Unit]
+Description=Redrob OS: add Flathub as the app source (once)
+Documentation=https://flathub.org/setup
+# Marker lives in /var (machine state); the image itself ships no remotes config.
+ConditionPathExists=!/var/lib/redrob/flathub-added
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+ExecStart=/usr/bin/mkdir -p /var/lib/redrob
+ExecStart=/usr/bin/touch /var/lib/redrob/flathub-added
+# Offline first boot: retry on the next boot instead of failing forever.
+Restart=on-failure
+RestartSec=5min
+
+[Install]
+WantedBy=multi-user.target

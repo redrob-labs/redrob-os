@@ -18,7 +18,19 @@ vision_backends:
   # only runs inference (HailoRT).
   - cpu
   - hailo                             # when the AI HAT+ accelerator is present
-models_dir: /data/models              # updated separately from OTA
+# Redrob OS (bootc image): /var/lib/redrob/inference/models, provisioned
+# separately from OS updates (bootc keeps /var). Buildroot image: /mnt/data/redrob/models.
+models_dir: /var/lib/redrob/inference/models
+# Serve, on 127.0.0.1:8081 with model alias "router"; the agent reaches it as the
+# `llamacpp.router` fallback provider (image/agent/etc/redrob/agent.toml):
+#   bootc image  -> podman quadlet image/agent/etc/containers/systemd/redrob-inference.container
+#                   (upstream ghcr.io/ggml-org/llama.cpp server image, pinned by
+#                   digest). Off by default; on when /var/lib/redrob/inference/enabled
+#                   and models/router.gguf exist. See README.md here.
+#   Buildroot     -> the supervisor (modules/local-inference/supervisor) runs
+#                   /usr/bin/llama-server (deploy/config/local-inference.toml).
+enabled_flag: /var/lib/redrob/inference/enabled
+model_file: router.gguf
 network:
   - "100.64.0.0/10"                   # tailnet only, for remote-gpu
 host_access: none

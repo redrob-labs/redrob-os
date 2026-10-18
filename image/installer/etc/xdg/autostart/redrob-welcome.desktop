@@ -1,0 +1,15 @@
+[Desktop Entry]
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+Type=Application
+Name=Redrob Welcome
+Name[ko]=Redrob 시작 안내
+Comment=First-login welcome dialog: connect your phone, install apps
+Comment[ko]=첫 로그인 안내: 폰 연결, 앱 설치
+Exec=/usr/libexec/redrob/welcome
+Icon=redrob-os
+Terminal=false
+NoDisplay=true
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=2
+X-KDE-StartupNotify=false

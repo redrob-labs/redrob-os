@@ -1,6 +1,11 @@
 # Sandbox interface (F3, F4)
 
-Status: design, 2026-10-08.
+Status: design, 2026-10-08. Updated 2026-10-18 for the bootc base: the row
+"Image ... built into the OS image under `/usr/share/redrob/images/`" now means
+the sandbox image is pre-loaded by the Containerfile (owned by `image/agent/`); the
+Podman + gVisor layer, the `--network none` rule and the broker proxy are unchanged.
+"Not this dev machine" remarks below refer to the former Buildroot dev host and no
+longer gate anything: the one build is CI.
 
 ## Shape
 
@@ -17,8 +22,11 @@ container. The agent never executes model-chosen commands on the host.
 | Limits | `--memory`, `--cpus`, `--pids-limit 512`, workspace quota via project quota on `/data` | fork bomb and memory blow-up cannot reach the host (test 7.1) |
 | Identity | `--userns=keep-id`, no capabilities, `--security-opt no-new-privileges` | |
 
-Pi 5 note: the stock kernel uses 16 KiB pages. gVisor needs a 4 KiB-page kernel on
-arm64; the image ships the `kernel8` (4 KiB) variant. Confirmed in Stage 6.
+Pi 5 note (superseded 2026-10-18): this section assumed a Buildroot kernel where we
+chose the page size. The base image's kernel is now supplied by the distro
+(`docs/decisions/0001-bootc-base.md`); its aarch64 kernel uses 4 KiB pages, so no
+`kernel8` pin is needed. gVisor `runsc` itself is installed into the image from the
+upstream release with a pinned hash (`image/pins.env`).
 
 ## Interface between agent and sandbox
 

@@ -1,0 +1,25 @@
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+# Redrob OS system-wide Plasma defaults. Users override in ~/.config/kdeglobals.
+# Look-and-feel (colors, icons, cursors, wallpaper) belongs to the branding
+# overlay; only behaviour and fonts live here.
+
+[KDE]
+# Default global theme: the Redrob look-and-feel package shipped by image/branding.
+LookAndFeelPackage=ai.redrob.desktop
+# Windows-style: single click selects, double click opens.
+SingleClick=false
+AnimationDurationFactor=0.5
+
+[General]
+# Qt6 font string: family,pointsize,pixelsize,styleHint,weight,style,underline,
+# strikeOut,fixedPitch,rawMode,capitalization,letterSpacingType,letterSpacing,
+# wordSpacing,stretch,styleName
+font=NanumGothic,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+menuFont=NanumGothic,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+toolBarFont=NanumGothic,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+smallestReadableFont=NanumGothic,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+fixed=NanumGothicCoding,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+
+[WM]
+activeFont=NanumGothic,10,-1,5,700,0,0,0,0,0,0,0,0,0,0,1,Bold

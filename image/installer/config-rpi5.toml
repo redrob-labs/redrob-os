@@ -1,0 +1,36 @@
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# bootc-image-builder / image-builder blueprint for the Redrob OS raw disk
+# image (aarch64, Raspberry Pi 5; `--type raw`). Secondary target.
+#
+# Build (CI on an aarch64 runner, release tags only):
+#   sudo podman run --rm -it --privileged --security-opt label=type:unconfined_t \
+#     -v ./image/installer/config-rpi5.toml:/config.toml:ro -v ./out:/output \
+#     -v /var/lib/containers/storage:/var/lib/containers/storage \
+#     quay.io/centos-bootc/bootc-image-builder:latest \
+#     --type raw --rootfs btrfs ghcr.io/redrob-labs/redrob-os:stable
+#   -> out/image/disk.raw  (compress with xz -T0 before publishing)
+#
+# There is no Anaconda on this path, so nothing asks for a user at install
+# time. We ship NO user and NO password in the image. On first boot the
+# graphical `initial-setup` wizard (Fedora's first-boot tool) asks for
+# language, keyboard, timezone and creates the first account, then disables
+# itself. Requirements on the image side (image agent, image/Containerfile):
+#   - `dnf install initial-setup initial-setup-gui` in the image (the ISO path
+#     turns it off through the kickstart `firstboot --disable`);
+#   - the preset image/installer/usr/lib/systemd/system-preset/
+#     85-redrob-initial-setup.preset enables initial-setup.service.
+# The device identity, signing key and hostname `redrob-<id6>` are created by
+# the agent's firstboot unit (agent agent), not here.
+
+# Root filesystem floor; the image is grown to the SD card / NVMe on first
+# boot by bootc's growfs unit (systemd-growfs on /sysroot).
+[[customizations.filesystem]]
+mountpoint = "/"
+minsize = 21474836480
+
+# Quiet boot. The Pi has no Plymouth splash by default; `quiet` still hides the
+# kernel log on the HDMI console. Serial console kept for headless debugging.
+[customizations.kernel]
+append = "quiet console=ttyAMA10,115200 console=tty0"

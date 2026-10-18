@@ -1,0 +1,26 @@
+[package]
+name = "redrob-local-inference"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Redrob OS local-inference supervisor: serves the ~1B router model on loopback via llama.cpp, offline fallback for the agent"
+publish = false
+
+[lib]
+name = "redrob_local_inference"
+path = "src/lib.rs"
+
+[[bin]]
+name = "redrob-local-inference"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+signal-hook = "0.3.17"
+toml = "0.8.23"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter"] }
+
+[dev-dependencies]
+tempfile = "3.23"
