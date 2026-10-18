@@ -1,0 +1,166 @@
+# Redrob OS Plymouth theme (script plugin).
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Layout: solid #121212 background, the Redrob mark centred, a thin red arc
+# (24 pre-rendered frames, throbber-NNNN.png) spinning around it. Password
+# prompts (LUKS) draw a dark box with an outlined entry and white bullets.
+
+Window.SetBackgroundTopColor    (0.0706, 0.0706, 0.0706);   # #121212
+Window.SetBackgroundBottomColor (0.0706, 0.0706, 0.0706);
+
+status = "normal";
+
+#----------------------------------------- Logo ---------------------------------
+
+logo.image  = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.x = Window.GetX() + Window.GetWidth()  / 2 - logo.image.GetWidth()  / 2;
+logo.y = Window.GetY() + Window.GetHeight() / 2 - logo.image.GetHeight() / 2;
+logo.sprite.SetPosition(logo.x, logo.y, 100);
+
+#----------------------------------------- Throbber -----------------------------
+
+throbber.frame_count = 24;
+for (i = 0; i < throbber.frame_count; i++)
+  throbber.image[i] = Image("throbber-" + i.ToString("%04d") + ".png");
+
+throbber.sprite = Sprite();
+throbber.index = 0;
+throbber.tick = 0;
+# the throbber sits around the logo: logo is 128px, throbber frames 64px,
+# so scale the frame up to 180px to orbit the mark.
+throbber.size = 180;
+throbber.x = Window.GetX() + Window.GetWidth()  / 2 - throbber.size / 2;
+throbber.y = Window.GetY() + Window.GetHeight() / 2 - throbber.size / 2;
+throbber.sprite.SetPosition(throbber.x, throbber.y, 90);
+
+fun refresh_callback ()
+  {
+    if (status == "normal")
+      {
+        throbber.tick++;
+        if (throbber.tick % 2 == 0)   # refresh runs at 50 Hz; step every 2nd tick
+          {
+            throbber.index = (throbber.index + 1) % throbber.frame_count;
+            throbber.sprite.SetImage(throbber.image[throbber.index].Scale(throbber.size, throbber.size));
+          }
+        throbber.sprite.SetOpacity(1);
+      }
+    else
+      {
+        throbber.sprite.SetOpacity(0);
+      }
+  }
+
+Plymouth.SetRefreshFunction (refresh_callback);
+
+#----------------------------------------- Dialogue -----------------------------
+
+fun dialog_setup()
+  {
+    local.box;
+    local.lock;
+    local.entry;
+
+    box.image   = Image("box.png");
+    lock.image  = Image("lock.png");
+    entry.image = Image("entry.png");
+
+    box.sprite = Sprite(box.image);
+    box.x = Window.GetX() + Window.GetWidth()  / 2 - box.image.GetWidth () / 2;
+    box.y = Window.GetY() + Window.GetHeight() * 0.72 - box.image.GetHeight() / 2;
+    box.z = 10000;
+    box.sprite.SetPosition(box.x, box.y, box.z);
+
+    lock.sprite = Sprite(lock.image);
+    lock.x = box.x + box.image.GetWidth() / 2 - (lock.image.GetWidth() + entry.image.GetWidth()) / 2;
+    lock.y = box.y + box.image.GetHeight() / 2 - lock.image.GetHeight() / 2;
+    lock.z = box.z + 1;
+    lock.sprite.SetPosition(lock.x, lock.y, lock.z);
+
+    entry.sprite = Sprite(entry.image);
+    entry.x = lock.x + lock.image.GetWidth();
+    entry.y = box.y + box.image.GetHeight() / 2 - entry.image.GetHeight() / 2;
+    entry.z = box.z + 1;
+    entry.sprite.SetPosition(entry.x, entry.y, entry.z);
+
+    global.dialog.box = box;
+    global.dialog.lock = lock;
+    global.dialog.entry = entry;
+    global.dialog.bullet_image = Image("bullet.png");
+    dialog_opacity (1);
+  }
+
+fun dialog_opacity(opacity)
+  {
+    dialog.box.sprite.SetOpacity (opacity);
+    dialog.lock.sprite.SetOpacity (opacity);
+    dialog.entry.sprite.SetOpacity (opacity);
+    for (index = 0; dialog.bullet[index]; index++)
+      {
+        dialog.bullet[index].sprite.SetOpacity(opacity);
+      }
+  }
+
+fun display_normal_callback ()
+  {
+    global.status = "normal";
+    if (global.dialog)
+      dialog_opacity (0);
+  }
+
+fun display_password_callback (prompt, bullets)
+  {
+    global.status = "password";
+    if (!global.dialog)
+      dialog_setup();
+    else
+      dialog_opacity(1);
+    for (index = 0; dialog.bullet[index] || index < bullets; index++)
+      {
+        if (!dialog.bullet[index])
+          {
+            dialog.bullet[index].sprite = Sprite(dialog.bullet_image);
+            dialog.bullet[index].x = dialog.entry.x + 6 + index * dialog.bullet_image.GetWidth();
+            dialog.bullet[index].y = dialog.entry.y + dialog.entry.image.GetHeight() / 2 - dialog.bullet_image.GetHeight() / 2;
+            dialog.bullet[index].z = dialog.entry.z + 1;
+            dialog.bullet[index].sprite.SetPosition(dialog.bullet[index].x, dialog.bullet[index].y, dialog.bullet[index].z);
+          }
+        if (index < bullets)
+          dialog.bullet[index].sprite.SetOpacity(1);
+        else
+          dialog.bullet[index].sprite.SetOpacity(0);
+      }
+  }
+
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+
+#----------------------------------------- Messages -----------------------------
+
+message_sprite = Sprite();
+message_sprite.SetPosition(Window.GetX() + 20, Window.GetY() + Window.GetHeight() - 40, 10000);
+
+fun display_message_callback (text)
+  {
+    message_sprite.SetImage(Image.Text(text, 0.75, 0.75, 0.75));
+  }
+
+fun hide_message_callback (text)
+  {
+    message_sprite.SetImage(Image.Text("", 0, 0, 0));
+  }
+
+Plymouth.SetDisplayMessageFunction (display_message_callback);
+Plymouth.SetHideMessageFunction (hide_message_callback);
+
+#----------------------------------------- Quit ---------------------------------
+
+fun quit_callback ()
+  {
+    throbber.sprite.SetOpacity(0);
+    logo.sprite.SetOpacity(1);
+  }
+
+Plymouth.SetQuitFunction(quit_callback);

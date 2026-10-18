@@ -1,0 +1,9 @@
+[Plymouth Theme]
+Name=Redrob
+Description=Redrob OS boot splash: the Redrob mark with a rotating red arc.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/redrob
+ScriptFile=/usr/share/plymouth/themes/redrob/redrob.script
+ConsoleLogBackgroundColor=0x121212

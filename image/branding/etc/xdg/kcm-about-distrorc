@@ -1,0 +1,7 @@
+# Redrob OS: KInfoCenter / System Settings "About this System" branding.
+# Keys read by kcm_about-distro; Version falls back to VERSION_ID from os-release.
+[General]
+Name=Redrob OS
+LogoPath=/usr/share/pixmaps/system-logo-white.png
+Website=https://redrob.ai
+ShowBuild=true
