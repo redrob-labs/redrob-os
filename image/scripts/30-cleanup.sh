@@ -65,8 +65,11 @@ rm -f /.gitkeep /.dockerenv 2>/dev/null || true
 # 5b. Overlay files are COPYed with git's modes; scripts greenboot runs must be executable.
 find /etc/greenboot/check -type f -name '*.sh' -exec chmod 0755 {} +
 
-# 6. Sanity: the things later stages rely on must be present.
-for f in /usr/bin/redrob-launcher /usr/libexec/gvisor/runsc /usr/bin/bootc /usr/bin/greenboot \
+# 6. Sanity: the things later stages rely on must be present. greenboot's binary path
+#    moved between releases (/usr/bin -> /usr/libexec), so check its unit instead.
+for f in /usr/bin/redrob-launcher /usr/libexec/gvisor/runsc /usr/bin/bootc \
+         /usr/lib/systemd/system/greenboot-healthcheck.service \
+         /usr/bin/redrob-agent /usr/bin/redrob-broker /usr/bin/redrob-usb-broker /usr/bin/redrob-pairing \
          /etc/containers/policy.json /etc/containers/containers.conf.d/50-redrob-runsc.conf; do
   [ -e "${f}" ] || { echo "error: expected ${f} missing after build" >&2; exit 1; }
 done

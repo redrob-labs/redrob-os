@@ -7,16 +7,10 @@
 enable bootc-fetch-apply-updates.timer
 
 # greenboot: boot health checks; a failing deployment is rolled back automatically.
+# (Fedora 44 ships the Rust greenboot: healthcheck + set-rollback-trigger are the
+# units; the old grub2-set-counter/redboot units no longer exist.)
 enable greenboot-healthcheck.service
-enable greenboot-loading-message.service
-enable greenboot-task-runner.service
-enable greenboot-status.service
-enable greenboot-grub2-set-counter.service
-enable greenboot-grub2-set-success.service
-enable greenboot-rpm-ostree-grub2-check-fallback.service
-enable redboot-task-runner.service
-enable redboot-auto-reboot.service
-enable redboot.target
+enable greenboot-set-rollback-trigger.service
 
 # Flathub as the one app store (runs once, marker in /var/lib/redrob).
 enable redrob-flathub.service
