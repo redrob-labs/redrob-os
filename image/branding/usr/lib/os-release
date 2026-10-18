@@ -1,0 +1,18 @@
+NAME="Redrob OS"
+ID=redrob-os
+ID_LIKE=fedora
+# CI may rewrite VERSION / VERSION_ID / BUILD_ID with sed at image build time.
+VERSION="44"
+VERSION_ID=44
+BUILD_ID=dev
+PRETTY_NAME="Redrob OS 44"
+ANSI_COLOR="1;31"
+LOGO=redrob-os
+CPE_NAME="cpe:/o:redrob:redrob_os:44"
+DEFAULT_HOSTNAME="redrob"
+HOME_URL="https://redrob.ai"
+DOCUMENTATION_URL="https://github.com/redrob-labs/redrob-os/tree/main/docs"
+SUPPORT_URL="https://github.com/redrob-labs/redrob-os/discussions"
+BUG_REPORT_URL="https://github.com/redrob-labs/redrob-os/issues"
+VARIANT="Desktop"
+VARIANT_ID=desktop

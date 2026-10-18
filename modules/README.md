@@ -4,6 +4,10 @@ A module is a container that receives a device class from the host after
 user approval. Modules install, update and remove independently of the OS
 image. Each module directory holds a `module.yaml` manifest.
 
+Display and input are no longer a module: the desktop (KDE Plasma, part of the
+base image) owns `/dev/dri` and `/dev/input`. The former `display` kiosk module
+was removed with the move to a bootc image (`docs/decisions/0001-bootc-base.md`).
+
 Manifest fields:
 
 | Field | Meaning |
@@ -20,7 +24,6 @@ Modules in this tree:
 
 | Module | Capabilities | Purpose |
 |---|---|---|
-| `display` | display, input | kiosk (cage + dashboard) or full Wayland desktop; the only module that receives `/dev/dri` and `/dev/input` |
 | `usb-broker` | storage | default-deny via kernel USB authorization, approval flow, BadUSB rejection, read-only automount (`broker/`: Rust daemon, phase 1 done); scoped path exposure to the agent sandbox pending |
 | `credential-broker` | none | holds OAuth tokens and API keys outside the sandbox, serves scoped calls, runs the agent egress proxy, writes the audit log to `/data` (`broker/`: Rust daemon, phase 1 done) |
 | `local-inference` | accelerator | supervises llama.cpp serving the ~1B router model on loopback `127.0.0.1:8081` (`supervisor/`: Rust daemon, done); the agent's offline fallback provider. Backends: CPU (shipped) / remote GPU over tailnet; AI HAT+ 2 is vision-only |

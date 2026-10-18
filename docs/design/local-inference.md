@@ -16,8 +16,11 @@ agent  --(OpenAI chat_completions)-->  127.0.0.1:8081  (llama.cpp llama-server)
                                    /mnt/data/redrob/models/*.gguf
 ```
 
-- **llama.cpp `llama-server`** (`os/buildroot-external/package/llama-cpp`,
-  CPU backend, no libcurl, no OpenMP) exposes an OpenAI-compatible API.
+- **llama.cpp `llama-server`** (CPU backend, no libcurl, no OpenMP) exposes an
+  OpenAI-compatible API. Superseded 2026-10-18: it used to be a Buildroot package
+  (`os/buildroot-external/package/llama-cpp`); on the bootc image the module runs
+  as a podman quadlet with the server image/version pinned in `image/pins.env`
+  (`docs/decisions/0001-bootc-base.md`).
 - **`redrob-local-inference`** (`modules/local-inference/supervisor`, Rust) is a
   thin supervisor, not a second inference engine. It picks the model file,
   launches `llama-server` bound to loopback, and relaunches it if it exits.
@@ -39,7 +42,7 @@ Two jobs systemd cannot do on its own:
 
 ## How the agent reaches it
 
-`deploy/config/agent.toml`:
+The agent config (formerly `deploy/config/agent.toml`, now shipped from `image/agent/`):
 
 ```toml
 [providers.models.custom.console]

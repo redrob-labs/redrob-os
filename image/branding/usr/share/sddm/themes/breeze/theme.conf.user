@@ -1,0 +1,4 @@
+# Redrob OS override for the Breeze SDDM theme (read by SDDM after theme.conf).
+[General]
+type=image
+background=/usr/share/wallpapers/Redrob/contents/images/1920x1080.png

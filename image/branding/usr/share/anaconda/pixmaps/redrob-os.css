@@ -1,0 +1,46 @@
+/* Anaconda GTK style overrides for Redrob OS.
+ * Copyright 2026 Janghoon Lee (Redrob) and contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Loaded via [User Interface] custom_stylesheet= in the redrob-os Anaconda
+ * profile (installer agent, image/installer). Pixmaps come from
+ * tools/branding/make_assets.py and match the fedora-logos sizes so the
+ * stock sidebar/topbar layout holds.
+ */
+
+@define-color redrob #E5322D;
+@define-color redrob_bg #121212;
+
+.logo-sidebar {
+    background-image: url('/usr/share/anaconda/pixmaps/sidebar-bg.png');
+    background-color: @redrob_bg;
+    background-repeat: no-repeat;
+}
+
+.logo {
+    background-image: url('/usr/share/anaconda/pixmaps/sidebar-logo.png');
+    background-position: 50% 20px;
+    background-repeat: no-repeat;
+    background-color: transparent;
+}
+
+.product-logo {
+    background-image: none;
+    background-color: transparent;
+}
+
+AnacondaSpokeWindow #nav-box {
+    background-color: @redrob_bg;
+    background-image: url('/usr/share/anaconda/pixmaps/topbar-bg.png');
+    background-repeat: repeat;
+    color: white;
+}
+
+/* accent for the few places Anaconda uses the vendor colour */
+progressbar progress,
+switch:checked,
+checkbutton check:checked,
+radiobutton radio:checked {
+    background-color: @redrob;
+    border-color: @redrob;
+}

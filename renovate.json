@@ -1,0 +1,68 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Redrob OS dependency pins: base image tag, downloaded artifacts in image/pins.env, GitHub Actions SHAs. Weekly, never automerged; a human merges after PR CI (podman build + bootc lint) is green.",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":disableDependencyDashboard"
+  ],
+  "timezone": "Asia/Seoul",
+  "schedule": ["before 9am on monday"],
+  "automerge": false,
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "labels": ["dependencies"],
+  "commitMessagePrefix": "chore(deps): ",
+  "github-actions": {
+    "enabled": true,
+    "pinDigests": true,
+    "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "image/base.env -- BASE_TAG follows the Fedora major of the kinoite base image (44 -> 45). Major bumps are a deliberate release, so they get their own PR and never automerge.",
+      "managerFilePatterns": ["/^image/base\\.env$/"],
+      "matchStrings": [
+        "^BASE_IMAGE=(?<depName>[^\\s#]+)[^\\n]*\\n(?:[^\\n]*\\n)*?BASE_TAG=(?<currentValue>[^\\s#]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "regex:^(?<major>\\d+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "image/pins.env -- a `# renovate: datasource=... depName=...` comment on the line above `NAME_VERSION=` makes that pin updatable. Renovate bumps only the version; the matching NAME_SHA256 must be recomputed by hand (PR CI fails on the stale hash until it is), see docs/ci.md.",
+      "managerFilePatterns": ["/^image/pins\\.env$/"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?(?:\\s+extractVersion=(?<extractVersion>\\S+))?\\s*\\n[A-Z0-9_]+_VERSION=\"?(?<currentValue>[^\"\\s]+)\"?"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "Container images pinned by digest inside workflow `env:` blocks (bootc-image-builder in release.yml).",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\n\\s*[A-Z_]+:\\s*(?<packageName>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "currentValueTemplate": "latest"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Base image major bump is a release decision; keep it visibly separate.",
+      "matchFileNames": ["image/base.env"],
+      "groupName": "base image (Fedora major)",
+      "addLabels": ["base-image"]
+    },
+    {
+      "description": "Pinned downloads: one PR per artifact so the hash can be recomputed per PR.",
+      "matchFileNames": ["image/pins.env"],
+      "addLabels": ["pins"]
+    },
+    {
+      "description": "GitHub Actions digests, grouped weekly.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    }
+  ]
+}

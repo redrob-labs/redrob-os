@@ -1,5 +1,7 @@
 # USB broker verification (QEMU, real guest kernel)
 
+> Historical record (2026-10-18): measured against the former Buildroot image and its `deploy/` paths, both removed when the image moved to bootc (`docs/decisions/0001-bootc-base.md`). The module code under `modules/` is unchanged; paths and harness names below are as they were on that date.
+
 Date: 2026-10-08. Binary: `modules/usb-broker/broker` built for `x86_64-unknown-linux-musl`
 (static, 3.7 MB) and dropped into a running dev1 guest under `/mnt/data`, because the image
 was not rebuilt for this stage. Kernel `6.18.55-haos`, QEMU `qemu-xhci`, devices hot-plugged

@@ -1,0 +1,76 @@
+#!/bin/sh
+# Redrob first boot (F1): device identity, agent config, pairing material.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# bootc port of deploy/firstboot/redrob-firstboot. Runs once per device
+# (redrob-firstboot.service: ConditionPathExists=!/var/lib/redrob/identity/device-id)
+# and is idempotent. Nothing here is baked into the image: /var and /etc are the
+# persistent halves of a bootc system, the image itself is read-only.
+#
+# Directories and their owners come from /usr/lib/tmpfiles.d/redrob.conf and the
+# users from /usr/lib/sysusers.d/redrob.conf, both applied before this unit runs,
+# so unlike the Buildroot version this script does not mkdir/chown the state tree.
+set -eu
+
+DATA=/var/lib/redrob
+ID_DIR=$DATA/identity
+AGENT_DIR=$DATA/agent
+TEMPLATE=/etc/redrob/agent.toml
+
+# tmpfiles has run, but be robust to a hand-wiped /var/lib/redrob.
+mkdir -p "$ID_DIR" "$AGENT_DIR/data" "$AGENT_DIR/work"
+
+# 1. Device id: random UUID, generated here, kept for the life of the device.
+if [ ! -s "$ID_DIR/device-id" ]; then
+    cat /proc/sys/kernel/random/uuid > "$ID_DIR/device-id.tmp"
+    chmod 0644 "$ID_DIR/device-id.tmp"
+    # Written last (atomic rename): the unit's condition keys on this file.
+fi
+
+# 2. Device key pair (ed25519). Private key readable by the broker group only.
+if [ ! -s "$ID_DIR/device.key" ]; then
+    if command -v openssl >/dev/null 2>&1; then
+        openssl genpkey -algorithm ed25519 -out "$ID_DIR/device.key"
+        openssl pkey -in "$ID_DIR/device.key" -pubout -out "$ID_DIR/device.pub"
+    else
+        # No openssl: 32 random bytes as the seed; the agent derives the
+        # ed25519 pair from it on first use.
+        head -c 32 /dev/urandom > "$ID_DIR/device.key"
+    fi
+    chmod 0640 "$ID_DIR/device.key"
+    chgrp redrob-broker "$ID_DIR/device.key"
+fi
+
+# 3. Agent config from the template in /etc (admin-editable, persistent).
+#    The agent itself edits its copy (`redrob-agent config set ...`), so it
+#    lives in the agent's own writable dir, not in /etc.
+if [ ! -s "$AGENT_DIR/config.toml" ]; then
+    install -m 0640 -o redrob-agent -g redrob-agent "$TEMPLATE" "$AGENT_DIR/config.toml"
+fi
+chown -R redrob-agent:redrob-agent "$AGENT_DIR"
+
+# 4. Hostname: redrob-<first 6 hex of device id> unless the installer/user
+#    already set a real one. Anaconda leaves "localhost.localdomain" (or an
+#    empty /etc/hostname) when the user did not pick a name.
+id_file=$ID_DIR/device-id
+[ -s "$id_file" ] || id_file=$ID_DIR/device-id.tmp
+current=$(cat /etc/hostname 2>/dev/null || true)
+case "${current:-}" in
+    ""|localhost|localhost.localdomain|fedora|redrob-os)
+        short=$(cut -c1-6 "$id_file")
+        if command -v hostnamectl >/dev/null 2>&1 && hostnamectl set-hostname "redrob-$short" 2>/dev/null; then
+            :
+        else
+            # No dbus yet (or no hostnamed): write the static file and apply it now.
+            printf 'redrob-%s\n' "$short" > /etc/hostname
+            hostname "redrob-$short" 2>/dev/null || true
+        fi
+        ;;
+esac
+
+# 5. Commit the identity: from here on the unit's condition is false.
+if [ -s "$ID_DIR/device-id.tmp" ]; then
+    mv -f "$ID_DIR/device-id.tmp" "$ID_DIR/device-id"
+fi
+echo "redrob-firstboot: device $(cat "$ID_DIR/device-id") ready"

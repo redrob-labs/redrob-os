@@ -1,24 +1,104 @@
 Redrob OS
-Copyright 2026 Janghoon Lee (Redrob)
+Copyright 2026 Janghoon Lee (Redrob) and contributors
 
 This product includes software developed by third parties.
 
 ----------------------------------------------------------------------
 
-os/ -- derived from Home Assistant Operating System
-  https://github.com/home-assistant/operating-system
-  Copyright (c) Home Assistant contributors
-  Licensed under the Apache License, Version 2.0 (see os/LICENSE).
-  "Home Assistant" is a trademark of Nabu Casa, Inc. Redrob OS is not
-  affiliated with or endorsed by Home Assistant or Nabu Casa. Brand
-  assets and names of the upstream project are replaced in this
-  distribution; any remaining references are historical.
+Base operating system image -- Fedora Kinoite
+  https://fedoraproject.org/atomic-desktops/kinoite/
+  quay.io/fedora-ostree-desktops/kinoite (pinned in image/base.env)
+  Copyright (c) Red Hat, Inc. and the Fedora Project contributors.
+  The base image is consumed as an OCI image and is not vendored in
+  this repository. The packages it contains are distributed under
+  their own licenses, which are recorded by the base distribution
+  (/usr/share/licenses in the image).
+  "Fedora" and the Fedora logos are trademarks of Red Hat, Inc.
+  Redrob OS is not sponsored by, endorsed by or affiliated with the
+  Fedora Project or Red Hat. Fedora trademarks and brand assets
+  (fedora-logos) are not used in Redrob OS: the image replaces them
+  with generic-logos and Redrob branding, and /usr/lib/os-release
+  identifies the system as Redrob OS (ID_LIKE=fedora is kept so that
+  software can detect package compatibility).
 
-os/buildroot -- Buildroot (Home Assistant fork, submodule)
-  https://github.com/home-assistant/buildroot
-  Licensed under the GNU General Public License, Version 2.0 or later.
-  Buildroot build scripts are GPL-2.0-or-later; the packages it builds
-  carry their own licenses, collected by `make legal-info` at build time.
+KDE Plasma desktop and KDE applications (Discover, System Settings, ...)
+  https://kde.org
+  Copyright (c) the KDE community.
+  Licensed under the GNU General Public License (Version 2 or later) and
+  the GNU Lesser General Public License, per component; see each
+  package's license in the base image.
+  "KDE" and the KDE logos are trademarks of KDE e.V. Redrob OS is not
+  endorsed by or affiliated with KDE e.V. KDE brand assets are not used
+  as Redrob OS branding.
+
+bootc / ostree -- bootable container tooling
+  https://github.com/bootc-dev/bootc
+  https://github.com/ostreedev/ostree
+  bootc: Copyright (c) the bootc authors, licensed under the Apache
+  License, Version 2.0 OR the MIT License.
+  ostree: Copyright (c) the libostree authors, licensed under the GNU
+  Lesser General Public License, Version 2.0 or later.
+  Installed from the base image; the installer ISO and disk images are
+  produced with bootc-image-builder (Apache-2.0,
+  https://github.com/osbuild/bootc-image-builder).
+
+greenboot -- boot health checks and automatic rollback
+  https://github.com/fedora-iot/greenboot
+  Copyright (c) the greenboot authors.
+  Licensed under the GNU Lesser General Public License, Version 2.1.
+
+gVisor (runsc) -- sandbox runtime for agent tasks
+  https://github.com/google/gvisor
+  Copyright 2018 The gVisor Authors
+  Licensed under the Apache License, Version 2.0.
+  Installed as a prebuilt binary from the upstream release channel;
+  version and hash are pinned in image/pins.env.
+
+RPM Fusion (free and nonfree repositories) -- media codecs and drivers
+  https://rpmfusion.org
+  Packages are installed at image build time from the RPM Fusion repositories
+  under their own licenses: ffmpeg and libavcodec-freeworld (LGPL/GPL),
+  mesa-va-drivers-freeworld and mesa-vdpau-drivers-freeworld (MIT), the
+  GStreamer "ugly"/"bad" plugin sets (LGPL), and the NVIDIA proprietary
+  driver (akmod-nvidia, xorg-x11-drv-nvidia, libva-nvidia-driver) under the
+  NVIDIA Software License Agreement, redistributed as RPM Fusion ships it.
+  Redrob OS does not modify these packages. The NVIDIA kernel module is
+  compiled during the image build against the shipped kernel; it is not
+  signed for Secure Boot (see docs/desktop.md).
+
+Podman and container tools (containers/*)
+  https://github.com/containers
+  Copyright (c) the containers/* authors.
+  Licensed under the Apache License, Version 2.0. Installed from the
+  base image.
+
+llama.cpp (ggml) -- CPU inference server for the local-inference module
+  https://github.com/ggml-org/llama.cpp
+  Copyright (c) 2023-2024 The ggml authors
+  Licensed under the MIT License. Runs llama-server for the on-device
+  router model as a podman quadlet (modules/local-inference); version
+  and hash pinned in image/pins.env. No source modified.
+
+Flatpak and Flathub
+  https://flatpak.org  https://flathub.org
+  Flatpak: Copyright (c) the Flatpak authors, licensed under the GNU
+  Lesser General Public License, Version 2.1 or later. Installed from
+  the base image. Applications installed by the user from Flathub carry
+  their own licenses and are not part of Redrob OS.
+
+Fonts -- Nanum fonts
+  https://hangeul.naver.com
+  Copyright (c) 2010, NAVER Corporation
+  Licensed under the SIL Open Font License, Version 1.1
+  (naver-nanum-fonts from the base distribution). Used as the UI fonts.
+
+ibus and ibus-hangul -- Korean input
+  https://github.com/ibus/ibus  https://github.com/libhangul/ibus-hangul
+  Copyright (c) the ibus and ibus-hangul authors.
+  Licensed under the GNU Lesser General Public License, Version 2.1 or
+  later. Installed from the base image.
+
+----------------------------------------------------------------------
 
 agent/ -- derived from ZeroClaw
   https://github.com/zeroclaw-labs/zeroclaw
@@ -27,16 +107,30 @@ agent/ -- derived from ZeroClaw
   agent/LICENSE-APACHE, agent/NOTICE). Redrob OS uses it under the
   Apache License, Version 2.0.
 
-os/buildroot-external/package/llama-cpp -- llama.cpp (ggml)
-  https://github.com/ggml-org/llama.cpp
-  Copyright (c) 2023-2024 The ggml authors
-  Licensed under the MIT License. Built as the CPU inference server
-  (llama-server) for the local-inference module's on-device router
-  model. Pinned at tag b4406; no source modified.
+image/agent (first boot, pairing) -- portions derived from
+Home Assistant Operating System
+  https://github.com/home-assistant/operating-system
+  Copyright (c) Home Assistant contributors
+  Licensed under the Apache License, Version 2.0.
+  Portions of the first-boot (device identity, hostname) and OTA/pairing
+  logic were derived from Home Assistant Operating System, which this
+  repository vendored as os/ until 2026-10-18 (see UPSTREAM.md). The
+  Buildroot-based image itself is no longer part of Redrob OS.
+  "Home Assistant" is a trademark of Nabu Casa, Inc. Redrob OS is not
+  affiliated with or endorsed by Home Assistant or Nabu Casa. Brand
+  assets and names of the upstream project are not used in this
+  distribution; any remaining references are historical.
+
+Redrob Launcher -- installs the Redrob apps into the user's home
+  https://github.com/redrob-labs/redrob-launcher
+  Copyright 2026 Janghoon Lee (Redrob) and contributors
+  Licensed under the Apache License, Version 2.0. Installed as a
+  prebuilt release tarball; version and hash pinned in image/pins.env.
 
 ----------------------------------------------------------------------
 
 Reference only (no code copied):
+  Universal Blue (Bluefin / Aurora / Bazzite)  Apache-2.0  bootc desktop image pattern
   nearai/ironclaw      Apache-2.0   WASM sandbox, credential protection design
   moltis-org/moltis    MIT          alternative runtime
   sipeed/picoclaw      MIT          low-cost reference

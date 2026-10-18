@@ -516,9 +516,11 @@ fn picker_items_for(
         | Section::EmbeddingRoutes => {
             PickerDispatch::Items(one_tier_alias_map_picker(cfg, section.as_str()))
         }
-        Section::Hardware | Section::Mcp | Section::Skills | Section::QuickstartState => {
-            PickerDispatch::DirectForm
-        }
+        Section::Hardware
+        | Section::Relay
+        | Section::Mcp
+        | Section::Skills
+        | Section::QuickstartState => PickerDispatch::DirectForm,
     }
 }
 
@@ -1111,7 +1113,11 @@ async fn select_section(
             };
             (prefix, selection_changed || defaults_changed)
         }
-        Section::Hardware | Section::Mcp | Section::Skills | Section::QuickstartState => {
+        Section::Hardware
+        | Section::Relay
+        | Section::Mcp
+        | Section::Skills
+        | Section::QuickstartState => {
             return error_response(
                 ConfigApiError::new(
                     ConfigApiCode::PathNotFound,
@@ -2483,6 +2489,7 @@ mod tests {
             Section::Channels,
             Section::Memory,
             Section::Hardware,
+            Section::Relay,
             Section::Tunnel,
             Section::Agents,
             Section::PeerGroups,
@@ -2495,7 +2502,7 @@ mod tests {
             Section::RiskProfiles,
             Section::RuntimeProfiles,
         ];
-        let direct_form = [Section::Hardware, Section::Mcp];
+        let direct_form = [Section::Hardware, Section::Relay, Section::Mcp];
         for section in all {
             match picker_items_for(*section, &cfg) {
                 PickerDispatch::Items(_items) => {

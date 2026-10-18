@@ -1,0 +1,6 @@
+# Redrob OS: fetch cosign/sigstore signatures stored next to the image on GHCR
+# (OCI "sigstore attachments"), which /etc/containers/policy.json requires for
+# this repository. Scoped to our image only; other registries are untouched.
+docker:
+  ghcr.io/redrob-labs/redrob-os:
+    use-sigstore-attachments: true

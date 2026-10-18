@@ -443,9 +443,9 @@ async fn egress_proxy_allows_listed_hosts_only_and_audits() {
 fn shipped_config_parses_and_validates() {
     let p = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../../deploy/config/broker.toml"
+        "/../../../image/agent/etc/redrob/broker.toml"
     );
-    let cfg = BrokerConfig::load(std::path::Path::new(p)).expect("deploy/config/broker.toml");
+    let cfg = BrokerConfig::load(std::path::Path::new(p)).expect("image/agent/etc/redrob/broker.toml");
     assert!(cfg.scopes.len() >= 10);
     assert!(
         cfg.egress

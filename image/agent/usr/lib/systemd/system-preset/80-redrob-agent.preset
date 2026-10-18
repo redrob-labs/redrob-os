@@ -1,0 +1,13 @@
+# Redrob OS: enable the agent stack. bootc images use presets instead of
+# .wants symlinks; `systemctl preset-all` runs at image build / first boot.
+# A user turns the agent off with `systemctl disable --now redrob-agent.service`
+# (persistent: /etc survives updates). See docs/agent-on-bootc.md.
+enable redrob-firstboot.service
+enable redrob-broker.service
+enable redrob-usb-broker.service
+enable redrob-agent.service
+enable redrob-pairing.timer
+# Task sandbox: the agent talks to the root podman API socket (DOCKER_HOST).
+enable podman.socket
+# Local inference quadlet (redrob-inference.container) is generated with
+# WantedBy=multi-user.target and gated by ConditionPathExists=; no preset needed.

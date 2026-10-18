@@ -1,5 +1,7 @@
 # local-inference: the router model served offline (L0 host)
 
+> Historical record (2026-10-18): measured against the former Buildroot image and its `deploy/` paths, both removed when the image moved to bootc (`docs/decisions/0001-bootc-base.md`). The module code under `modules/` is unchanged; paths and harness names below are as they were on that date.
+
 Date: 2026-10-09. This records an end-to-end run of the real supervisor driving
 the real llama.cpp server against a real GGUF, on the L0 build host (not QEMU —
 the module needs no device hardware, only a CPU). It proves the agent's offline

@@ -1,0 +1,11 @@
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+# Redrob OS file-search defaults: index the home directory incl. contents so the
+# Start menu / KRunner find documents by text. Users override in ~/.config/baloofilerc.
+
+[Basic Settings]
+Indexing-Enabled=true
+
+[General]
+only basic indexing=false
+exclude filters version=9

@@ -1,0 +1,20 @@
+# Redrob OS system-unit presets. Applied at build time by image/scripts/30-cleanup.sh
+# (so the enablement symlinks ship in the image) and by systemd on first boot.
+# Only `enable` lines are read by the build script; keep one unit per line.
+
+# Atomic OS updates: fetch + stage daily (timer tuned in
+# bootc-fetch-apply-updates.timer.d/redrob.conf), applied on the next reboot.
+enable bootc-fetch-apply-updates.timer
+
+# greenboot: boot health checks; a failing deployment is rolled back automatically.
+# (Fedora 44 ships the Rust greenboot: healthcheck + set-rollback-trigger are the
+# units; the old grub2-set-counter/redboot units no longer exist.)
+enable greenboot-healthcheck.service
+enable greenboot-set-rollback-trigger.service
+
+# Flathub as the one app store (runs once, marker in /var/lib/redrob).
+enable redrob-flathub.service
+
+# Printing + firmware updates.
+enable cups.socket
+enable fwupd-refresh.timer

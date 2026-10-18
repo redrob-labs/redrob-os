@@ -1,0 +1,21 @@
+[Unit]
+Description=Redrob first boot (device identity and agent config)
+Documentation=https://github.com/redrob-labs/redrob-os/blob/develop/docs/agent-on-bootc.md
+# Normal boot ordering (not DefaultDependencies=no as on Buildroot): sysusers and
+# tmpfiles have created the users and /var/lib/redrob by now, and hostnamed is
+# reachable for the redrob-<id6> hostname.
+After=systemd-sysusers.service systemd-tmpfiles-setup.service local-fs.target dbus.socket
+Wants=dbus.socket
+Before=redrob-agent.service redrob-broker.service redrob-usb-broker.service network-online.target
+# One shot per device: the script writes device-id last.
+ConditionPathExists=!/var/lib/redrob/identity/device-id
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/redrob/firstboot
+# Root, unsandboxed on purpose: it chowns the state tree, writes /etc/hostname
+# and talks to hostnamed. It runs exactly once.
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+# Redrob OS screen lock defaults. Users override in ~/.config/kscreenlockerrc.
+
+[Daemon]
+Autolock=true
+# Minutes of inactivity before the screen locks.
+Timeout=10
+# Seconds after locking during which no password is needed to unlock.
+LockGrace=5
+LockOnResume=true

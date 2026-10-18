@@ -1,0 +1,59 @@
+# Redrob task sandbox -- the container the agent runs every task in.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+#
+# Published by .github/workflows/build-image.yml as ghcr.io/redrob-labs/redrob-sandbox
+# (tags: stable, sha-<short>) next to the OS image, and logically bound to the OS
+# image (image/Containerfile), so bootc pulls both together and the first task
+# works offline. The OS runs it under gVisor (runsc) with --read-only, no network,
+# and only /workspace writable (image/agent/etc/redrob/agent.toml).
+#
+# Build context is the REPOSITORY ROOT:
+#   podman build -f image/sandbox/Containerfile -t ghcr.io/redrob-labs/redrob-os:sandbox .
+#
+# Contents: a plain developer userland (shell, git, Python, Node.js, C toolchain,
+# search tools) plus Redrob Code headless. Nothing here holds a credential: model
+# calls and pushes go through the credential broker on the host (docs/design/sandbox.md).
+
+ARG SANDBOX_BASE=registry.fedoraproject.org/fedora-minimal
+ARG SANDBOX_TAG=44
+
+FROM scratch AS ctx
+COPY image/pins.env /pins.env
+COPY image/scripts/lib.sh /scripts/lib.sh
+COPY image/sandbox/install-redrob-code.sh /scripts/install-redrob-code.sh
+
+FROM ${SANDBOX_BASE}:${SANDBOX_TAG}
+
+LABEL org.opencontainers.image.title="Redrob task sandbox" \
+      org.opencontainers.image.description="Developer userland the Redrob OS agent runs tasks in, under gVisor" \
+      org.opencontainers.image.vendor="Redrob" \
+      org.opencontainers.image.source="https://github.com/redrob-labs/redrob-os" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    dnf5 -y install --setopt=install_weak_deps=False \
+        bash coreutils findutils grep sed gawk diffutils patch tar gzip zstd xz unzip \
+        git git-lfs jq ripgrep fd-find tree which procps-ng \
+        ca-certificates curl openssh-clients \
+        python3 python3-pip python3-virtualenv \
+        nodejs npm \
+        gcc gcc-c++ make cmake pkgconf-pkg-config \
+        shadow-utils && \
+    dnf5 clean all && rm -rf /var/cache/libdnf5/* /var/log/*
+
+# Redrob Code headless (pinned in image/pins.env). TARGETARCH is amd64|arm64.
+ARG TARGETARCH
+RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
+    --mount=type=tmpfs,dst=/tmp \
+    TARGETARCH="${TARGETARCH}" bash /ctx/scripts/install-redrob-code.sh
+
+# Unprivileged task user; /workspace is the only writable mount at run time.
+RUN useradd --uid 1000 --user-group --create-home --shell /bin/bash task && \
+    mkdir -p /workspace && chown task:task /workspace
+USER task
+WORKDIR /workspace
+ENV HOME=/home/task \
+    PATH=/home/task/.local/bin:/usr/local/bin:/usr/bin:/bin \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+CMD ["/bin/bash"]
