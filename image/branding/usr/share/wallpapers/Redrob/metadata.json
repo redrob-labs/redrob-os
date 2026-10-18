@@ -1,0 +1,17 @@
+{
+    "KPlugin": {
+        "Id": "Redrob",
+        "Name": "Redrob",
+        "Description": "Redrob OS default wallpaper",
+        "Authors": [
+            {
+                "Name": "Redrob",
+                "Email": "hello@redrob.ai"
+            }
+        ],
+        "License": "Apache-2.0",
+        "Website": "https://redrob.ai"
+    },
+    "KPackageStructure": "Plasma/Wallpaper",
+    "X-KDE-PlasmaImageWallpaper-AccentColor": "#E5322D"
+}

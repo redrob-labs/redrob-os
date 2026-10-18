@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "hello@redrob.ai",
+                "Name": "Redrob"
+            }
+        ],
+        "Category": "",
+        "Description": "Redrob OS global theme: Breeze Dark with the Redrob red accent and the Redrob wallpaper",
+        "Id": "ai.redrob.desktop",
+        "License": "Apache-2.0",
+        "Name": "Redrob",
+        "Website": "https://redrob.ai"
+    }
+}
