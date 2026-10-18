@@ -62,7 +62,10 @@ RUN --mount=type=cache,dst=/usr/local/cargo/registry \
 # NVIDIA kernel module, built against the exact kernel the base image ships (the
 # akmods pattern Universal Blue uses; a bootc image cannot build modules on the
 # device because /usr is read-only). x86_64 only: RPM Fusion has no aarch64 build.
-# Output: /out/kmod-nvidia-<kver>-<ver>.rpm (empty on aarch64).
+# akmod-nvidia's %post starts an eager build as root, which akmodsbuild refuses
+# inside a container build, so the scriptlets are skipped and the build is run
+# explicitly as the `akmods` user. Output: /out/kmod-nvidia-<kver>-<ver>.rpm
+# (empty on aarch64).
 FROM ${BASE_IMAGE}:${BASE_TAG} AS akmods
 ARG TARGETARCH
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
@@ -78,9 +81,12 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
       || dnf5 -y install --setopt=install_weak_deps=False \
            "https://kojipkgs.fedoraproject.org/packages/kernel/${KV}/${KR}/x86_64/kernel-devel-${KVER}.rpm" \
            "https://kojipkgs.fedoraproject.org/packages/kernel/${KV}/${KR}/x86_64/kernel-devel-matched-${KVER}.rpm"; \
-    dnf5 -y install --setopt=install_weak_deps=False akmods akmod-nvidia; \
-    akmods --force --kernels "${KVER}"; \
-    cp /var/cache/akmods/nvidia/kmod-nvidia-*.rpm /out/; ls -l /out
+    dnf5 -y install --setopt=install_weak_deps=False akmods rpm-build; \
+    dnf5 -y install --setopt=install_weak_deps=False --setopt=tsflags=noscripts akmod-nvidia; \
+    chown akmods:akmods /out; install -d -o akmods -g akmods -m 0755 /tmp/akmods-build; \
+    runuser -u akmods -- env TMPDIR=/tmp/akmods-build /usr/sbin/akmodsbuild \
+      --target x86_64 --kernels "${KVER}" --outputdir /out /usr/src/akmods/nvidia-kmod.latest; \
+    ls -l /out; test -n "$(ls /out/kmod-nvidia-*.rpm)"
 
 FROM ${BASE_IMAGE}:${BASE_TAG}
 
