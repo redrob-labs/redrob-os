@@ -102,7 +102,7 @@ but a cgroup heuristic). So the OS supplies the pieces:
 | API socket | `podman.socket` (preset) + `usr/lib/systemd/system/podman.socket.d/50-redrob-sandbox.conf` | `/run/podman/podman.sock`, group `redrob-sandbox`, 0660. `DOCKER_HOST` in the agent unit points there. |
 | runsc as default runtime | `usr/lib/systemd/system/podman.service.d/50-redrob-sandbox.conf` → `CONTAINERS_CONF_OVERRIDE=/etc/redrob/containers-sandbox.conf` | `[engine] runtime = "runsc"`, `label = false`. Scoped to `podman.service` only: quadlets and users' rootless podman/toolbox keep crun. |
 | runsc binary | image build (`image/pins.env` `RUNSC_*`, installed at `/usr/bin/runsc`) | owned by the image agent; this overlay only references it. |
-| sandbox image | `etc/containers/systemd/redrob-sandbox.image` | pre-pulls `ghcr.io/redrob-labs/redrob-os:sandbox` into root podman storage; TODO make it a bootc logically-bound image once CI publishes it. |
+| sandbox image | `etc/containers/systemd/redrob-sandbox.image` | pre-pulls `ghcr.io/redrob-labs/redrob-os:sandbox` into root podman storage on first boot (not a bootc bound image: that breaks image-builder and offline installs). |
 | agent config | `etc/redrob/agent.toml` `[runtime.docker]` | image, `network = "none"`, 2 GiB / 2 CPUs, read-only rootfs, workspace allow-list. |
 
 Design notes and known limits:
