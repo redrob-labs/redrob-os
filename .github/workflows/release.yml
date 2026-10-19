@@ -209,7 +209,23 @@ jobs:
             --chown "$(id -u):$(id -g)" \
             "${IMAGE}:${VER}"
           ls -la output/bootiso
-          mv output/bootiso/install.iso "redrob-os-${VER}-linux-x86_64.iso"
+          mv output/bootiso/install.iso unbranded.iso
+      - name: Brand the installer (Anaconda product.img)
+        # bootc-image-builder builds the installer root from Fedora packages, so
+        # our Anaconda pixmaps/profile/os-release are added as images/product.img
+        # (tools/installer/brand-iso.sh). Verified on v0.3.1 in QEMU: "Welcome
+        # to Redrob OS 44", Redrob sidebar and lockup.
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends xorriso isomd5sum
+          # The token typefaces, exactly as installed in the released image.
+          cid="$(sudo podman create "${IMAGE}:${VER}" /bin/true)"
+          sudo podman cp "${cid}:/usr/share/fonts/redrob" fonts
+          sudo podman rm "${cid}" >/dev/null
+          sudo chown -R "$(id -u):$(id -g)" fonts
+          tools/installer/brand-iso.sh unbranded.iso "redrob-os-${VER}-linux-x86_64.iso" fonts
+          rm -rf unbranded.iso fonts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-iso-x86_64
