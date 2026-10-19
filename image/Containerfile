@@ -122,6 +122,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         generic-logos \
         naver-nanum-fonts-all \
         ibus-hangul \
+        ibus-wayland \
         podman \
         podman-docker \
         catatonit \
