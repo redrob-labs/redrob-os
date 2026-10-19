@@ -4,19 +4,56 @@ Everything user-visible that says who made this OS lives in the `image/branding/
 The Containerfile `COPY`s that directory onto `/`, so every file below is already at its
 final absolute path. Nothing here needs a build; the PNGs are committed.
 
-## Colour tokens
+## Source: the Redrob Group Design System
 
-| Token | Value | Used for |
+Redrob OS carries the group brand (group tier, `10-logo.md`: it is not one of the seven
+products, so Redrob grounds, the Redrob lockup, no product colour). Nothing is drawn by
+hand. `tools/branding/brand/` holds verbatim copies of the design system's shipped files,
+pinned by `SHA256SUMS`; `tools/branding/make_assets.py` only resizes **down**, crops,
+composes grounds and writes config files from them.
+
+| In `tools/branding/brand/` | From | Used for |
 |---|---|---|
-| Redrob red | `#E5322D` (`229,50,45`) | mark, accent colour, selection/highlight, Plymouth arc |
-| Background | `#121212` | wallpaper gradient start, Plymouth background, Anaconda sidebar/topbar |
-| Background (warm) | `#2A0D0C` | wallpaper gradient end |
-| Foreground | `#FCFCFC` | mark inner ring, text on red |
+| `redrob-logo-primary-white.png` | `Logos/` (gradient symbol, white wordmark) | Plymouth splash, Anaconda sidebar |
+| `redrob-logo-primary.png` | `Logos/` | reserved for light grounds (first-login pages) |
+| `redrob-logo-primary-solid-mono-white.png` | `Logos/` (flat white) | anything placed on a gradient |
+| `redrob-symbol-solid-white.png`, `symbol-white-*.png` | `Symbol/`, `Favicons/` | `system-logo-white.png` (KInfoCenter header, Plymouth fallback) |
+| `favicon-{16,32,48,64}.png`, `icon-{192,512}.png`, `favicon.svg` | `Favicons/` (white symbol on a Redrob Blue tile, drawn per size) | the `redrob-os` icon: start button, About, Discover, os-release `LOGO=` |
+| `tokens.json` | `@redrob-labs/ui` 1.7.0 `dist/styles/tokens.json` | every colour below |
 
-The mark is ours: a red disc (r 0.50) with a white ring (r 0.33–0.21) and a red centre.
-It is defined once, in code, in `tools/branding/make_assets.py` (`MARK`), and written by
-hand as SVG in the same file. No Fedora, KDE, Universal Blue or Home Assistant geometry
-is used anywhere.
+### Colour tokens (from `tokens.json`)
+
+| Token | Light | Dark | Used for |
+|---|---|---|---|
+| `blue-6` Redrob Blue (`surface-brand`, `focus-ring`) | `#2B52FF` | `#2B52FF` | accent colour, selection, checked controls, installer progress, favicon tile |
+| `blue-7` / `blue-4` (`ink-brand`) | `#1733D5` | `#8AAFFF` | links, active text, hover |
+| `redrob-black` (`surface-base` dark) | - | `#0A0B0C` | Plymouth field, wallpaper field, Anaconda sidebar/topbar, login/lock (`Colors:Complementary`) |
+| `surface-base` / `surface-raised` / `surface-sunken` | `#FFFFFF` / `#F8F9FB` / `#EFF1F4` | `#0A0B0C` / `#141719` / `#1C1F26` | View / Window+Header+Tooltip / alternate rows, buttons |
+| `ink-primary` / `ink-muted` | `#0A0B0C` / `#686E78` | `#F8F9FB` / `#838A97` | text / inactive text |
+| `status-danger` / `-warning` / `-success` | `#A31310` / `#AE5100` / `#00864A` | `#FF4B4B` / `#FF9C1B` / `#29E474` | Negative / Neutral / Positive |
+| `blue-10` | `#030C34` | | the lit far side of the wallpaper seam |
+| `gradient-brand` = `blue-6` -> `accent-teal-3` `#6FF4F0` at 40 deg | | | the seam, the Plymouth loader segment |
+
+Two colour schemes are generated: `Redrob` (light, the default -- the design system's
+`surface-base` is white, as is Windows') and `RedrobDark`, selectable in System Settings.
+The login greeter and lock screen draw from `Colors:Complementary`, which is the dark set
+in both schemes because it sits on the wallpaper.
+
+### Grounds
+
+The wallpaper and the Anaconda sidebar are the design system's **deep** ground
+(`85-social.md`): Redrob Black crossed by one diagonal at 40 deg toward the bottom right,
+the far side lit `blue-10`, the seam itself `gradient-brand` with one hairline. No logo on
+the wallpaper; the lockup appears once per surface (splash, installer sidebar).
+
+### Typography
+
+`30-typography.md`: Pretendard (Latin system face) and Wanted Sans (Korean system face),
+both SIL OFL, installed from their upstream release zips by `image/scripts/25-fonts.sh`
+(pins in `image/pins.env`). `/etc/fonts/conf.d/60-redrob.conf` makes Pretendard the
+default sans and lets it fall through to Wanted Sans for Hangul; `/etc/xdg/kdeglobals`
+names Pretendard for every Plasma font role. Nanum Myeongjo (Fedora's `naver-nanum-fonts`)
+stays as the Korean serif voice face.
 
 ## Regenerate
 
@@ -25,34 +62,35 @@ python3 -m venv ~/.local/venv-pil && ~/.local/venv-pil/bin/pip install pillow
 ~/.local/venv-pil/bin/python tools/branding/make_assets.py   # writes into image/branding/
 ```
 
-The script is idempotent and only depends on Pillow. Total overlay size is ~0.6 MB.
-Hand-written files (os-release, `.plymouth`/`.script`, SDDM/LnF configs, colour scheme,
-Anaconda CSS) are not touched by the script.
+The script verifies `tools/branding/brand/SHA256SUMS` first and refuses to enlarge any
+artwork. Hand-written files (os-release, `.plymouth`/`.script`, PLM/LnF configs, the
+layout script) are not touched by it; colour schemes, Anaconda CSS, wallpaper metadata
+and every PNG are. To take a new design-system export: copy the file over, update
+`SHA256SUMS`, rerun.
 
 ## Asset list
 
 | Path (absolute, in the image) | Source | Consumer |
 |---|---|---|
 | `/usr/lib/os-release` | hand-written | everything (`NAME="Redrob OS"`, `ID=redrob-os`, `ID_LIKE=fedora`, `LOGO=redrob-os`) |
-| `/usr/share/icons/hicolor/{16..256}x*/apps/redrob-os.png`, `scalable/apps/redrob-os.svg` | generated | `LOGO=` in os-release → KInfoCenter, Discover, GRUB/boot menus that use the distro icon |
-| `/usr/share/pixmaps/system-logo-white.png` (252×252), `redrob-os.png` | generated | Plymouth `spinner` watermark fallback, Anaconda, kcm-about-distro `LogoPath` |
-| `/usr/share/plymouth/themes/redrob/{redrob.plymouth,redrob.script,logo.png,throbber-0000..0023.png,box,entry,bullet,lock}.png` | script theme hand-written, images generated | Plymouth boot splash + LUKS prompt |
+| `/usr/share/icons/hicolor/{16..256}x*/apps/redrob-os.png`, `scalable/apps/redrob-os.svg` | design-system favicon tiles (64->128 and 512->256 downscaled) | `LOGO=` in os-release → KInfoCenter, Discover, GRUB/boot menus that use the distro icon |
+| `/usr/share/pixmaps/system-logo-white.png` (252×252, white symbol on transparent), `redrob-os.png` (tile) | design-system symbol / tile, downscaled | Plymouth `spinner` watermark fallback, Anaconda, kcm-about-distro `LogoPath` |
+| `/usr/share/plymouth/themes/redrob/{redrob.plymouth,redrob.script,logo.png,throbber-0000..0023.png,box,entry,bullet,lock}.png` | script theme hand-written; `logo.png` = primary-white lockup at 420 px; loader frames generated | Plymouth boot splash (lockup still, loader bar moves -- `10-logo.md` forbids animating the mark as a loading indicator) + LUKS prompt |
 | `/etc/plymouth/plymouthd.conf` | hand-written (`Theme=redrob`) | plymouthd |
-| `/usr/share/wallpapers/Redrob/{metadata.json,contents/images/{1920x1080,2560x1440,3840x2160}.png,contents/screenshot.png}` | generated | Plasma wallpaper package (`Plasma/Wallpaper`, accent `#E5322D` via `X-KDE-PlasmaImageWallpaper-AccentColor`) |
+| `/usr/share/wallpapers/Redrob/{metadata.json,contents/images/{1920x1080,2560x1440,3840x2160}.png,contents/screenshot.png}` | generated | Plasma wallpaper package (`Plasma/Wallpaper`, the deep ground; accent `#2B52FF` via `X-KDE-PlasmaImageWallpaper-AccentColor`) |
 | `/usr/lib/plasmalogin/defaults.conf` | hand-written | Plasma Login Manager (Kinoite 44's display manager; SDDM is not installed) distro defaults: Redrob wallpaper package, clock on. Admins/KCM override in `/etc/plasmalogin.conf` |
-| `/etc/xdg/kdeglobals` `[General] ColorScheme=Redrob`, `AccentColor` (installer overlay) | hand-written | colours of the login greeter (runs as `plasmalogin`, no LnF applied) and of every user before the LnF package runs |
-| `/usr/share/plasma/look-and-feel/ai.redrob.desktop/{metadata.json,contents/defaults,contents/colors,contents/previews/*}` | hand-written + generated previews | Plasma global theme "Redrob": Breeze widgets/icons/cursors, colour scheme Redrob, `AccentColor=229,50,45`, wallpaper Redrob |
-| `/usr/share/color-schemes/Redrob.colors` | derived from KDE Breeze Dark | Plasma colour scheme; also copied into the LnF package as `contents/colors` |
-| `/usr/share/anaconda/pixmaps/{sidebar-logo.png 150×69, sidebar-bg.png 406×767, topbar-bg.png 1040×132, redrob-os.css}` | generated + hand-written CSS | Anaconda GTK UI (sizes match fedora-logos so the stock layout holds) |
+| `/etc/xdg/kdeglobals` `[General] ColorScheme=Redrob`, `AccentColor=43,82,255`, Pretendard font roles (installer overlay) | hand-written | colours of the login greeter (runs as `plasmalogin`, no LnF applied) and of every user before the LnF package runs |
+| `/usr/share/plasma/look-and-feel/ai.redrob.desktop/{metadata.json,contents/defaults,contents/colors,contents/layouts/org.kde.plasma.desktop-layout.js,contents/previews/*}` | hand-written + generated colours/previews | Plasma global theme "Redrob": Breeze widgets/icons/cursors, colour scheme Redrob, `AccentColor=43,82,255`, wallpaper Redrob, default panel whose start button is the `redrob-os` tile and whose task manager is icons-only |
+| `/usr/share/color-schemes/{Redrob,RedrobDark}.colors` | generated from `tokens.json` (Breeze section structure) | Plasma colour schemes; the light one is also the LnF package's `contents/colors` |
+| `/usr/share/anaconda/pixmaps/{sidebar-logo.png 150×69 (lockup 130 px wide), sidebar-bg.png 406×767 (deep ground), topbar-bg.png 1040×132, redrob-os.css}` | generated | Anaconda GTK UI (sizes match fedora-logos so the stock layout holds) |
 | `/etc/xdg/kcm-about-distrorc` | hand-written | System Settings → About this System: `Name`, `LogoPath`, `Website`, `ShowBuild` |
 
-### Colour scheme licence
+### Colour scheme provenance
 
-`Redrob.colors` keeps every KDE `SPDX-FileCopyrightText` line from `BreezeDark.colors`
-and stays `LGPL-2.0-or-later`; our line is added below theirs. Only `DecorationFocus`,
-`DecorationHover`, `ForegroundActive`, `ForegroundLink`, `BackgroundAlternate` and the
-`Colors:Selection` `BackgroundNormal` were changed (Breeze blue → Redrob red); the `Name`
-translations were dropped so the scheme shows as "Redrob" in every locale.
+`Redrob.colors` and `RedrobDark.colors` are generated: every value is a design-system
+token, and only the *section structure* (`[Colors:View]`, `[WM]`, the `ColorEffects`
+blocks) follows KDE's Breeze schemes. No Breeze colour value survives, so the files carry
+our Apache-2.0 header; `UPSTREAM.md` still credits Breeze for the structure.
 
 ## Notes for the other agents
 
@@ -130,8 +168,9 @@ translations were dropped so the scheme shows as "Redrob" in every locale.
 
 ### repo agent
 
-- `NOTICE`/`UPSTREAM.md` should list: KDE Breeze Dark colour scheme (LGPL-2.0-or-later,
-  `Redrob.colors` is a derivative); Plymouth `script` example theme (GPL-2.0-or-later;
+- `NOTICE`/`UPSTREAM.md` should list: KDE Breeze colour schemes (LGPL-2.0-or-later;
+  `Redrob*.colors` follow their section structure, values are ours); Pretendard and
+  Wanted Sans (SIL OFL 1.1, installed from upstream releases); Plymouth `script` example theme (GPL-2.0-or-later;
   `redrob.script` follows its structure for the password dialog, images are ours).
 
 ## Rules
@@ -139,8 +178,11 @@ translations were dropped so the scheme shows as "Redrob" in every locale.
 - No Fedora, KDE, Universal Blue or Home Assistant names or marks on any product surface:
   boot splash, login, desktop, installer, About dialog, wallpapers, icons. They are only
   allowed in `NOTICE`, `UPSTREAM.md` and `docs/`.
-- The mark is never recoloured or re-drawn by hand; change `MARK`/tokens in
-  `tools/branding/make_assets.py` and regenerate.
+- The mark is never redrawn, recoloured, stretched or enlarged (`10-logo.md`). Only the
+  design system's exports in `tools/branding/brand/` are used, and only scaled down. A
+  new colour is a new `tokens.json`, not an edit to `make_assets.py`.
+- Blue acts: anything that is a control, a link, focus or selection is Redrob Blue. No
+  second accent anywhere on the OS.
 - Anything user-visible that names the OS reads it from `/usr/lib/os-release`; do not
   hard-code "Redrob OS" in scripts when `NAME`/`PRETTY_NAME` will do.
 - `generic-logos` (not `fedora-logos`) is the logos RPM in the image; our overlay sits on

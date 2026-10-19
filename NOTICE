@@ -90,7 +90,30 @@ Fonts -- Nanum fonts
   https://hangeul.naver.com
   Copyright (c) 2010, NAVER Corporation
   Licensed under the SIL Open Font License, Version 1.1
-  (naver-nanum-fonts from the base distribution). Used as the UI fonts.
+  (naver-nanum-fonts from the base distribution). Nanum Myeongjo is the
+  Korean serif face; NanumGothicCoding the fixed-width UI font.
+
+Fonts -- Pretendard
+  https://github.com/orioncactus/pretendard
+  Copyright (c) 2021 Kil Hyung-jin, with Reserved Font Name Pretendard
+  Licensed under the SIL Open Font License, Version 1.1. Installed from
+  the upstream release zip (version and hash pinned in image/pins.env)
+  by image/scripts/25-fonts.sh. The Latin UI font. No source modified.
+
+Fonts -- Wanted Sans
+  https://github.com/wanteddev/wanted-sans
+  Copyright (c) 2023 Wantedlab, with Reserved Font Name Wanted Sans
+  Licensed under the SIL Open Font License, Version 1.1. Installed from
+  the upstream release zip (pinned in image/pins.env) by
+  image/scripts/25-fonts.sh. The Korean UI font. No source modified.
+
+KDE Breeze colour schemes -- section structure only
+  https://invent.kde.org/plasma/breeze
+  Copyright (c) the KDE Breeze authors.
+  Licensed under the GNU Lesser General Public License, Version 2.0 or
+  later. image/branding/usr/share/color-schemes/Redrob*.colors follow
+  the Breeze files' section and key layout; every colour value is a
+  Redrob design-system token written by tools/branding/make_assets.py.
 
 ibus and ibus-hangul -- Korean input
   https://github.com/ibus/ibus  https://github.com/libhangul/ibus-hangul

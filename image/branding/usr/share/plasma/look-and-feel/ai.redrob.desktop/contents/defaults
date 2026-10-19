@@ -3,10 +3,10 @@ widgetStyle=Breeze
 
 [kdeglobals][General]
 ColorScheme=Redrob
-AccentColor=229,50,45
+AccentColor=43,82,255
 
 [kdeglobals][Icons]
-Theme=breeze-dark
+Theme=breeze
 
 [plasmarc][Theme]
 name=default

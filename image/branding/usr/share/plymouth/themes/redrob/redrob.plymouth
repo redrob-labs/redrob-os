@@ -1,9 +1,9 @@
 [Plymouth Theme]
 Name=Redrob
-Description=Redrob OS boot splash: the Redrob mark with a rotating red arc.
+Description=Redrob OS boot splash: the Redrob lockup on Redrob Black with a brand-gradient loader.
 ModuleName=script
 
 [script]
 ImageDir=/usr/share/plymouth/themes/redrob
 ScriptFile=/usr/share/plymouth/themes/redrob/redrob.script
-ConsoleLogBackgroundColor=0x121212
+ConsoleLogBackgroundColor=0x0a0b0c

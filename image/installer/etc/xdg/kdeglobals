@@ -15,16 +15,23 @@ AnimationDurationFactor=0.5
 # Colours are also set by the look-and-feel package on first login, but the
 # Plasma Login Manager greeter runs as the `plasmalogin` user with no LnF
 # applied, so the system default must name the Redrob scheme explicitly.
+# Both values come from the design-system tokens: scheme = generated from
+# tokens.json, accent = blue-6 #2B52FF (Redrob Blue, surface-brand).
 ColorScheme=Redrob
-AccentColor=229,50,45
+AccentColor=43,82,255
+# Typography (design system 30-typography.md): Pretendard is the Latin system
+# face, Wanted Sans the Korean one. fontconfig (image/files/etc/fonts) makes
+# Pretendard fall through to Wanted Sans for Hangul, so one family name here
+# covers both scripts. 10pt = the system's 15px body at 96 dpi -> 11pt; Plasma
+# UI runs one step smaller, as the design system's label/body-sm pair does.
 # Qt6 font string: family,pointsize,pixelsize,styleHint,weight,style,underline,
 # strikeOut,fixedPitch,rawMode,capitalization,letterSpacingType,letterSpacing,
 # wordSpacing,stretch,styleName
-font=NanumGothic,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
-menuFont=NanumGothic,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
-toolBarFont=NanumGothic,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
-smallestReadableFont=NanumGothic,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+font=Pretendard,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+menuFont=Pretendard,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+toolBarFont=Pretendard,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
+smallestReadableFont=Pretendard,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
 fixed=NanumGothicCoding,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1,Regular
 
 [WM]
-activeFont=NanumGothic,10,-1,5,700,0,0,0,0,0,0,0,0,0,0,1,Bold
+activeFont=Pretendard,10,-1,5,600,0,0,0,0,0,0,0,0,0,0,1,SemiBold

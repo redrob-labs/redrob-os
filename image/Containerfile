@@ -12,7 +12,7 @@
 #
 # Layer order (each overlay is COPYed onto / at its final absolute path):
 #   1. base packages (dnf5, one transaction)            image/scripts, image/pins.env
-#   2. pinned binaries: gVisor runsc, Redrob Launcher   image/scripts/10-*,20-*
+#   2. pinned downloads: gVisor, Redrob Launcher, UI fonts  image/scripts/10-*,20-*,25-*
 #   3. base-OS overlay                                   image/files/
 #   4. branding overlay (os-release, logos, themes)      image/branding/   (branding agent)
 #   5. agent overlay (units, sandbox, pairing)           image/agent/      (agent agent)
@@ -146,13 +146,15 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         bluez \
         pipewire \
         zstd \
+        unzip \
         tar
 
 # 2. Pinned binaries (network downloads, checksum-verified against image/pins.env).
 RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/scripts/10-pins.sh && \
-    /ctx/scripts/20-launcher.sh
+    /ctx/scripts/20-launcher.sh && \
+    /ctx/scripts/25-fonts.sh
 
 # 2b. Hardware layer: RPM Fusion codecs, NVIDIA (userspace + the kernel module built
 #     in the `akmods` stage, one transaction), fingerprint, KDE Connect.
