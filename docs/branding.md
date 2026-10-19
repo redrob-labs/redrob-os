@@ -50,7 +50,7 @@ the wallpaper; the lockup appears once per surface (splash, installer sidebar).
 
 `30-typography.md`: Pretendard (Latin system face) and Wanted Sans (Korean system face),
 both SIL OFL, installed from their upstream release zips by `image/scripts/25-fonts.sh`
-(pins in `image/pins.env`). `/etc/fonts/conf.d/60-redrob.conf` makes Pretendard the
+(pins in `image/pins.env`). `/etc/fonts/conf.d/50-redrob.conf` makes Pretendard the
 default sans and lets it fall through to Wanted Sans for Hangul; `/etc/xdg/kdeglobals`
 names Pretendard for every Plasma font role. Nanum Myeongjo (Fedora's `naver-nanum-fonts`)
 stays as the Korean serif voice face.

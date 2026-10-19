@@ -34,3 +34,15 @@ panel.addWidget("org.kde.plasma.marginsseparator");
 panel.addWidget("org.kde.plasma.systemtray");
 panel.addWidget("org.kde.plasma.digitalclock");
 panel.addWidget("org.kde.plasma.showdesktop");
+
+// Wallpaper. The LnF `defaults` file (Image=Redrob) is only read by
+// lookandfeeltool / System Settings, not on a first login, so without this the
+// desktop falls back to Plasma's stock image (seen on the v0.3.0 install).
+var allDesktops = desktops();
+for (var i = 0; i < allDesktops.length; i++) {
+  var d = allDesktops[i];
+  d.wallpaperPlugin = "org.kde.image";
+  d.currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+  d.writeConfig("Image", "file:///usr/share/wallpapers/Redrob");
+  d.writeConfig("FillMode", 2);
+}
