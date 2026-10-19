@@ -38,6 +38,8 @@ pub struct AppState {
     pub audit: Arc<Audit>,
     pub http: reqwest::Client,
     pub admin_uid: u32,
+    /// Per-task egress proxies; `None` when `[egress]` is not configured.
+    pub task_egress: Option<Arc<crate::proxy::TaskProxies>>,
 }
 
 type Shared = Arc<AppState>;
@@ -53,6 +55,8 @@ pub fn router(state: Shared) -> Router {
         .route("/v1/grants", get(list_grants).post(post_grant))
         .route("/v1/grants/{task}", axum::routing::delete(revoke_task))
         .route("/v1/approvals", post(post_approval))
+        .route("/v1/egress", get(list_egress).post(post_egress))
+        .route("/v1/egress/{task}", axum::routing::delete(delete_egress))
         .route("/v1/call", post(call))
         .with_state(state)
 }
@@ -186,8 +190,92 @@ async fn revoke_task(
         return r;
     }
     match s.store.lock().await.revoke_task(&task) {
-        Ok(n) => Json(json!({"revoked": n})).into_response(),
+        Ok(n) => {
+            // Revoking a task also closes its network: no grants, no egress.
+            let egress = s.task_egress.as_ref().is_some_and(|t| t.stop(&task));
+            Json(json!({"revoked": n, "egress_closed": egress})).into_response()
+        }
         Err(e) => err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    }
+}
+
+#[derive(Deserialize)]
+struct EgressBody {
+    task: String,
+    allow: Vec<String>,
+    /// Seconds until the proxy closes; capped at a day. Default one hour.
+    #[serde(default = "default_ttl")]
+    ttl_secs: u64,
+}
+
+fn task_egress(
+    s: &AppState,
+) -> Result<(&crate::config::EgressConfig, &crate::proxy::TaskProxies), Response> {
+    match (&s.cfg.egress, &s.task_egress) {
+        (Some(cfg), Some(t)) => Ok((cfg, t)),
+        _ => Err(err(StatusCode::NOT_FOUND, "egress is not configured")),
+    }
+}
+
+async fn post_egress(
+    State(s): State<Shared>,
+    ConnectInfo(peer): ConnectInfo<Peer>,
+    Json(b): Json<EgressBody>,
+) -> Response {
+    if let Err(r) = require_admin(&s, &peer) {
+        return r;
+    }
+    let (cfg, tasks) = match task_egress(&s) {
+        Ok(v) => v,
+        Err(r) => return r,
+    };
+    if !crate::config::valid_task_name(&b.task) {
+        return err(StatusCode::BAD_REQUEST, "bad task name");
+    }
+    if let Some(rule) = b
+        .allow
+        .iter()
+        .find(|r| !crate::config::task_rule_admitted(&cfg.allow, r))
+    {
+        return err(
+            StatusCode::FORBIDDEN,
+            format!("{rule} is not admitted by [egress] allow"),
+        );
+    }
+    let ttl = b.ttl_secs.clamp(1, 86_400);
+    match tasks.start(&b.task, b.allow, ttl) {
+        Ok(path) => (
+            StatusCode::CREATED,
+            Json(json!({"task": b.task, "socket": path, "ttl_secs": ttl})),
+        )
+            .into_response(),
+        Err(e) => err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    }
+}
+
+async fn list_egress(State(s): State<Shared>, ConnectInfo(peer): ConnectInfo<Peer>) -> Response {
+    if let Err(r) = require_admin(&s, &peer) {
+        return r;
+    }
+    let tasks = s
+        .task_egress
+        .as_ref()
+        .map(|t| t.tasks())
+        .unwrap_or_default();
+    Json(json!({"tasks": tasks})).into_response()
+}
+
+async fn delete_egress(
+    State(s): State<Shared>,
+    ConnectInfo(peer): ConnectInfo<Peer>,
+    Path(task): Path<String>,
+) -> Response {
+    if let Err(r) = require_admin(&s, &peer) {
+        return r;
+    }
+    match s.task_egress.as_ref().map(|t| t.stop(&task)) {
+        Some(true) => (StatusCode::NO_CONTENT, ()).into_response(),
+        _ => err(StatusCode::NOT_FOUND, "no egress for that task"),
     }
 }
 
@@ -329,7 +417,7 @@ async fn call(
         "auto"
     };
 
-    let credential = match s.store.lock().await.credential(&scope.credential) {
+    let (credential, is_oauth) = match resolve_credential(&s, &scope.credential, false).await {
         Ok(Some(c)) => c,
         Ok(None) => {
             return refuse(
@@ -343,18 +431,8 @@ async fn call(
             )
             .await;
         }
-        Err(e) => {
-            tracing::error!(%e, "credential decrypt");
-            return refuse(
-                &s,
-                &b,
-                &method,
-                &host,
-                peer,
-                "credential-unreadable",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            )
-            .await;
+        Err((status, reason)) => {
+            return refuse(&s, &b, &method, &host, peer, reason, status).await;
         }
     };
 
@@ -374,22 +452,34 @@ async fn call(
             .await;
         }
     };
-    let mut req = s.http.request(req_method, &url).query(&query);
-    req = if scope.auth == "bearer" {
-        req.bearer_auth(&credential)
-    } else {
-        req.header(
-            scope.auth.trim_start_matches("header:"),
-            credential.as_str(),
-        )
+    let build = |token: &str| {
+        let mut req = s.http.request(req_method.clone(), &url).query(&query);
+        req = if scope.auth == "bearer" {
+            req.bearer_auth(token)
+        } else {
+            req.header(scope.auth.trim_start_matches("header:"), token)
+        };
+        if !body_bytes.is_empty() {
+            req = req
+                .header("content-type", "application/json")
+                .body(body_bytes.clone());
+        }
+        req
     };
-    if !body_bytes.is_empty() {
-        req = req
-            .header("content-type", "application/json")
-            .body(body_bytes.clone());
+
+    let mut sent = build(&credential).send().await;
+    // An OAuth access token can be revoked or expire early: refresh once and retry.
+    if is_oauth && matches!(&sent, Ok(r) if r.status() == reqwest::StatusCode::UNAUTHORIZED) {
+        match resolve_credential(&s, &scope.credential, true).await {
+            Ok(Some((fresh, _))) => sent = build(&fresh).send().await,
+            Ok(None) => {}
+            Err((status, reason)) => {
+                return refuse(&s, &b, &method, &host, peer, reason, status).await;
+            }
+        }
     }
 
-    let resp = match req.send().await {
+    let resp = match sent {
         Ok(r) => r,
         Err(e) => {
             audit_line(
@@ -432,6 +522,41 @@ async fn call(
         body,
     })
     .into_response()
+}
+
+/// The token to send for `name`, and whether it is a refreshable OAuth credential.
+/// OAuth credentials are refreshed when close to expiry, or always with `force`;
+/// the store lock is held across the refresh so concurrent calls refresh once.
+async fn resolve_credential(
+    s: &AppState,
+    name: &str,
+    force: bool,
+) -> Result<Option<(String, bool)>, (StatusCode, &'static str)> {
+    let mut store = s.store.lock().await;
+    let raw = match store.credential(name) {
+        Ok(Some(v)) => v,
+        Ok(None) => return Ok(None),
+        Err(e) => {
+            tracing::error!(%e, "credential decrypt");
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, "credential-unreadable"));
+        }
+    };
+    let Some(mut oauth) = crate::oauth::OAuthCredential::parse(&raw) else {
+        return Ok(Some((raw, false)));
+    };
+    let now = crate::store::now_secs();
+    if force || oauth.needs_refresh(now) {
+        if let Err(e) = oauth.refresh(&s.http, now).await {
+            tracing::warn!(credential = name, %e, "oauth refresh failed");
+            return Err((StatusCode::BAD_GATEWAY, "credential-refresh-failed"));
+        }
+        let saved = oauth.to_json().and_then(|v| store.set_credential(name, &v));
+        if let Err(e) = saved {
+            // The fresh token still works for this call; the next one refreshes again.
+            tracing::error!(credential = name, %e, "oauth token not saved");
+        }
+    }
+    Ok(Some((oauth.access_token, true)))
 }
 
 async fn refuse(

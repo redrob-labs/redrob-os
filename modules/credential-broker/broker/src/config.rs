@@ -56,6 +56,42 @@ pub struct EgressConfig {
     /// Host allow-list. `*.example.com` matches any subdomain, not the apex.
     #[serde(default)]
     pub allow: Vec<String>,
+    /// Directory for per-task proxy sockets (`<task>.sock`), mounted into task sandboxes.
+    #[serde(default = "default_task_dir")]
+    pub task_dir: PathBuf,
+    /// Task proxies started with the broker: `[egress.tasks.<name>] allow = [...]`.
+    /// Each rule must be one of `allow` above or a host that `allow` already admits.
+    /// More can be opened at run time with `POST /v1/egress`.
+    #[serde(default)]
+    pub tasks: BTreeMap<String, TaskEgress>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskEgress {
+    pub allow: Vec<String>,
+}
+
+fn default_task_dir() -> PathBuf {
+    "/run/redrob/egress".into()
+}
+
+/// Task names become socket file names and audit keys: keep them plain.
+pub fn valid_task_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && !name.starts_with('.')
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+}
+
+/// A task rule is admitted when the global list already contains it verbatim,
+/// or when it is a plain host the global list allows. A task can narrow egress,
+/// never widen it.
+pub fn task_rule_admitted(global: &[String], rule: &str) -> bool {
+    let rule = rule.to_ascii_lowercase();
+    global.iter().any(|g| g.eq_ignore_ascii_case(&rule))
+        || (!rule.starts_with("*.") && crate::policy::host_allowed(global, &rule))
 }
 
 fn default_proxy_listen() -> String {
@@ -111,6 +147,17 @@ impl BrokerConfig {
     }
 
     pub fn validate(&self) -> Result<()> {
+        if let Some(e) = &self.egress {
+            for (task, t) in &e.tasks {
+                anyhow::ensure!(valid_task_name(task), "egress task {task}: bad name");
+                for rule in &t.allow {
+                    anyhow::ensure!(
+                        task_rule_admitted(&e.allow, rule),
+                        "egress task {task}: {rule} is not admitted by [egress] allow"
+                    );
+                }
+            }
+        }
         for (name, scope) in &self.scopes {
             anyhow::ensure!(
                 scope.base_url.starts_with("https://"),

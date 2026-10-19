@@ -34,7 +34,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     dnf5 -y install --setopt=install_weak_deps=False \
         bash coreutils findutils grep sed gawk diffutils patch tar gzip zstd xz unzip \
         git git-lfs jq ripgrep fd-find tree which procps-ng \
-        ca-certificates curl openssh-clients \
+        ca-certificates curl openssh-clients socat \
         python3 python3-pip python3-virtualenv \
         nodejs npm \
         gcc gcc-c++ make cmake pkgconf-pkg-config \
@@ -50,6 +50,9 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
 # Unprivileged task user; /workspace is the only writable mount at run time.
 RUN useradd --uid 1000 --user-group --create-home --shell /bin/bash task && \
     mkdir -p /workspace && chown task:task /workspace
+# Per-task egress bridge (broker socket -> 127.0.0.1:3128); a no-op without the socket.
+COPY --chmod=0755 image/sandbox/egress-bridge.sh /usr/local/bin/redrob-egress-bridge
+ENTRYPOINT ["/usr/local/bin/redrob-egress-bridge"]
 USER task
 WORKDIR /workspace
 ENV HOME=/home/task \
