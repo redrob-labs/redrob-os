@@ -75,8 +75,11 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     KVER="$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}')"; \
     KV="$(rpm -q kernel-core --qf '%{VERSION}')"; KR="$(rpm -q kernel-core --qf '%{RELEASE}')"; \
     dnf5 -y install --setopt=install_weak_deps=False \
-      "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA}.noarch.rpm" \
-      "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA}.noarch.rpm"; \
+      "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA}.noarch.rpm" \
+      "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA}.noarch.rpm" \
+      || dnf5 -y install --setopt=install_weak_deps=False \
+      "https://download2.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA}.noarch.rpm" \
+      "https://download2.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA}.noarch.rpm"; \
     dnf5 -y install --setopt=install_weak_deps=False "kernel-devel-${KVER}" \
       || dnf5 -y install --setopt=install_weak_deps=False \
            "https://kojipkgs.fedoraproject.org/packages/kernel/${KV}/${KR}/x86_64/kernel-devel-${KVER}.rpm" \
