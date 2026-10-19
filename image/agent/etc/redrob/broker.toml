@@ -21,6 +21,22 @@ allow = [
   "api.telegram.org",
   "*.googleapis.com", "accounts.google.com", "oauth2.googleapis.com",
   "github.com", "api.github.com", "*.githubusercontent.com",
+  # package registries for task sandboxes (below)
+  "pypi.org", "files.pythonhosted.org", "registry.npmjs.org",
+  "index.crates.io", "static.crates.io",
+]
+task_dir = "/run/redrob/egress"           # <task>.sock, mounted into the task container
+
+# Task sandboxes: their own proxy on a Unix socket, their own allow-list (must sit
+# inside `allow` above), audit lines tagged with the task name. The container keeps
+# --network none; agent.toml [runtime.docker] egress_socket mounts this socket and
+# the sandbox image bridges it to 127.0.0.1:3128. More tasks: POST /v1/egress
+# {task, allow, ttl_secs}; DELETE /v1/egress/<task> (or revoking the task) closes one.
+[egress.tasks.sandbox]
+allow = [
+  "github.com", "*.githubusercontent.com",
+  "pypi.org", "files.pythonhosted.org", "registry.npmjs.org",
+  "index.crates.io", "static.crates.io",
 ]
 
 # Scoped calls: POST /v1/call {task, scope, method, path, query, body}.

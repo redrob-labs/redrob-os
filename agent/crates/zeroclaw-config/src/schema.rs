@@ -14979,6 +14979,10 @@ pub struct DockerRuntimeConfig {
     /// Optional workspace root allowlist for fail-closed Docker mount validation: when `mount_workspace` is enabled, the workspace must exist and canonicalize even when this list is empty; every configured root must also exist and canonicalize; one invalid entry rejects the command before Docker starts; an empty list permits any canonical workspace.
     #[serde(default)]
     pub allowed_workspace_roots: Vec<String>,
+
+    /// Optional host Unix socket of a per-task egress proxy (Redrob credential broker). When set and present, it is bind-mounted at `/run/redrob/egress.sock` and `HTTP_PROXY`/`HTTPS_PROXY` point at `127.0.0.1:3128` inside the container, where the sandbox image bridges to the socket; `network` can stay `none`. Empty = no egress.
+    #[serde(default)]
+    pub egress_socket: String,
 }
 
 fn default_docker_image() -> String {
@@ -15007,6 +15011,7 @@ impl Default for DockerRuntimeConfig {
             read_only_rootfs: true,
             mount_workspace: true,
             allowed_workspace_roots: Vec::new(),
+            egress_socket: String::new(),
         }
     }
 }

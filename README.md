@@ -9,8 +9,8 @@ itself in the background and rolls back on its own if an update does not boot.
 
 ## Install
 
-Download the installer ISO from
-[Releases](https://github.com/redrob-labs/redrob-os/releases/latest), write it to a USB
+Download the [installer ISO](https://cdn.redrob.ai/os/latest/redrob-os-linux-x86_64.iso)
+(older versions on [Releases](https://github.com/redrob-labs/redrob-os/releases/latest)), write it to a USB
 stick, boot it and follow the guided installer (disk selection, dual boot with Windows,
 disk encryption, your user account). Raspberry Pi 5 uses a raw disk image instead.
 Full steps: [docs/install.md](./docs/install.md).

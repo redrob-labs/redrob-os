@@ -90,9 +90,12 @@ the next time anyone regenerates.
 | Text | Pretendard / Wanted Sans (`font-sans`, `font-sans-kr`) |
 
 Not driven by tokens, by choice or because no token exists: the Breeze icon and cursor
-themes (the design system ships no icon theme for a desktop), the GRUB menu (bootupd owns
-it; plain text), and NanumGothicCoding as the fixed-width UI font (`font-mono` names the
-platform monospace).
+themes (the design system ships no icon theme for a desktop), and NanumGothicCoding as
+the fixed-width UI font (`font-mono` names the platform monospace). The GRUB menu is
+plain text with 16 VGA colours, so `usr/lib/bootupd/grub2-static/configs.d/40-redrob-colors.cfg`
+maps the tokens to the nearest ones (black ground, light-gray text, white on blue
+selection); bootupd writes it into `/boot/grub2/grub.cfg` at install time, so systems
+installed before it keep the stock colours.
 
 ## Asset list
 

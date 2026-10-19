@@ -178,6 +178,23 @@ impl DockerRuntime {
             process.arg("--env").arg(key);
         }
 
+        // Per-task egress: the broker's socket goes in, the sandbox image bridges it to
+        // 127.0.0.1:3128, and the usual proxy variables point there. A configured but
+        // missing socket means "no egress for this task", not an error.
+        let egress = self.config.egress_socket.trim();
+        if !egress.is_empty() && Path::new(egress).exists() {
+            process
+                .arg("--volume")
+                .arg(format!("{egress}:/run/redrob/egress.sock"));
+            for key in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"] {
+                process
+                    .arg("--env")
+                    .arg(format!("{key}=http://127.0.0.1:3128"));
+            }
+            process.arg("--env").arg("NO_PROXY=127.0.0.1,localhost");
+            process.arg("--env").arg("no_proxy=127.0.0.1,localhost");
+        }
+
         if let Some(host_workspace) = host_workspace {
             process
                 .arg("--volume")
@@ -354,6 +371,7 @@ mod tests {
             read_only_rootfs: true,
             mount_workspace: true,
             allowed_workspace_roots: Vec::new(),
+            egress_socket: String::new(),
         };
         let runtime = DockerRuntime::new(cfg);
 

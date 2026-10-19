@@ -121,6 +121,7 @@ async fn start(vendor: &str, admin_uid: u32) -> Harness {
             .build()
             .unwrap(),
         admin_uid,
+        task_egress: None,
     });
     let listener = UnixListener::bind(&sock).unwrap();
     let task = tokio::spawn(async move {
@@ -392,6 +393,8 @@ async fn egress_proxy_allows_listed_hosts_only_and_audits() {
     let cfg = EgressConfig {
         listen: proxy_addr.to_string(),
         allow: vec!["127.0.0.1".into(), "*.googleapis.com".into()],
+        task_dir: dir.path().join("egress"),
+        tasks: Default::default(),
     };
     let a2 = audit.clone();
     tokio::spawn(async move { redrob_broker::proxy::serve(cfg, a2).await.unwrap() });

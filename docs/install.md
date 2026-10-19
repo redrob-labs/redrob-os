@@ -4,7 +4,8 @@ Redrob OS installs like Windows or macOS: download an installer, put it on a
 USB stick, boot from it, and answer a few screens. The installer handles the
 disk, dual boot with Windows, encryption and your user account.
 
-Latest download: [Releases](https://github.com/redrob-labs/redrob-os/releases/latest).
+Latest download: [redrob-os-linux-x86_64.iso](https://cdn.redrob.ai/os/latest/redrob-os-linux-x86_64.iso)
+(one file). Older versions and the Raspberry Pi image: [Releases](https://github.com/redrob-labs/redrob-os/releases/latest).
 
 | Target | File | Path |
 |--------|------|------|
@@ -18,9 +19,14 @@ Requirements: 64-bit UEFI PC, 4 GB RAM (8 GB recommended), 20 GB of free disk
 
 ## 1. Download
 
-From the latest release grab the installer and the `SHA256SUMS` file. GitHub caps
-release files at 2 GiB, so the ISO comes as `.iso.part0`, `.iso.part1`, ... --
-download every part into one folder and join them:
+Download the installer as one file from
+`https://cdn.redrob.ai/os/latest/redrob-os-linux-x86_64.iso`, and its checksum
+from the same address plus `.sha256`. A specific version lives at
+`https://cdn.redrob.ai/os/<version>/redrob-os-<version>-linux-x86_64.iso`.
+
+The same ISO is also on the GitHub release, but GitHub caps release files at
+2 GiB, so there it comes as `.iso.part0`, `.iso.part1`, ... -- download every
+part into one folder and join them:
 
 ```sh
 # Linux / macOS
@@ -77,7 +83,8 @@ the disk until you press **Begin Installation**.
    <!-- TODO screenshot: language screen -->
 2. **Installation Summary.** A hub with the remaining items. Anything marked
    with a warning icon still needs your input.
-   <!-- TODO screenshot: summary hub -->
+
+   ![Installation Summary](./images/installer-summary.png)
 3. **Keyboard** and **Time & Date** are pre-filled from your language and
    network location. Check them, fix if needed.
 4. **Network & Host Name.** Wired networks connect on their own; join Wi-Fi here

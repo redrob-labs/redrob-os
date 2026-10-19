@@ -1,0 +1,9 @@
+#!/bin/bash
+# runsc for the agent's task sandbox (podman.service only, via containers-sandbox.conf).
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+#
+# --host-uds=open lets a task connect to a host Unix socket that was bind-mounted
+# into it -- the broker's per-task egress proxy (/run/redrob/egress.sock). Without
+# it gVisor refuses every host socket. It cannot create host sockets, and a task
+# only sees the sockets its own run mounted.
+exec /usr/libexec/gvisor/runsc --host-uds=open "$@"

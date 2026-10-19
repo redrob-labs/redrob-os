@@ -90,6 +90,9 @@ cpu_limit = 2.0
 read_only_rootfs = true
 mount_workspace = true
 allowed_workspace_roots = ["/var/lib/redrob/agent/work"]
+# Per-task egress from the credential broker ([egress.tasks.sandbox] in broker.toml).
+# Mounted at /run/redrob/egress.sock; the network stays "none". Empty = no network.
+egress_socket = "/run/redrob/egress/sandbox.sock"
 
 [http_request]
 allowed_domains = []          # filled per-task by the credential broker policy

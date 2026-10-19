@@ -2,7 +2,7 @@
 #
 #   version   -> build amd64 / arm64 -> manifest + sign (ghcr.io/redrob-labs/redrob-os:X.Y.Z)
 #             -> iso (amd64, anaconda-iso) / raw (arm64, raw disk) via bootc-image-builder
-#             -> publish (SHA256SUMS + assets on the release)
+#             -> publish (whole files to cdn.redrob.ai/os/, then SHA256SUMS + split assets on the release)
 #
 # Assets:  redrob-os-<ver>-linux-x86_64.iso        Anaconda installer (disk install, dual boot, LUKS)
 #          redrob-os-<ver>-linux-aarch64.img.xz    raw disk image for aarch64 boards (EXPERIMENTAL,
@@ -10,8 +10,9 @@
 #          SHA256SUMS
 #
 # `workflow_dispatch` with a version is a DRY RUN: it builds everything and publishes nothing.
-# Secrets: none. GITHUB_TOKEN pushes the image (packages: write) and creates the release
-# (contents: write); id-token: write is granted only to the signing job.
+# Secrets: org REDROB_CDN_ACCESS_KEY_ID / REDROB_CDN_SECRET_ACCESS_KEY + org var REDROB_CDN_BUCKET
+# (CDN upload; skipped when absent). GITHUB_TOKEN pushes the image (packages: write) and creates
+# the release (contents: write); id-token: write is granted only to the signing job.
 #
 # Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 
@@ -294,6 +295,9 @@ jobs:
     env:
       VER: ${{ needs.version.outputs.version }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/scripts
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: release-*
@@ -306,6 +310,30 @@ jobs:
           ls -la
           sha256sum redrob-os-* > SHA256SUMS
           cat SHA256SUMS
+      - name: Publish whole files to cdn.redrob.ai
+        # Before the split: the CDN has no 2 GiB cap, so it serves the ISO as one file.
+        # Pinned to this repository's id so a fork or a renamed repo never uses the org's CDN keys.
+        # Without the bucket/keys the script uploads nothing and exits 0 (CDN_OK stays empty).
+        id: cdn
+        if: github.repository_id == '1409779132'
+        working-directory: dist
+        env:
+          REDROB_CDN_BUCKET: ${{ vars.REDROB_CDN_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.REDROB_CDN_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.REDROB_CDN_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          CDN_PUBLIC_HOST: cdn.redrob.ai
+          CDN_PREFIX: os
+          APP_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p ../cdn
+          ln redrob-os-* ../cdn/   # hard links: the 5 GB ISO is not copied
+          bash "$GITHUB_WORKSPACE/.github/scripts/cdn-publish.sh" ../cdn
+          if [ -n "${REDROB_CDN_BUCKET}" ] && [ -n "${AWS_ACCESS_KEY_ID}" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+          rm -rf ../cdn "$RUNNER_TEMP"/verify-* "$RUNNER_TEMP"/published-*
       - name: Split assets over GitHub's 2 GiB release limit
         # The ISO embeds the whole OS image and is ~5 GB; GitHub refuses release assets
         # >= 2 GiB. Ship it as 1900 MiB parts (.part0, .part1, ...) plus the whole-file
@@ -325,11 +353,18 @@ jobs:
           sha256sum redrob-os-*.part* >> SHA256SUMS || true
           cat SHA256SUMS
       - name: Release notes
+        env:
+          CDN_OK: ${{ steps.cdn.outputs.ok }}
         run: |
           set -euo pipefail
           {
             echo "Image: \`${IMAGE}:${VER}\` (cosign-signed, GitHub OIDC)."
             echo
+            if [ "${CDN_OK}" = "true" ]; then
+              echo "**Download the installer as one file:** https://cdn.redrob.ai/os/${VER}/redrob-os-${VER}-linux-x86_64.iso"
+              echo "(always the newest: https://cdn.redrob.ai/os/latest/redrob-os-linux-x86_64.iso)"
+              echo
+            fi
             echo "- \`redrob-os-${VER}-linux-x86_64.iso\` -- installer for PCs (Anaconda)."
             if ls "dist/redrob-os-${VER}-linux-x86_64.iso.part"* >/dev/null 2>&1; then
               echo "  GitHub caps release files at 2 GiB, so the ISO comes in parts. Download every"
