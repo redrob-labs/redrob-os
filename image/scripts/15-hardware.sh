@@ -17,9 +17,23 @@
 FEDORA="$(. /usr/lib/os-release && echo "${VERSION_ID}")"
 : "${FEDORA:?VERSION_ID missing from /usr/lib/os-release}"
 
-dnf5 -y install --setopt=install_weak_deps=False \
-  "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA}.noarch.rpm" \
-  "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA}.noarch.rpm"
+# The release RPM comes from RPM Fusion's own hosts (download1/download2), not the
+# `mirrors.rpmfusion.org` redirector: that redirector load-balances to third-party
+# mirrors, and a dead one (repos.eggycrew.com, DNS NXDOMAIN) failed the image build
+# repeatedly. download1 is authoritative; download2 is the fallback.
+rpmfusion_release() {
+  local repo="$1" # free | nonfree
+  for host in download1.rpmfusion.org download2.rpmfusion.org; do
+    if dnf5 -y install --setopt=install_weak_deps=False \
+      "https://${host}/${repo}/fedora/rpmfusion-${repo}-release-${FEDORA}.noarch.rpm"; then
+      return 0
+    fi
+    echo "rpmfusion ${repo}: ${host} failed, trying next host" >&2
+  done
+  return 1
+}
+rpmfusion_release free
+rpmfusion_release nonfree
 
 # Codecs. Fedora's ffmpeg-free stays (Plasma links against it; a `swap` to the full
 # ffmpeg with --allowerasing tore out the whole desktop in CI). libavcodec-freeworld
