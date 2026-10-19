@@ -417,7 +417,7 @@ async fn call(
         "auto"
     };
 
-    let credential = match s.store.lock().await.credential(&scope.credential) {
+    let (credential, is_oauth) = match resolve_credential(&s, &scope.credential, false).await {
         Ok(Some(c)) => c,
         Ok(None) => {
             return refuse(
@@ -431,18 +431,8 @@ async fn call(
             )
             .await;
         }
-        Err(e) => {
-            tracing::error!(%e, "credential decrypt");
-            return refuse(
-                &s,
-                &b,
-                &method,
-                &host,
-                peer,
-                "credential-unreadable",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            )
-            .await;
+        Err((status, reason)) => {
+            return refuse(&s, &b, &method, &host, peer, reason, status).await;
         }
     };
 
@@ -462,22 +452,34 @@ async fn call(
             .await;
         }
     };
-    let mut req = s.http.request(req_method, &url).query(&query);
-    req = if scope.auth == "bearer" {
-        req.bearer_auth(&credential)
-    } else {
-        req.header(
-            scope.auth.trim_start_matches("header:"),
-            credential.as_str(),
-        )
+    let build = |token: &str| {
+        let mut req = s.http.request(req_method.clone(), &url).query(&query);
+        req = if scope.auth == "bearer" {
+            req.bearer_auth(token)
+        } else {
+            req.header(scope.auth.trim_start_matches("header:"), token)
+        };
+        if !body_bytes.is_empty() {
+            req = req
+                .header("content-type", "application/json")
+                .body(body_bytes.clone());
+        }
+        req
     };
-    if !body_bytes.is_empty() {
-        req = req
-            .header("content-type", "application/json")
-            .body(body_bytes.clone());
+
+    let mut sent = build(&credential).send().await;
+    // An OAuth access token can be revoked or expire early: refresh once and retry.
+    if is_oauth && matches!(&sent, Ok(r) if r.status() == reqwest::StatusCode::UNAUTHORIZED) {
+        match resolve_credential(&s, &scope.credential, true).await {
+            Ok(Some((fresh, _))) => sent = build(&fresh).send().await,
+            Ok(None) => {}
+            Err((status, reason)) => {
+                return refuse(&s, &b, &method, &host, peer, reason, status).await;
+            }
+        }
     }
 
-    let resp = match req.send().await {
+    let resp = match sent {
         Ok(r) => r,
         Err(e) => {
             audit_line(
@@ -520,6 +522,41 @@ async fn call(
         body,
     })
     .into_response()
+}
+
+/// The token to send for `name`, and whether it is a refreshable OAuth credential.
+/// OAuth credentials are refreshed when close to expiry, or always with `force`;
+/// the store lock is held across the refresh so concurrent calls refresh once.
+async fn resolve_credential(
+    s: &AppState,
+    name: &str,
+    force: bool,
+) -> Result<Option<(String, bool)>, (StatusCode, &'static str)> {
+    let mut store = s.store.lock().await;
+    let raw = match store.credential(name) {
+        Ok(Some(v)) => v,
+        Ok(None) => return Ok(None),
+        Err(e) => {
+            tracing::error!(%e, "credential decrypt");
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, "credential-unreadable"));
+        }
+    };
+    let Some(mut oauth) = crate::oauth::OAuthCredential::parse(&raw) else {
+        return Ok(Some((raw, false)));
+    };
+    let now = crate::store::now_secs();
+    if force || oauth.needs_refresh(now) {
+        if let Err(e) = oauth.refresh(&s.http, now).await {
+            tracing::warn!(credential = name, %e, "oauth refresh failed");
+            return Err((StatusCode::BAD_GATEWAY, "credential-refresh-failed"));
+        }
+        let saved = oauth.to_json().and_then(|v| store.set_credential(name, &v));
+        if let Err(e) = saved {
+            // The fresh token still works for this call; the next one refreshes again.
+            tracing::error!(credential = name, %e, "oauth token not saved");
+        }
+    }
+    Ok(Some((oauth.access_token, true)))
 }
 
 async fn refuse(

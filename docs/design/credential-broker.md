@@ -21,13 +21,12 @@ Implements requirement F5 and the egress half of F4.
 | store: SQLite, ChaCha20-Poly1305 under a key derived from `device.key`, reusing `zeroclaw-config` | JSON file `store.json` + `.secret_key` (32 random bytes, 0600, broker user) under `/mnt/data/redrob/broker`. Same cipher, **own 40-line implementation**: `zeroclaw-config` pulls postgres, rusqlite, websockets and the whole agent schema, far too much surface for the one process that holds tokens. The device key stays identity-only |
 | approval record signed with the device key | approval = `(task, sha256(task, scope, method, path, sorted query, body))` posted by the admin peer; single use; a different hash does not unlock. Signing is phase 2 |
 | `spend` above budget needs approval | `spend` always needs approval (`git.push`); `console.infer` is `mutate` until budget accounting exists |
-| OAuth refresh in the broker | not yet; the stored value is sent as-is (`bearer` or `header:<Name>`) |
+| OAuth refresh in the broker | **done** (`src/oauth.rs`). A credential whose value is `{"type":"oauth2","token_url":"https://…","client_id":"…","client_secret":"…","refresh_token":"…"}` (optional `scope`) is refreshed with `grant_type=refresh_token` when its access token is missing or within 60 s of expiry, and once more on an upstream 401 before the call is retried. The new access token, its expiry and a rotated refresh token go back into the encrypted store; the store lock is held during the refresh so parallel calls refresh once. Failure refuses the call with `credential-refresh-failed` (502); token-endpoint bodies are never logged. Any other value is still sent as-is |
 | audit `/data/audit/broker.jsonl`, daily rotation, 90 days | `/mnt/data/redrob/audit/broker-YYYY-MM-DD.jsonl`; no retention/size cap yet |
 | paths `/data/...` | host paths are `/mnt/data/redrob/...`; `/data/...` in manifests is the module view (bind of `/mnt/data/redrob`) |
 
 Phase 2 (not started): route the agent's channel adapters and `google_workspace` through
-`/v1/call` so Z1 holds no third-party credential; OAuth refresh;
-approval signing; audit retention.
+`/v1/call` so Z1 holds no third-party credential; approval signing; audit retention.
 
 ## Problem
 
