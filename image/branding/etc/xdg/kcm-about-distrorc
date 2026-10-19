@@ -2,6 +2,6 @@
 # Keys read by kcm_about-distro; Version falls back to VERSION_ID from os-release.
 [General]
 Name=Redrob OS
-LogoPath=/usr/share/pixmaps/system-logo-white.png
+LogoPath=/usr/share/pixmaps/redrob-os.png
 Website=https://redrob.ai
 ShowBuild=true

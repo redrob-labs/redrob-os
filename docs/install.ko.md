@@ -164,6 +164,11 @@ Launcher 앱, Flatpak이 살아남습니다. 예전 시스템의 `/etc`에 있�
 
 ## 문제 해결
 
+알려진 겉모습 문제: 설치 중 텍스트 콘솔(Ctrl+Alt+F2)의 인사말은 "Fedora Linux 44"입니다.
+설치기 환경을 bootc-image-builder가 Fedora 패키지로 조립하기 때문이며, 설치되는
+시스템이 아닙니다. 그래픽 설치기와 설치된 시스템은 Redrob OS로 표시됩니다.
+
+
 - *부팅 메뉴에 USB가 안 보임.* 다시 굽고(Rufus: DD 모드), UEFI 부팅이 켜져 있는지
   확인합니다. Legacy/CSM 전용 펌웨어는 지원하지 않습니다.
 - *"Install Redrob OS" 뒤 검은 화면.* `Esc`를 눌러 메시지를 봅니다. 하이브리드

@@ -2,7 +2,7 @@
     "KPlugin": {
         "Id": "Redrob",
         "Name": "Redrob",
-        "Description": "Redrob OS default wallpaper",
+        "Description": "Redrob OS default wallpaper: the deep ground, Redrob Black crossed by the brand seam",
         "Authors": [
             {
                 "Name": "Redrob",
@@ -13,5 +13,5 @@
         "Website": "https://redrob.ai"
     },
     "KPackageStructure": "Plasma/Wallpaper",
-    "X-KDE-PlasmaImageWallpaper-AccentColor": "#E5322D"
+    "X-KDE-PlasmaImageWallpaper-AccentColor": "#2B52FF"
 }

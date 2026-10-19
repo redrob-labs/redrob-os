@@ -2,12 +2,15 @@
 # Copyright 2026 Janghoon Lee (Redrob) and contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Layout: solid #121212 background, the Redrob mark centred, a thin red arc
-# (24 pre-rendered frames, throbber-NNNN.png) spinning around it. Password
-# prompts (LUKS) draw a dark box with an outlined entry and white bullets.
+# Layout: Redrob Black (#0A0B0C, token redrob-black) field, the primary-white
+# lockup centred (design-system export, 420x84, never redrawn), and a loader
+# bar beneath it: a brand-gradient segment travelling a dark track (24
+# pre-rendered frames, throbber-NNNN.png). 10-logo.md forbids animating the
+# logo itself as a loading indicator, so the mark stays still and the bar moves.
+# Password prompts (LUKS) draw a dark box with a blue-outlined entry.
 
-Window.SetBackgroundTopColor    (0.0706, 0.0706, 0.0706);   # #121212
-Window.SetBackgroundBottomColor (0.0706, 0.0706, 0.0706);
+Window.SetBackgroundTopColor    (0.0392, 0.0431, 0.0471);   # #0A0B0C redrob-black
+Window.SetBackgroundBottomColor (0.0392, 0.0431, 0.0471);
 
 status = "normal";
 
@@ -28,11 +31,10 @@ for (i = 0; i < throbber.frame_count; i++)
 throbber.sprite = Sprite();
 throbber.index = 0;
 throbber.tick = 0;
-# the throbber sits around the logo: logo is 128px, throbber frames 64px,
-# so scale the frame up to 180px to orbit the mark.
-throbber.size = 180;
-throbber.x = Window.GetX() + Window.GetWidth()  / 2 - throbber.size / 2;
-throbber.y = Window.GetY() + Window.GetHeight() / 2 - throbber.size / 2;
+# the loader bar sits under the lockup, 0.5x of the symbol height (84px) below
+# it as clear space, centred. Frames are 300x4 and used at native size.
+throbber.x = Window.GetX() + Window.GetWidth()  / 2 - throbber.image[0].GetWidth() / 2;
+throbber.y = logo.y + logo.image.GetHeight() + 42;
 throbber.sprite.SetPosition(throbber.x, throbber.y, 90);
 
 fun refresh_callback ()
@@ -43,7 +45,7 @@ fun refresh_callback ()
         if (throbber.tick % 2 == 0)   # refresh runs at 50 Hz; step every 2nd tick
           {
             throbber.index = (throbber.index + 1) % throbber.frame_count;
-            throbber.sprite.SetImage(throbber.image[throbber.index].Scale(throbber.size, throbber.size));
+            throbber.sprite.SetImage(throbber.image[throbber.index]);
           }
         throbber.sprite.SetOpacity(1);
       }
