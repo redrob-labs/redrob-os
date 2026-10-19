@@ -85,12 +85,21 @@ async fn main() -> Result<()> {
     tracing::info!(socket = %cfg.socket.display(), scopes = cfg.scopes.len(), admin_uid, "broker up");
 
     let egress = cfg.egress.clone();
+    let task_egress = egress
+        .as_ref()
+        .map(|e| Arc::new(proxy::TaskProxies::new(e.task_dir.clone(), Arc::clone(&audit))));
+    if let (Some(e), Some(t)) = (&egress, &task_egress) {
+        for (task, te) in &e.tasks {
+            t.start(task, te.allow.clone(), 0)?;
+        }
+    }
     let state = Arc::new(api::AppState {
         cfg,
         store: tokio::sync::Mutex::new(store),
         audit: Arc::clone(&audit),
         http,
         admin_uid,
+        task_egress,
     });
 
     let api_task = tokio::spawn(api::serve(state, listener));

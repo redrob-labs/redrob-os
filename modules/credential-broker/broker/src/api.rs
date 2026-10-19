@@ -38,6 +38,8 @@ pub struct AppState {
     pub audit: Arc<Audit>,
     pub http: reqwest::Client,
     pub admin_uid: u32,
+    /// Per-task egress proxies; `None` when `[egress]` is not configured.
+    pub task_egress: Option<Arc<crate::proxy::TaskProxies>>,
 }
 
 type Shared = Arc<AppState>;
@@ -53,6 +55,8 @@ pub fn router(state: Shared) -> Router {
         .route("/v1/grants", get(list_grants).post(post_grant))
         .route("/v1/grants/{task}", axum::routing::delete(revoke_task))
         .route("/v1/approvals", post(post_approval))
+        .route("/v1/egress", get(list_egress).post(post_egress))
+        .route("/v1/egress/{task}", axum::routing::delete(delete_egress))
         .route("/v1/call", post(call))
         .with_state(state)
 }
@@ -186,8 +190,92 @@ async fn revoke_task(
         return r;
     }
     match s.store.lock().await.revoke_task(&task) {
-        Ok(n) => Json(json!({"revoked": n})).into_response(),
+        Ok(n) => {
+            // Revoking a task also closes its network: no grants, no egress.
+            let egress = s.task_egress.as_ref().is_some_and(|t| t.stop(&task));
+            Json(json!({"revoked": n, "egress_closed": egress})).into_response()
+        }
         Err(e) => err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    }
+}
+
+#[derive(Deserialize)]
+struct EgressBody {
+    task: String,
+    allow: Vec<String>,
+    /// Seconds until the proxy closes; capped at a day. Default one hour.
+    #[serde(default = "default_ttl")]
+    ttl_secs: u64,
+}
+
+fn task_egress(
+    s: &AppState,
+) -> Result<(&crate::config::EgressConfig, &crate::proxy::TaskProxies), Response> {
+    match (&s.cfg.egress, &s.task_egress) {
+        (Some(cfg), Some(t)) => Ok((cfg, t)),
+        _ => Err(err(StatusCode::NOT_FOUND, "egress is not configured")),
+    }
+}
+
+async fn post_egress(
+    State(s): State<Shared>,
+    ConnectInfo(peer): ConnectInfo<Peer>,
+    Json(b): Json<EgressBody>,
+) -> Response {
+    if let Err(r) = require_admin(&s, &peer) {
+        return r;
+    }
+    let (cfg, tasks) = match task_egress(&s) {
+        Ok(v) => v,
+        Err(r) => return r,
+    };
+    if !crate::config::valid_task_name(&b.task) {
+        return err(StatusCode::BAD_REQUEST, "bad task name");
+    }
+    if let Some(rule) = b
+        .allow
+        .iter()
+        .find(|r| !crate::config::task_rule_admitted(&cfg.allow, r))
+    {
+        return err(
+            StatusCode::FORBIDDEN,
+            format!("{rule} is not admitted by [egress] allow"),
+        );
+    }
+    let ttl = b.ttl_secs.clamp(1, 86_400);
+    match tasks.start(&b.task, b.allow, ttl) {
+        Ok(path) => (
+            StatusCode::CREATED,
+            Json(json!({"task": b.task, "socket": path, "ttl_secs": ttl})),
+        )
+            .into_response(),
+        Err(e) => err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+    }
+}
+
+async fn list_egress(State(s): State<Shared>, ConnectInfo(peer): ConnectInfo<Peer>) -> Response {
+    if let Err(r) = require_admin(&s, &peer) {
+        return r;
+    }
+    let tasks = s
+        .task_egress
+        .as_ref()
+        .map(|t| t.tasks())
+        .unwrap_or_default();
+    Json(json!({"tasks": tasks})).into_response()
+}
+
+async fn delete_egress(
+    State(s): State<Shared>,
+    ConnectInfo(peer): ConnectInfo<Peer>,
+    Path(task): Path<String>,
+) -> Response {
+    if let Err(r) = require_admin(&s, &peer) {
+        return r;
+    }
+    match s.task_egress.as_ref().map(|t| t.stop(&task)) {
+        Some(true) => (StatusCode::NO_CONTENT, ()).into_response(),
+        _ => err(StatusCode::NOT_FOUND, "no egress for that task"),
     }
 }
 
