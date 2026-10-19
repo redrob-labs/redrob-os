@@ -371,6 +371,7 @@ mod tests {
             read_only_rootfs: true,
             mount_workspace: true,
             allowed_workspace_roots: Vec::new(),
+            egress_socket: String::new(),
         };
         let runtime = DockerRuntime::new(cfg);
 
