@@ -25,4 +25,4 @@ theme=Breeze
 LayoutName=thumbnail_grid
 
 [ksplashrc][KSplash]
-Theme=org.kde.breeze.desktop
+Theme=ai.redrob.desktop
