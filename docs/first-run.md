@@ -16,6 +16,10 @@ three things the welcome dialog offers. 한국어 설명은 각 절 끝에 있�
   opens files; the **Meta** (Windows) key opens the start menu; `Meta+E`
   opens the file manager; `Meta+L` locks the screen.
 
+![Login screen](./images/login.png)
+
+![Desktop after the first login](./images/desktop.png)
+
 > 첫 부팅은 1분쯤 걸립니다(기기 ID·서명 키·호스트 이름 생성). 파이에서는 로그인
 > 전에 첫 부팅 마법사가 언어·키보드·시간대·사용자를 묻습니다. 바탕화면은 Windows와
 > 비슷합니다: 아래 작업 표시줄, 왼쪽 시작 메뉴, 더블 클릭으로 열기, **Meta**(윈도)

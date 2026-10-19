@@ -4,7 +4,8 @@
 부팅해서 몇 개 화면에 답하면 끝입니다. 디스크, Windows와 함께 쓰기(듀얼 부트),
 암호화, 사용자 계정은 설치 프로그램이 처리합니다.
 
-최신 다운로드: [Releases](https://github.com/redrob-labs/redrob-os/releases/latest).
+최신 다운로드: [redrob-os-linux-x86_64.iso](https://cdn.redrob.ai/os/latest/redrob-os-linux-x86_64.iso)
+(파일 하나). 이전 버전과 라즈베리 파이 이미지: [Releases](https://github.com/redrob-labs/redrob-os/releases/latest).
 
 | 대상 | 파일 | 방법 |
 |------|------|------|
@@ -18,9 +19,13 @@ English: [install.md](./install.md).
 
 ## 1. 내려받기
 
-최신 릴리스에서 설치 파일과 `SHA256SUMS` 파일을 받습니다. GitHub는 릴리스 파일을
-2 GiB까지만 받기 때문에 ISO가 `.iso.part0`, `.iso.part1`, ... 로 나뉘어 있습니다.
-조각을 모두 한 폴더에 받고 하나로 합칩니다.
+설치 파일은 `https://cdn.redrob.ai/os/latest/redrob-os-linux-x86_64.iso` 에서 파일
+하나로 받습니다. 체크섬은 같은 주소 뒤에 `.sha256`을 붙이면 됩니다. 특정 버전은
+`https://cdn.redrob.ai/os/<버전>/redrob-os-<버전>-linux-x86_64.iso` 에 있습니다.
+
+같은 ISO가 GitHub 릴리스에도 있지만, GitHub는 릴리스 파일을 2 GiB까지만 받기 때문에
+거기서는 `.iso.part0`, `.iso.part1`, ... 로 나뉘어 있습니다. 조각을 모두 한 폴더에
+받고 하나로 합칩니다.
 
 ```sh
 # Linux / macOS
@@ -77,7 +82,8 @@ USB를 꽂고 전원을 켠 뒤 제조사 로고가 보일 때 부팅 메뉴를 
    <!-- TODO 스크린샷: 언어 화면 -->
 2. **설치 요약.** 남은 항목이 모인 허브입니다. 경고 아이콘이 붙은 항목은 아직
    입력이 필요합니다.
-   <!-- TODO 스크린샷: 요약 허브 -->
+
+   ![설치 요약](./images/installer-summary.png)
 3. **키보드**, **시간 및 날짜**는 언어와 네트워크 위치에서 미리 채워집니다. 확인하고
    필요하면 고칩니다.
 4. **네트워크 및 호스트 이름.** 유선은 자동으로 연결됩니다. 설치 직후부터 업데이트를

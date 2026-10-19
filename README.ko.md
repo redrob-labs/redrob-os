@@ -9,7 +9,8 @@ English: [README.md](./README.md)
 
 ## 설치
 
-[Releases](https://github.com/redrob-labs/redrob-os/releases/latest)에서 설치 ISO를 받아
+[설치 ISO](https://cdn.redrob.ai/os/latest/redrob-os-linux-x86_64.iso)를 받아(이전 버전은
+[Releases](https://github.com/redrob-labs/redrob-os/releases/latest))
 USB에 쓰고 부팅한 뒤 안내에 따라 설치합니다(디스크 선택, Windows와 듀얼 부팅, 디스크
 암호화, 사용자 계정). 라즈베리 파이 5는 ISO 대신 raw 디스크 이미지를 씁니다.
 전체 단계: [docs/install.ko.md](./docs/install.ko.md).
