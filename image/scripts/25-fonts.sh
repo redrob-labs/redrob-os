@@ -9,7 +9,7 @@
 # image/pins.env (PRETENDARD_*, WANTED_SANS_*). We install the static OTFs only
 # (no variable fonts: Qt6/KDE pick weights more reliably from static faces) to
 # /usr/share/fonts/redrob/<family>/ with the licence beside them.
-# /etc/fonts/conf.d/60-redrob.conf (image/files) makes Pretendard the default
+# /etc/fonts/conf.d/50-redrob.conf (image/files) makes Pretendard the default
 # sans and lets it fall through to Wanted Sans for Hangul.
 
 # shellcheck source=lib.sh
