@@ -50,9 +50,17 @@ lic="$(find "${work}/wanted-sans" -maxdepth 2 \( -iname 'LICENSE*' -o -iname 'OF
 [ -n "${lic}" ] && install -m 0644 "${lic}" "${dest}/wanted-sans/LICENSE.txt"
 echo "Wanted Sans ${WANTED_SANS_VERSION}: ${n} faces"
 
-fc-cache -f "${dest}" >/dev/null
-fc-list | grep -q 'Pretendard' || { echo "fontconfig does not see Pretendard after install" >&2; exit 1; }
-fc-list | grep -q 'Wanted Sans' || { echo "fontconfig does not see Wanted Sans after install" >&2; exit 1; }
+# Rebuild the system font cache so first login does not pay for it. On a bootc
+# image /var is not shipped, so when the base keeps its cache under
+# /usr/lib/fontconfig/cache (rpm-ostree does) refresh that copy too.
+fc-cache -f -s >/dev/null
+if [ -d /usr/lib/fontconfig/cache ] && [ -d /var/cache/fontconfig ]; then
+  cp -a /var/cache/fontconfig/. /usr/lib/fontconfig/cache/
+fi
+# No `grep -q` here: with pipefail, grep -q closing the pipe early turns a
+# successful fc-list into a SIGPIPE failure and the guard fires spuriously.
+fc-list | grep 'Pretendard' >/dev/null || { echo "fontconfig does not see Pretendard after install" >&2; fc-list >&2; exit 1; }
+fc-list | grep 'Wanted Sans' >/dev/null || { echo "fontconfig does not see Wanted Sans after install" >&2; exit 1; }
 
 install -d -m 0755 /usr/share/redrob
 {
