@@ -39,8 +39,8 @@ Anaconda CSS) are not touched by the script.
 | `/usr/share/plymouth/themes/redrob/{redrob.plymouth,redrob.script,logo.png,throbber-0000..0023.png,box,entry,bullet,lock}.png` | script theme hand-written, images generated | Plymouth boot splash + LUKS prompt |
 | `/etc/plymouth/plymouthd.conf` | hand-written (`Theme=redrob`) | plymouthd |
 | `/usr/share/wallpapers/Redrob/{metadata.json,contents/images/{1920x1080,2560x1440,3840x2160}.png,contents/screenshot.png}` | generated | Plasma wallpaper package (`Plasma/Wallpaper`, accent `#E5322D` via `X-KDE-PlasmaImageWallpaper-AccentColor`) |
-| `/etc/sddm.conf.d/redrob.conf` | hand-written (`[Theme] Current=breeze`) | SDDM; `/etc/sddm.conf.d` overrides `/usr/lib/sddm/sddm.conf.d/kde_settings.conf` from Fedora's kde-settings |
-| `/usr/share/sddm/themes/breeze/theme.conf.user` | hand-written | Breeze SDDM theme background = Redrob 1080p wallpaper |
+| `/usr/lib/plasmalogin/defaults.conf` | hand-written | Plasma Login Manager (Kinoite 44's display manager; SDDM is not installed) distro defaults: Redrob wallpaper package, clock on. Admins/KCM override in `/etc/plasmalogin.conf` |
+| `/etc/xdg/kdeglobals` `[General] ColorScheme=Redrob`, `AccentColor` (installer overlay) | hand-written | colours of the login greeter (runs as `plasmalogin`, no LnF applied) and of every user before the LnF package runs |
 | `/usr/share/plasma/look-and-feel/ai.redrob.desktop/{metadata.json,contents/defaults,contents/colors,contents/previews/*}` | hand-written + generated previews | Plasma global theme "Redrob": Breeze widgets/icons/cursors, colour scheme Redrob, `AccentColor=229,50,45`, wallpaper Redrob |
 | `/usr/share/color-schemes/Redrob.colors` | derived from KDE Breeze Dark | Plasma colour scheme; also copied into the LnF package as `contents/colors` |
 | `/usr/share/anaconda/pixmaps/{sidebar-logo.png 150×69, sidebar-bg.png 406×767, topbar-bg.png 1040×132, redrob-os.css}` | generated + hand-written CSS | Anaconda GTK UI (sizes match fedora-logos so the stock layout holds) |
@@ -150,6 +150,8 @@ translations were dropped so the scheme shows as "Redrob" in every locale.
 
 Per the brief nothing was built. The following were checked only against upstream sources
 and not on a running image: Plymouth script syntax (modelled on plymouth's `themes/script`
-example), SDDM reading `theme.conf.user`, the LnF package applying `AccentColor` on Plasma
-6.x in Fedora 44, and the Anaconda CSS selectors for the accent widgets. The first CI
-image / ISO is where those get confirmed.
+example), the LnF package applying `AccentColor` on Plasma 6.x in Fedora 44, and the
+Anaconda CSS selectors for the accent widgets. The first CI image / ISO is where those get
+confirmed. Confirmed on the v0.2.6 QEMU install: Plymouth theme loads, Anaconda shows
+"Redrob OS 44"; the login screen was still stock because Kinoite 44 runs Plasma Login
+Manager, not SDDM (fixed in v0.3.0 by `/usr/lib/plasmalogin/defaults.conf`).

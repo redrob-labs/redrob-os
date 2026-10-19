@@ -52,8 +52,10 @@ window leaves it in the tray; the agent keeps running regardless.
 
 ## Korean input
 
-Korean (Hangul) input is installed and enabled when Korean is chosen as the system
-language at install time, and can be added later in Settings → Keyboard → Input Method.
+Korean (Hangul) input is always on: KWin starts IBus at login
+(`/etc/xdg/kwinrc` `[Wayland] InputMethod=`) and the English + Hangul engines are
+preloaded for every user (`/etc/dconf/db/local.d/10-redrob-ibus`). No setup step,
+whatever language was chosen at install time.
 
 - Toggle Korean/English: **Shift+Space**, or the **한/영** key on a Korean keyboard.
 - The tray indicator shows `한` when Korean is active and `A` for English.

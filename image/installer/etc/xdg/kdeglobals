@@ -12,6 +12,11 @@ SingleClick=false
 AnimationDurationFactor=0.5
 
 [General]
+# Colours are also set by the look-and-feel package on first login, but the
+# Plasma Login Manager greeter runs as the `plasmalogin` user with no LnF
+# applied, so the system default must name the Redrob scheme explicitly.
+ColorScheme=Redrob
+AccentColor=229,50,45
 # Qt6 font string: family,pointsize,pixelsize,styleHint,weight,style,underline,
 # strikeOut,fixedPitch,rawMode,capitalization,letterSpacingType,letterSpacing,
 # wordSpacing,stretch,styleName

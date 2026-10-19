@@ -94,10 +94,9 @@ version, and a terminal `bootc status` shows the staged one.
 
 ## Korean input
 
-Korean (Hangul) input is ready after you pick 한국어 in the installer: press
-**Hangul** (`한/영`) or `Shift+Space` to switch. If you installed in English and
-want Korean later: *System Settings → Input Method* → add **Hangul**; the
-`한/영` key works at the next login.
+Korean (Hangul) input is ready on every account, whatever language you picked in
+the installer: press **Hangul** (`한/영`), `Shift+Space` or `Super+Space` to switch
+between English and Korean. Nothing to install or enable.
 
-> 설치 때 한국어를 골랐으면 `한/영`(또는 `Shift+Space`)으로 바로 한글을 칩니다. 영어로
-> 설치했다면 *시스템 설정 → 입력기*에서 **Hangul**을 추가하고 다시 로그인하세요.
+> 설치 언어와 상관없이 모든 계정에서 바로 `한/영`(또는 `Shift+Space`, `Super+Space`)으로
+> 한글을 칩니다. 따로 켤 것이 없습니다.

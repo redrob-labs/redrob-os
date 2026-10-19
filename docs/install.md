@@ -176,6 +176,12 @@ UART, 115200) and sent over the agent's channels — see
 
 ## Troubleshooting
 
+Known, cosmetic: the installer's own text console (Ctrl+Alt+F2 while installing)
+greets with "Fedora Linux 44" -- that is the installer environment
+bootc-image-builder assembles from Fedora packages, not the system being
+installed. The graphical installer and the installed system say Redrob OS.
+
+
 - *The stick does not show in the boot menu.* Re-write it (Rufus: DD mode),
   and make sure UEFI boot is enabled; Legacy/CSM-only firmware is not supported.
 - *Black screen after "Install Redrob OS".* Press `Esc` to see messages. On

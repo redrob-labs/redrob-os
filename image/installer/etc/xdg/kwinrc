@@ -21,3 +21,10 @@ CommandTitlebarWheel=Nothing
 ElectricBorders=0
 ElectricBorderMaximize=true
 ElectricBorderTiling=true
+
+[Wayland]
+# Input method on Wayland: KWin starts IBus itself through this desktop entry
+# (ibus >= 1.5.29 ships it). Without it ibus-hangul is installed but never
+# running, so 한/영 does nothing. Engines preloaded via dconf
+# (/etc/dconf/db/local.d/10-redrob-ibus).
+InputMethod=/usr/share/applications/org.freedesktop.IBus.Panel.Wayland.desktop
