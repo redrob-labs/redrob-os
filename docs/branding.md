@@ -68,6 +68,32 @@ layout script) are not touched by it; colour schemes, Anaconda CSS, wallpaper me
 and every PNG are. To take a new design-system export: copy the file over, update
 `SHA256SUMS`, rerun.
 
+It ends with a **token audit**: every colour literal in the text files of
+`image/{branding,installer,files,agent}` (hex, and `r,g,b` triplets in KDE colour files,
+`kdeglobals` and LnF `defaults`) must be a value in `tokens.json`, and Plymouth's float
+background must be `redrob-black`; anything else fails the run with the file and value.
+A hand-written file with an off-token colour (the old `#E5322D` accent, say) is caught
+the next time anyone regenerates.
+
+### Surfaces and where their colours come from
+
+| Surface | Source of colour |
+|---|---|
+| Plasma widgets, windows, panel, notifications, System Settings, Discover | `Redrob` / `RedrobDark` colour schemes (tokens) via `/etc/xdg/kdeglobals` |
+| GTK and Flatpak apps | the same scheme, mirrored by KDE's GTK config sync |
+| Accent | `AccentColor=43,82,255` (`blue-6`) |
+| Desktop, login greeter, lock screen | the deep-ground wallpaper; set in the layout script, `plasmalogin/defaults.conf`, `/etc/xdg/kscreenlockerrc` |
+| Login splash (KSplash) | LnF `contents/splash/Splash.qml`: `redrob-black`, `gray-8`, `gradient-brand`; `/etc/xdg/ksplashrc` |
+| Boot splash, LUKS prompt | Plymouth `redrob` theme (tokens) |
+| Installer (Anaconda) | `redrob-os.css` + pixmaps (tokens) through `images/product.img`, with the token typefaces |
+| Terminal | Konsole `Redrob` scheme/profile (dark tokens; ANSI = accent families) |
+| Text | Pretendard / Wanted Sans (`font-sans`, `font-sans-kr`) |
+
+Not driven by tokens, by choice or because no token exists: the Breeze icon and cursor
+themes (the design system ships no icon theme for a desktop), the GRUB menu (bootupd owns
+it; plain text), and NanumGothicCoding as the fixed-width UI font (`font-mono` names the
+platform monospace).
+
 ## Asset list
 
 | Path (absolute, in the image) | Source | Consumer |
@@ -82,7 +108,7 @@ and every PNG are. To take a new design-system export: copy the file over, updat
 | `/etc/xdg/kdeglobals` `[General] ColorScheme=Redrob`, `AccentColor=43,82,255`, Pretendard font roles (installer overlay) | hand-written | colours of the login greeter (runs as `plasmalogin`, no LnF applied) and of every user before the LnF package runs |
 | `/usr/share/plasma/look-and-feel/ai.redrob.desktop/{metadata.json,contents/defaults,contents/colors,contents/layouts/org.kde.plasma.desktop-layout.js,contents/previews/*}` | hand-written + generated colours/previews | Plasma global theme "Redrob": Breeze widgets/icons/cursors, colour scheme Redrob, `AccentColor=43,82,255`, wallpaper Redrob, default panel whose start button is the `redrob-os` tile and whose task manager is icons-only |
 | `/usr/share/color-schemes/{Redrob,RedrobDark}.colors` | generated from `tokens.json` (Breeze section structure) | Plasma colour schemes; the light one is also the LnF package's `contents/colors` |
-| `/usr/share/anaconda/pixmaps/{sidebar-logo.png 150×69 (lockup 130 px wide), sidebar-bg.png 406×767 (deep ground), topbar-bg.png 1040×132, redrob-os.css}` | generated | Anaconda GTK UI (sizes match fedora-logos so the stock layout holds) |
+| `/usr/share/anaconda/pixmaps/{sidebar-logo.png 150×69 (lockup 130 px wide), sidebar-bg.png 406×767 (deep ground), topbar-bg.png 1040×132, redrob-os.css}` | generated | Anaconda GTK UI, delivered to the installer through `images/product.img` (`tools/installer/brand-iso.sh`, release workflow); sizes match fedora-logos so the stock layout holds |
 | `/etc/xdg/kcm-about-distrorc` | hand-written | System Settings → About this System: `Name`, `LogoPath`, `Website`, `ShowBuild` |
 
 ### Colour scheme provenance
@@ -161,8 +187,17 @@ our Apache-2.0 header; `UPSTREAM.md` still credits Breeze for the structure.
   ```
 
   `base_profile = fedora` inherits the Fedora storage/bootloader/network defaults; the
-  CSS line swaps in our pixmaps. The installer ISO (bootc-image-builder `anaconda-iso`)
-  runs Anaconda from the image itself, so this file and the pixmaps come from this overlay.
+  CSS line swaps in our pixmaps.
+
+  **The installer does not run from our image.** bootc-image-builder `anaconda-iso`
+  builds the installer root from Fedora packages (fedora-logos, Fedora os-release), so
+  nothing in this overlay is present while Anaconda runs -- the v0.3.0 ISO showed the
+  Fedora sidebar and "Welcome to Fedora Linux 44". The release workflow therefore adds
+  `images/product.img` to the ISO (`tools/installer/brand-iso.sh`): Anaconda's dracut
+  stage overlays it onto the installer root. It carries the four Anaconda pixmaps, the
+  profile above, a `conf.d` file naming the stylesheet, our os-release and
+  `system-logo-white.png`. Verified on the v0.3.1 ISO branded locally with the same
+  script: "Welcome to Redrob OS 44", Redrob sidebar and lockup in Anaconda.
 - First-login hooks that show a logo should use `/usr/share/pixmaps/redrob-os.png` or the
   `redrob-os` icon name.
 
