@@ -40,6 +40,7 @@ dock.hiding = "dodgewindows";     // slides away when a window would overlap it
 var dtasks = dock.addWidget("org.kde.plasma.icontasks");
 dtasks.currentConfigGroup = ["General"];
 dtasks.writeConfig("launchers", [
+  "applications:redrob-agent-sidebar.desktop",
   "applications:org.kde.dolphin.desktop",
   "preferred://browser",
   "applications:ai.redrob.launcher.desktop",

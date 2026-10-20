@@ -6,3 +6,7 @@
 [ai.redrob.launcher.desktop]
 _k_friendly_name=Redrob
 _launch=Meta+Space,none,Redrob
+
+[redrob-agent-sidebar.desktop]
+_k_friendly_name=Redrob Agent
+_launch=Meta+`,none,Redrob Agent sidebar

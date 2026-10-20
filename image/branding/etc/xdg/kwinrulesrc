@@ -1,0 +1,34 @@
+# Redrob OS KWin window rules (system default layer).
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+# Pins the Redrob Agent sidebar (window class redrob-agent-sidebar, launched by
+# /usr/libexec/redrob/agent-sidebar) to the right edge: borderless, kept above,
+# full height, fixed width, off the taskbar/pager, on all virtual desktops.
+# Values: 2 = Force. Position x is large so KWin clamps the window to the right
+# screen edge regardless of resolution; maximizevert fills the height.
+
+[General]
+count=1
+rules=redrob-agent-sidebar
+
+[redrob-agent-sidebar]
+Description=Redrob Agent sidebar
+wmclass=redrob-agent-sidebar
+wmclasscomplete=false
+wmclassmatch=1
+types=1
+noborder=true
+noborderrule=2
+above=true
+aboverule=2
+skiptaskbar=true
+skiptaskbarrule=2
+skippager=true
+skippagerrule=2
+desktops=\x00
+desktopsrule=2
+maximizevert=true
+maximizevertrule=2
+size=440,1040
+sizerule=2
+position=99999,0
+positionrule=2
