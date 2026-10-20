@@ -1,16 +1,14 @@
 // Redrob OS default Plasma layout (applied on a user's first login by the
-// ai.redrob.desktop look-and-feel package).
+// ai.redrob.desktop look-and-feel package). This is the SAFE DEFAULT (Windows
+// shape); the first-login style chooser (/usr/libexec/redrob/style-chooser)
+// rebuilds the panels for whichever style the user picks (macOS or Windows),
+// so this only governs the brief window before the chooser runs, and the case
+// where the chooser is cancelled.
 // Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
-//
-// Same shape as Plasma's own org.kde.breeze layout -- one bottom panel: start
-// menu, icons-only task manager, system tray, clock, show desktop -- with two
-// Redrob choices: the start button is the Redrob tile (hicolor `redrob-os`, the
-// design system's white symbol on a Redrob Blue tile, Favicons/README.md), and
-// the task manager is icons-only, the way Windows users expect.
 
 var panel = new Panel;
 panel.location = "bottom";
-panel.height = 2 * Math.floor(gridUnit * 1.6 / 2); // Plasma's default (44 px at 96 dpi)
+panel.height = 2 * Math.floor(gridUnit * 1.6 / 2);
 panel.hiding = "none";
 panel.floating = false;
 
@@ -19,11 +17,10 @@ kickoff.currentConfigGroup = ["General"];
 kickoff.writeConfig("icon", "redrob-os");
 kickoff.writeConfig("favoritesPortedToKAstats", true);
 
-panel.addWidget("org.kde.plasma.pager");
-
 var tasks = panel.addWidget("org.kde.plasma.icontasks");
 tasks.currentConfigGroup = ["General"];
 tasks.writeConfig("launchers", [
+  "applications:redrob-agent-sidebar.desktop",
   "applications:systemsettings.desktop",
   "preferred://filemanager",
   "preferred://browser",
@@ -35,9 +32,6 @@ panel.addWidget("org.kde.plasma.systemtray");
 panel.addWidget("org.kde.plasma.digitalclock");
 panel.addWidget("org.kde.plasma.showdesktop");
 
-// Wallpaper. The LnF `defaults` file (Image=Redrob) is only read by
-// lookandfeeltool / System Settings, not on a first login, so without this the
-// desktop falls back to Plasma's stock image (seen on the v0.3.0 install).
 var allDesktops = desktops();
 for (var i = 0; i < allDesktops.length; i++) {
   var d = allDesktops[i];

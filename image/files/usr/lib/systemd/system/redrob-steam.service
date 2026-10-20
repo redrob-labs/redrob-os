@@ -1,0 +1,23 @@
+[Unit]
+Description=Redrob OS: install Steam and the Proton-GE manager (once)
+Documentation=https://flathub.org/apps/com.valvesoftware.Steam
+# Needs the flathub remote (redrob-flathub.service) to exist first.
+ConditionPathExists=/var/lib/redrob/flathub-added
+ConditionPathExists=!/var/lib/redrob/steam-installed
+After=redrob-flathub.service network-online.target
+Wants=network-online.target
+Requires=redrob-flathub.service
+
+[Service]
+Type=oneshot
+# Steam (Proton is bundled) + ProtonUp-Qt (adds Proton-GE). System-wide so every
+# user account on the machine gets them; a user may remove either from Discover.
+ExecStart=/usr/bin/flatpak install --system --noninteractive --assumeyes flathub com.valvesoftware.Steam net.davidotek.pupgui2
+ExecStart=/usr/bin/mkdir -p /var/lib/redrob
+ExecStart=/usr/bin/touch /var/lib/redrob/steam-installed
+# Offline / slow first boot: retry instead of failing forever.
+Restart=on-failure
+RestartSec=5min
+
+[Install]
+WantedBy=multi-user.target

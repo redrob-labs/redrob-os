@@ -1,0 +1,45 @@
+#!/usr/bin/bash
+# style-chooser -- first login: ask whether this is a macOS-style or a
+# Windows-style user, then apply the matching desktop. macOS = top menu bar +
+# floating dock + window buttons on the LEFT. Windows = bottom taskbar + start
+# menu + buttons on the RIGHT. Runs once (marker in XDG_STATE); if the dialog is
+# cancelled or unavailable it keeps the safe Windows default.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+set -euo pipefail
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/redrob"
+mkdir -p "${state}"
+marker="${state}/desktop-style"
+[ -e "${marker}" ] && exit 0
+
+lay=/usr/share/redrob/layouts
+qd="$(command -v qdbus6 || command -v qdbus || true)"
+
+apply_layout() { # $1 = mac|windows
+  [ -n "${qd}" ] || return 0
+  "${qd}" org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$(cat "${lay}/$1.js")" >/dev/null 2>&1 || true
+}
+set_buttons() { # $1 = left-codes  $2 = right-codes
+  kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft "$1" 2>/dev/null || true
+  kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "$2" 2>/dev/null || true
+  [ -n "${qd}" ] && "${qd}" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
+}
+
+choice="windows"
+if command -v kdialog >/dev/null 2>&1; then
+  choice="$(kdialog --title "Redrob OS" \
+    --menu "데스크톱 스타일을 고르세요 · Choose your desktop style" \
+    mac "macOS 스타일 — 상단 메뉴 막대 + 하단 도크" \
+    windows "Windows 스타일 — 하단 작업 표시줄 + 시작 메뉴" 2>/dev/null)" || choice="windows"
+fi
+
+case "${choice}" in
+  mac)
+    apply_layout mac
+    set_buttons "XIA" ""        # Close/Min/Max on the left, nothing on the right
+    echo "mac" > "${marker}" ;;
+  *)
+    apply_layout windows
+    set_buttons "" "IAX"        # Min/Max/Close on the right, Windows-style
+    echo "windows" > "${marker}" ;;
+esac
