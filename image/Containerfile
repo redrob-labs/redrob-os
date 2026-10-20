@@ -149,6 +149,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         tuned-ppd \
         bluez \
         pipewire \
+        kvantum \
         zstd \
         unzip \
         tar

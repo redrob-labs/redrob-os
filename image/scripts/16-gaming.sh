@@ -2,7 +2,8 @@
 # 16-gaming.sh -- the Steam/Proton gaming layer (v0.5.0). Host tools a PC gamer
 # expects, so Steam + Proton "just work" after the first-boot install. Steam
 # itself is NOT baked into the image (it is a ~1-2 GB Flathub app pulled on first
-# boot by redrob-steam.service, and a user who removes it stays removed); this
+# boot by redrob-gaming-apps.service -- alongside Heroic, Lutris and Bottles --
+# and a user who removes it stays removed); this
 # script ships only the small host pieces Flatpak games cannot bring themselves:
 #   * gamemode   -- CPU governor / niceness boost while a game runs (D-Bus activated).
 #   * gamescope  -- micro-compositor for scaling / frame-limiting a game window.
