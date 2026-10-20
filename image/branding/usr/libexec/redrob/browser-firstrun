@@ -1,0 +1,33 @@
+#!/usr/bin/bash
+# browser-firstrun -- on a user's first login, trigger Redrob Launcher to install
+# Redrob Browser, then make it the default browser once it is actually present.
+# The Launcher (baked, autostarted) owns the redrob:// scheme, so opening
+# redrob://install/browser is how we "install the browser through the launcher".
+# We only set the default AFTER the browser's .desktop exists -- never a broken
+# default pointing at a missing app. Offline / cancelled: retry next login.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+set -euo pipefail
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/redrob"
+mkdir -p "$state"
+marker="$state/browser-setup-done"
+[ -e "$marker" ] && exit 0
+
+# Ask the Launcher to install the browser (it shows Redrob Browser and installs it).
+xdg-open "redrob://install/browser" >/dev/null 2>&1 || true
+
+# Wait (up to ~2 min) for the installed browser's desktop entry, then default to it.
+for _ in $(seq 1 40); do
+  df="$(ls -1 "$HOME/.local/share/applications/"*[Rr]edrob*[Bb]rowser*.desktop 2>/dev/null | head -1 || true)"
+  if [ -n "${df}" ]; then
+    id="$(basename "${df}")"
+    xdg-settings set default-web-browser "${id}" 2>/dev/null || true
+    gio mime x-scheme-handler/https "${id}" >/dev/null 2>&1 || true
+    gio mime x-scheme-handler/http  "${id}" >/dev/null 2>&1 || true
+    gio mime text/html              "${id}" >/dev/null 2>&1 || true
+    touch "${marker}"
+    exit 0
+  fi
+  sleep 3
+done
+exit 0

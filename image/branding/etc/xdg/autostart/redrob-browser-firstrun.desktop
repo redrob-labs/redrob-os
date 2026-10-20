@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Redrob Browser setup
+Comment=Install Redrob Browser via the Launcher and set it as default (once)
+Exec=/usr/libexec/redrob/browser-firstrun
+# Runs after the Launcher (phase 2) so the redrob:// handler is live.
+X-KDE-autostart-phase=2
+NoDisplay=true
+OnlyShowIn=KDE;

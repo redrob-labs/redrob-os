@@ -2,42 +2,55 @@
 // ai.redrob.desktop look-and-feel package).
 // Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 //
-// Same shape as Plasma's own org.kde.breeze layout -- one bottom panel: start
-// menu, icons-only task manager, system tray, clock, show desktop -- with two
-// Redrob choices: the start button is the Redrob tile (hicolor `redrob-os`, the
-// design system's white symbol on a Redrob Blue tile, Favicons/README.md), and
-// the task manager is icons-only, the way Windows users expect.
+// macOS-shaped, not Windows-shaped: a thin TOP menu bar (Redrob menu + the
+// global application menu + status tray + clock) and a floating BOTTOM dock
+// (icon-only, auto-hiding) for apps. Window buttons move to the left and the
+// per-window menu is lifted into the top bar (see /etc/xdg/kwinrc, kdeglobals).
 
-var panel = new Panel;
-panel.location = "bottom";
-panel.height = 2 * Math.floor(gridUnit * 1.6 / 2); // Plasma's default (44 px at 96 dpi)
-panel.hiding = "none";
-panel.floating = false;
+// --- Top menu bar -------------------------------------------------------------
+var top = new Panel;
+top.location = "top";
+top.height = Math.round(gridUnit * 1.4);
+top.hiding = "none";
+top.floating = false;
 
-var kickoff = panel.addWidget("org.kde.plasma.kickoff");
+// Redrob menu: the start/launcher menu sits where macOS puts the Apple menu,
+// as the Redrob tile (hicolor `redrob-os`, white symbol on Redrob Blue).
+var kickoff = top.addWidget("org.kde.plasma.kickoff");
 kickoff.currentConfigGroup = ["General"];
 kickoff.writeConfig("icon", "redrob-os");
 kickoff.writeConfig("favoritesPortedToKAstats", true);
 
-panel.addWidget("org.kde.plasma.pager");
+// Global application menu: the focused window's menu bar, macOS-style.
+top.addWidget("org.kde.plasma.appmenu");
 
-var tasks = panel.addWidget("org.kde.plasma.icontasks");
-tasks.currentConfigGroup = ["General"];
-tasks.writeConfig("launchers", [
-  "applications:systemsettings.desktop",
-  "preferred://filemanager",
+// Push status items to the right edge.
+top.addWidget("org.kde.plasma.panelspacer");
+
+top.addWidget("org.kde.plasma.systemtray");
+top.addWidget("org.kde.plasma.digitalclock");
+
+// --- Bottom dock --------------------------------------------------------------
+var dock = new Panel;
+dock.location = "bottom";
+dock.height = Math.round(gridUnit * 3.2);
+dock.floating = true;             // detached, rounded -- macOS dock
+dock.hiding = "dodgewindows";     // slides away when a window would overlap it
+
+var dtasks = dock.addWidget("org.kde.plasma.icontasks");
+dtasks.currentConfigGroup = ["General"];
+dtasks.writeConfig("launchers", [
+  "applications:org.kde.dolphin.desktop",
   "preferred://browser",
-  "applications:ai.redrob.launcher.desktop"
+  "applications:ai.redrob.launcher.desktop",
+  "applications:systemsettings.desktop"
 ]);
+dtasks.writeConfig("showOnlyCurrentDesktop", false);
+dtasks.writeConfig("showOnlyCurrentActivity", false);
 
-panel.addWidget("org.kde.plasma.marginsseparator");
-panel.addWidget("org.kde.plasma.systemtray");
-panel.addWidget("org.kde.plasma.digitalclock");
-panel.addWidget("org.kde.plasma.showdesktop");
-
-// Wallpaper. The LnF `defaults` file (Image=Redrob) is only read by
-// lookandfeeltool / System Settings, not on a first login, so without this the
-// desktop falls back to Plasma's stock image (seen on the v0.3.0 install).
+// --- Wallpaper ----------------------------------------------------------------
+// The LnF `defaults` Image= is only read by lookandfeeltool / System Settings,
+// not on a first login, so set it here (seen falling back to stock on v0.3.0).
 var allDesktops = desktops();
 for (var i = 0; i < allDesktops.length; i++) {
   var d = allDesktops[i];

@@ -1,0 +1,8 @@
+# Redrob OS global shortcuts (system default layer).
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+# Meta+Space opens the Redrob hub (Launcher: apps, sign-in, connect) the way
+# macOS Spotlight is one keystroke away -- the desktop's agentic entry point.
+
+[ai.redrob.launcher.desktop]
+_k_friendly_name=Redrob
+_launch=Meta+Space,none,Redrob
