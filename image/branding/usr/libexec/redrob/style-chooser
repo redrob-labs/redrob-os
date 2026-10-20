@@ -25,28 +25,33 @@ kw() { kwriteconfig6 --file "$1" --group "$2" --key "$3" "$4" 2>/dev/null || tru
 apply_style() {
   local lnf="$1" aurorae="$2" icons="$3" left="$4" right="$5" layout="$6"
 
-  # 1. Upstream LOOK (decoration/panel/colour) via the global theme.
+  # 1. Upstream LOOK (panel style + colour scheme) via the global theme. This is
+  #    ASYNC and, for WhiteSur/Win11, rewrites the decoration back to Breeze, so
+  #    it must run FIRST and be given time to finish before we set the decoration.
   command -v plasma-apply-lookandfeel >/dev/null 2>&1 \
     && plasma-apply-lookandfeel -a "${lnf}" >/dev/null 2>&1 || true
+  sleep 5
 
-  # 2. Window decoration: Aurorae theme + button sides.
-  kw kwinrc org.kde.kdecoration2 library org.kde.kwin.aurorae
-  kw kwinrc org.kde.kdecoration2 theme "${aurorae}"
-  kw kwinrc org.kde.kdecoration2 ButtonsOnLeft "${left}"
-  kw kwinrc org.kde.kdecoration2 ButtonsOnRight "${right}"
-
-  # 3. Redrob branding FORCED over the upstream theme.
+  # 2. Redrob branding FORCED over the upstream theme.
   kw kdeglobals Icons Theme "${icons}"            # generic icons themed; our app/logo
                                                   # marks win via hicolor fallback
   kw kdeglobals General AccentColor "${REDROB_ACCENT}"
   kw ksplashrc KSplash Theme "${REDROB_SPLASH}"
   kw ksplashrc KSplash Engine KSplashQML
 
+  # 3. Window decoration LAST (after the LnF settled): Aurorae engine + the theme's
+  #    traffic-light/pill variant + button sides. Written after plasma-apply so the
+  #    library is not clobbered back to org.kde.breeze.
+  kw kwinrc org.kde.kdecoration2 library org.kde.kwin.aurorae
+  kw kwinrc org.kde.kdecoration2 theme "${aurorae}"
+  kw kwinrc org.kde.kdecoration2 ButtonsOnLeft "${left}"
+  kw kwinrc org.kde.kdecoration2 ButtonsOnRight "${right}"
+
   # 4. Panels + Redrob wallpaper (the layout script sets the wallpaper itself).
   [ -n "${qd}" ] && "${qd}" org.kde.plasmashell /PlasmaShell \
     org.kde.PlasmaShell.evaluateScript "$(cat "${lay}/${layout}.js")" >/dev/null 2>&1 || true
 
-  # 5. Apply the kwin changes.
+  # 5. Apply the kwin changes (re-decorates open windows with the Aurorae theme).
   [ -n "${qd}" ] && "${qd}" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
 }
 
@@ -60,7 +65,7 @@ fi
 
 case "${choice}" in
   mac)
-    apply_style com.github.vinceliuice.WhiteSur-dark __aurorae__svg__WhiteSur WhiteSur XIA "" mac
+    apply_style com.github.vinceliuice.WhiteSur-dark __aurorae__svg__WhiteSur-dark WhiteSur XIA "" mac
     echo "mac" > "${marker}" ;;
   *)
     apply_style com.github.yeyushengfan258.Win11OS-dark __aurorae__svg__Win11OS-dark Win11 "" IAX windows
