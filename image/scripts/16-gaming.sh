@@ -7,7 +7,8 @@
 #   * gamemode   -- CPU governor / niceness boost while a game runs (D-Bus activated).
 #   * gamescope  -- micro-compositor for scaling / frame-limiting a game window.
 #   * mangohud   -- in-game FPS / temp overlay (host build for native apps).
-#   * game-devices-udev -- udev rules so Xbox/PS/Switch pads work without root.
+#   * game-devices-udev / steam-devices -- udev rules so Xbox/PS/Switch pads work
+#     without root. steam-devices is in RPM Fusion (added by 15-hardware).
 # Proton ships inside Steam; ProtonUp-Qt (first boot) adds Proton-GE on top.
 # League of Legends is NOT supported (Vanguard is a Windows kernel driver); the
 # installer's dual-boot path is the only route for it.
@@ -22,7 +23,7 @@ dnf5 -y install --setopt=install_weak_deps=False \
   gamemode \
   gamescope \
   mangohud \
-  game-devices-udev
+  steam-devices
 
 # Some Proton/Unity titles mmap far more regions than the old default allowed.
 # Fedora 44 already raises this via systemd, but pin it so a game never dies with
