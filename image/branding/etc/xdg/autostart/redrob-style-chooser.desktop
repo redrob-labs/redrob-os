@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Redrob desktop style
+Comment=Pick a macOS-style or Windows-style desktop (once)
+Exec=/usr/libexec/redrob/style-chooser
+X-KDE-autostart-phase=1
+NoDisplay=true
+OnlyShowIn=KDE;
