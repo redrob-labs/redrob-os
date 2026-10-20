@@ -1,0 +1,29 @@
+[Unit]
+Description=Redrob OS: install the game launchers and the Windows-app installer (once)
+Documentation=https://flathub.org/apps/com.valvesoftware.Steam
+# Needs the flathub remote (redrob-flathub.service) to exist first.
+ConditionPathExists=/var/lib/redrob/flathub-added
+ConditionPathExists=!/var/lib/redrob/gaming-apps-installed
+After=redrob-flathub.service network-online.target
+Wants=network-online.target
+Requires=redrob-flathub.service
+
+[Service]
+Type=oneshot
+# Not baked into the image (these are multi-GB Flathub apps, and a user who
+# removes one stays removed); pulled on first boot. System-wide so every account
+# gets them; any can be removed from Discover.
+#   com.valvesoftware.Steam  -- Steam, Proton bundled (Windows games)
+#   net.davidotek.pupgui2    -- ProtonUp-Qt, adds Proton-GE on top
+#   com.heroicgameslauncher.hgl -- Heroic: Epic / GOG / Amazon game launcher
+#   net.lutris.Lutris        -- Lutris: installs games + apps from many sources
+#   com.usebottles.bottles   -- Bottles: install & run Windows .exe/.msi apps (Wine)
+ExecStart=/usr/bin/flatpak install --system --noninteractive --assumeyes flathub com.valvesoftware.Steam net.davidotek.pupgui2 com.heroicgameslauncher.hgl net.lutris.Lutris com.usebottles.bottles
+ExecStart=/usr/bin/mkdir -p /var/lib/redrob
+ExecStart=/usr/bin/touch /var/lib/redrob/gaming-apps-installed
+# Offline / slow first boot: retry instead of failing forever.
+Restart=on-failure
+RestartSec=5min
+
+[Install]
+WantedBy=multi-user.target
