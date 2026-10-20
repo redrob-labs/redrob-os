@@ -15,8 +15,9 @@ enable greenboot-set-rollback-trigger.service
 # Flathub as the one app store (runs once, marker in /var/lib/redrob).
 enable redrob-flathub.service
 
-# Gaming layer (v0.5.0): install Steam + Proton-GE manager once, after Flathub.
-enable redrob-steam.service
+# Gaming layer: install game launchers (Steam+Proton, Heroic, Lutris) and the
+# Windows-app installer (Bottles) once, after Flathub.
+enable redrob-gaming-apps.service
 
 # Printing + firmware updates.
 enable cups.socket
