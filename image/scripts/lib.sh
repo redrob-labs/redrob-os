@@ -63,3 +63,41 @@ fetch_pinned() {
   fi
   echo "${name}: checksum OK"
 }
+
+# fetch_extract NAME DESTDIR  -- fetch_pinned NAME into a temp tarball and extract
+# it into DESTDIR (created), stripping the archive's top directory. Echoes DESTDIR.
+fetch_extract() {
+  local name="$1" dest="$2" tgz
+  tgz="$(mktemp)"
+  fetch_pinned "${name}" "${tgz}"
+  mkdir -p "${dest}"
+  tar -xzf "${tgz}" -C "${dest}" --strip-components=1
+  rm -f "${tgz}"
+}
+
+# theme_copy_look SRC  -- copy the "look" assets of a WhiteSur/Win11-style KDE
+# theme tree (colour schemes, Kvantum, Plasma desktop theme + look-and-feel) into
+# /usr/share. Deliberately NOT wallpaper/ or sddm*/ -- those are branding Redrob
+# OS replaces with its own. Aurorae decorations are copied by the caller (their
+# layout differs between themes).
+theme_copy_look() {
+  local src="$1"
+  install -d /usr/share/color-schemes /usr/share/Kvantum \
+            /usr/share/plasma/desktoptheme /usr/share/plasma/look-and-feel
+  cp -a "${src}/color-schemes/." /usr/share/color-schemes/
+  cp -a "${src}/Kvantum/." /usr/share/Kvantum/
+  cp -a "${src}/plasma/desktoptheme/." /usr/share/plasma/desktoptheme/
+  cp -a "${src}/plasma/look-and-feel/." /usr/share/plasma/look-and-feel/
+}
+
+# install_icon_theme SRC  -- run an icon theme's own install.sh against
+# /usr/share/icons, then refresh caches for the named theme dirs ($@ after SRC).
+install_icon_theme() {
+  local src="$1"; shift
+  ( cd "${src}" && bash ./install.sh -d /usr/share/icons ) \
+    || echo "warning: icon-theme install returned nonzero" >&2
+  local d
+  for d in "$@"; do
+    [ -d "/usr/share/icons/${d}" ] && gtk-update-icon-cache -q -f "/usr/share/icons/${d}" 2>/dev/null || true
+  done
+}
