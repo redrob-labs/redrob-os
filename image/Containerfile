@@ -166,7 +166,8 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     --mount=type=bind,from=akmods,src=/out,dst=/akmods,ro \
     --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=tmpfs,dst=/tmp \
-    /ctx/scripts/15-hardware.sh
+    /ctx/scripts/15-hardware.sh && \
+    /ctx/scripts/16-gaming.sh
 
 # 3. Our binaries (agent, credential broker, USB broker, pairing) from the build stage.
 COPY --from=redrob-build /out/ /usr/bin/
