@@ -1,9 +1,11 @@
 #!/usr/bin/bash
-# style-chooser -- first login: ask whether this is a macOS-style or a
-# Windows-style user, then apply the matching desktop. macOS = top menu bar +
-# floating dock + window buttons on the LEFT. Windows = bottom taskbar + start
-# menu + buttons on the RIGHT. Runs once (marker in XDG_STATE); if the dialog is
-# cancelled or unavailable it keeps the safe Windows default.
+# style-chooser -- first login: ask macOS-style or Windows-style, then apply the
+# matching desktop. macOS = WhiteSur look (top bar + floating dock, traffic-light
+# buttons on the LEFT). Windows = Win11OS look (bottom taskbar + start, buttons on
+# the RIGHT). BOTH are forced to Redrob branding: Redrob wallpaper, Redrob splash,
+# Redrob accent (#2B52FF), Redrob logo/app icons -- only the window decoration,
+# panel style and colour scheme come from upstream. Runs once (marker in
+# XDG_STATE); a cancelled/unavailable dialog keeps the safe Windows default.
 # Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 set -euo pipefail
 
@@ -14,31 +16,38 @@ marker="${state}/desktop-style"
 
 lay=/usr/share/redrob/layouts
 qd="$(command -v qdbus6 || command -v qdbus || true)"
-REDROB_ACCENT="43,82,255"   # Redrob Blue #2B52FF
+REDROB_ACCENT="43,82,255"            # Redrob Blue #2B52FF
+REDROB_SPLASH="ai.redrob.desktop"    # our KSplash (Redrob lockup)
 
-apply_layout() { # $1 = mac|windows
-  [ -n "${qd}" ] || return 0
-  "${qd}" org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "$(cat "${lay}/$1.js")" >/dev/null 2>&1 || true
-}
 kw() { kwriteconfig6 --file "$1" --group "$2" --key "$3" "$4" 2>/dev/null || true; }
-set_buttons() { # $1 = left-codes  $2 = right-codes
-  kw kwinrc org.kde.kdecoration2 ButtonsOnLeft "$1"
-  kw kwinrc org.kde.kdecoration2 ButtonsOnRight "$2"
-}
-kwin_reconfigure() { [ -n "${qd}" ] && "${qd}" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true; }
 
-apply_mac_theme() {
-  # Real macOS look from WhiteSur (baked by 26-mac-theme.sh), tinted to Redrob.
-  if command -v plasma-apply-lookandfeel >/dev/null 2>&1; then
-    plasma-apply-lookandfeel -a com.github.vinceliuice.WhiteSur-dark >/dev/null 2>&1 || true
-  fi
-  # Big Sur icons + Aurorae traffic-light decoration on the LEFT.
-  kw kdeglobals Icons Theme WhiteSur
+# apply_style  LNF  AURORAE_THEME  ICON_THEME  BTN_LEFT  BTN_RIGHT  LAYOUT
+apply_style() {
+  local lnf="$1" aurorae="$2" icons="$3" left="$4" right="$5" layout="$6"
+
+  # 1. Upstream LOOK (decoration/panel/colour) via the global theme.
+  command -v plasma-apply-lookandfeel >/dev/null 2>&1 \
+    && plasma-apply-lookandfeel -a "${lnf}" >/dev/null 2>&1 || true
+
+  # 2. Window decoration: Aurorae theme + button sides.
   kw kwinrc org.kde.kdecoration2 library org.kde.kwin.aurorae
-  kw kwinrc org.kde.kdecoration2 theme __aurorae__svg__WhiteSur
-  set_buttons "XIA" ""
-  # Redrob tint: accent blue over the WhiteSur base.
+  kw kwinrc org.kde.kdecoration2 theme "${aurorae}"
+  kw kwinrc org.kde.kdecoration2 ButtonsOnLeft "${left}"
+  kw kwinrc org.kde.kdecoration2 ButtonsOnRight "${right}"
+
+  # 3. Redrob branding FORCED over the upstream theme.
+  kw kdeglobals Icons Theme "${icons}"            # generic icons themed; our app/logo
+                                                  # marks win via hicolor fallback
   kw kdeglobals General AccentColor "${REDROB_ACCENT}"
+  kw ksplashrc KSplash Theme "${REDROB_SPLASH}"
+  kw ksplashrc KSplash Engine KSplashQML
+
+  # 4. Panels + Redrob wallpaper (the layout script sets the wallpaper itself).
+  [ -n "${qd}" ] && "${qd}" org.kde.plasmashell /PlasmaShell \
+    org.kde.PlasmaShell.evaluateScript "$(cat "${lay}/${layout}.js")" >/dev/null 2>&1 || true
+
+  # 5. Apply the kwin changes.
+  [ -n "${qd}" ] && "${qd}" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
 }
 
 choice="windows"
@@ -51,18 +60,9 @@ fi
 
 case "${choice}" in
   mac)
-    apply_mac_theme
-    apply_layout mac            # top bar + floating dock + Redrob wallpaper
-    kwin_reconfigure
+    apply_style com.github.vinceliuice.WhiteSur-dark __aurorae__svg__WhiteSur WhiteSur XIA "" mac
     echo "mac" > "${marker}" ;;
   *)
-    # Stock Breeze, Windows shape: buttons on the right, default decoration/icons.
-    kw kwinrc org.kde.kdecoration2 library org.kde.kwin.aurorae
-    kw kwinrc org.kde.kdecoration2 theme __aurorae__svg__breeze
-    kw kwinrc org.kde.kdecoration2 library org.kde.breeze
-    kw kdeglobals General AccentColor "${REDROB_ACCENT}"
-    set_buttons "" "IAX"
-    apply_layout windows        # bottom taskbar + start menu + Redrob wallpaper
-    kwin_reconfigure
+    apply_style com.github.yeyushengfan258.Win11OS-dark __aurorae__svg__Win11OS-dark Win11 "" IAX windows
     echo "windows" > "${marker}" ;;
 esac

@@ -159,7 +159,8 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     /ctx/scripts/10-pins.sh && \
     /ctx/scripts/20-launcher.sh && \
     /ctx/scripts/25-fonts.sh && \
-    /ctx/scripts/26-mac-theme.sh
+    /ctx/scripts/26-mac-theme.sh && \
+    /ctx/scripts/27-win-theme.sh
 
 # 2b. Hardware layer: RPM Fusion codecs, NVIDIA (userspace + the kernel module built
 #     in the `akmods` stage, one transaction), fingerprint, KDE Connect.
