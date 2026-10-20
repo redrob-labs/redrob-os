@@ -76,7 +76,8 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-24.04
+            # The organization's 16-core larger runner (Ubuntu 24.04 image, billed per minute).
+            runner: redrob-linux-16
           - arch: arm64 # EXPERIMENTAL
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
@@ -176,7 +177,7 @@ jobs:
   iso:
     name: installer ISO (x86_64)
     needs: [version, manifest]
-    runs-on: ubuntu-24.04
+    runs-on: redrob-linux-16
     timeout-minutes: 120
     permissions:
       contents: read
