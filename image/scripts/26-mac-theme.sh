@@ -18,11 +18,13 @@ trap 'rm -rf "${work}"' EXIT
 
 fetch_extract WHITESUR_KDE "${work}/kde"
 theme_copy_look "${work}/kde"
-# WhiteSur ships one aurorae decoration under aurorae/main -> themes/WhiteSur.
-install -d /usr/share/aurorae/themes/WhiteSur
-cp -a "${work}/kde/aurorae/main/." /usr/share/aurorae/themes/WhiteSur/
-[ -f "${work}/kde/aurorae/metadata.desktop" ] && \
-  cp -a "${work}/kde/aurorae/metadata.desktop" /usr/share/aurorae/themes/WhiteSur/metadata.desktop
+# WhiteSur ships its aurorae decoration VARIANTS under aurorae/main/<variant>/
+# (WhiteSur, WhiteSur-dark, WhiteSur-dark_x1.5, ...). Install each as a TOP-LEVEL
+# aurorae theme so kwin's __aurorae__svg__<variant> resolves (nesting them under
+# one WhiteSur/ dir makes kwin fall back to Breeze -> no traffic-light buttons).
+install -d /usr/share/aurorae/themes
+cp -a "${work}/kde/aurorae/main/." /usr/share/aurorae/themes/
+[ -d "${work}/kde/aurorae/common" ] && cp -a "${work}/kde/aurorae/common" /usr/share/aurorae/themes/
 
 fetch_extract WHITESUR_ICON "${work}/icon"
 install_icon_theme "${work}/icon" WhiteSur WhiteSur-dark
