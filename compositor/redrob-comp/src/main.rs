@@ -93,6 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
              SDL_IM_MODULE GDK_BACKEND; systemctl --user start redrob-session.target",
         ]);
         crate::shell::spawn(&["sh", "-c", "command -v fcitx5 >/dev/null && exec fcitx5 -d --replace"]);
+        crate::shell::spawn(&["sh", "-c", "[ -x /usr/libexec/redrob/ptyxis-setup ] && exec /usr/libexec/redrob/ptyxis-setup"]);
         crate::autostart::run();
     } else {
         spawn_client();

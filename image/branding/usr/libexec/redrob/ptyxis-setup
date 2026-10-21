@@ -1,0 +1,21 @@
+#!/usr/bin/bash
+# ptyxis-setup -- Redrob session start: give Ptyxis the Redrob palette on the
+# default profile (creating the profile if Ptyxis has not made one yet).
+# Idempotent; a palette the user picked later is left alone.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+set -uo pipefail
+command -v ptyxis >/dev/null || exit 0
+dir="${XDG_DATA_HOME:-$HOME/.local/share}/org.gnome.Ptyxis/palettes"
+mkdir -p "${dir}"
+cp -f /usr/share/redrob/ptyxis/redrob.palette "${dir}/redrob.palette"
+marker="${XDG_STATE_HOME:-$HOME/.local/state}/redrob/ptyxis-palette"
+[ -e "${marker}" ] && exit 0
+uuid="$(gsettings get org.gnome.Ptyxis default-profile-uuid 2>/dev/null | tr -d "'")"
+if [ -z "${uuid}" ]; then
+  uuid="$(cat /proc/sys/kernel/random/uuid | tr -d -)"
+  gsettings set org.gnome.Ptyxis profile-uuids "['${uuid}']"
+  gsettings set org.gnome.Ptyxis default-profile-uuid "${uuid}"
+fi
+gsettings set "org.gnome.Ptyxis.Profile:/org/gnome/Ptyxis/Profiles/${uuid}/" palette 'redrob' && {
+  mkdir -p "$(dirname "${marker}")"; touch "${marker}"; }
+exit 0
