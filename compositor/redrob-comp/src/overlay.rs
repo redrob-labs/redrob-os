@@ -375,8 +375,10 @@ impl Smallvil {
                     keysyms::KEY_Return | keysyms::KEY_KP_Enter if !input.is_empty() => {
                         let pw = std::mem::take(input);
                         let (tx, rx) = channel();
+                        let user = crate::greeter::current().0;
                         std::thread::spawn(move || {
-                            let _ = tx.send(crate::pam::check(&pw));
+                            let ok = if crate::greeter::active() { crate::greeter::login(&user, &pw) } else { crate::pam::check(&pw) };
+                            let _ = tx.send(ok);
                         });
                         *busy = Some(rx);
                     }
@@ -384,6 +386,17 @@ impl Smallvil {
                         input.pop();
                     }
                     keysyms::KEY_Escape => input.clear(),
+                    // The login screen: pick the user.
+                    keysyms::KEY_Tab | keysyms::KEY_Right | keysyms::KEY_Down if crate::greeter::active() => {
+                        crate::greeter::step(1);
+                        input.clear();
+                        *error = false;
+                    }
+                    keysyms::KEY_Left | keysyms::KEY_Up | keysyms::KEY_ISO_Left_Tab if crate::greeter::active() => {
+                        crate::greeter::step(-1);
+                        input.clear();
+                        *error = false;
+                    }
                     _ => {
                         if let Some(c) = ch {
                             input.push(c);
@@ -520,6 +533,11 @@ impl Smallvil {
         unsafe { while libc::waitpid(-1, std::ptr::null_mut(), libc::WNOHANG) > 0 {} }
         if let Some(Overlay::Lock { busy: Some(rx), error, .. }) = &mut self.layers.overlay {
             if let Ok(ok) = rx.try_recv() {
+                if ok && crate::greeter::active() {
+                    // greetd starts the session once the greeter is gone.
+                    tracing::info!("greeter: logged in");
+                    std::process::exit(0);
+                }
                 if ok {
                     self.layers.overlay = None;
                     tracing::info!("unlocked");
@@ -822,7 +840,11 @@ impl Smallvil {
         draw::draw_text(p, f, &time, (w - tw) / 2.0, h * 0.18 + 100.0, 96.0, white);
 
         // Avatar, name, password pill.
-        let user = std::env::var("USER").unwrap_or_else(|_| "user".into());
+        let user = if crate::greeter::active() {
+            crate::greeter::current().1
+        } else {
+            std::env::var("USER").unwrap_or_else(|_| "user".into())
+        };
         let cy = h * 0.62;
         fill_circle(p, w / 2.0, cy - 70.0, 36.0, with_alpha(white, 40));
         let initial: String = user.chars().next().map(|c| c.to_uppercase().collect()).unwrap_or_default();
@@ -850,6 +872,11 @@ impl Smallvil {
             }
         }
         self.chrome.icons.draw(p, ICON_LOCK, Some(with_alpha(white, 160)), px + 14.0, py + 12.0, 16.0);
+        if crate::greeter::active() && crate::greeter::user_count() > 1 {
+            let hint = "Tab 키로 사용자 바꾸기";
+            let hw = draw::text_width(m, hint, 13.0);
+            draw::draw_text(p, m, hint, (w - hw) / 2.0, py + ph + 52.0, 13.0, with_alpha(white, 140));
+        }
         if error {
             let e = "암호가 맞지 않습니다";
             let ew = draw::text_width(m, e, 13.0);

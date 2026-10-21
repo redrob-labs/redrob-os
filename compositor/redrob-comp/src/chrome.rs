@@ -645,17 +645,14 @@ fn symbol_dark_ink() -> &'static str {
 }
 
 /// Match apps to the shell theme, live, open windows included:
-/// - Qt/KDE: the image's Redrob colour schemes into kdeglobals; running apps
-///   repaint on the change notification (they use Breeze, see main.rs).
-///   `offscreen` because the tool is a Qt app that needs no window.
-/// - GTK / portals: org.gnome.desktop.interface color-scheme.
+/// - GTK / portals: org.gnome.desktop.interface color-scheme, and the
+///   Redrob palette in ~/.config/gtk-4.0/gtk.css.
 pub fn apply_qt_colors(mode: Mode) {
     if std::env::var_os("REDROB_NESTED").is_some() {
         return; // a development run must not retheme the host desktop
     }
     write_gtk_css();
-    let (scheme, gtk) = if mode == Mode::Dark { ("RedrobDark", "prefer-dark") } else { ("Redrob", "default") };
-    crate::shell::spawn_env(&["plasma-apply-colorscheme", scheme], &[("QT_QPA_PLATFORM", "offscreen")]);
+    let gtk = if mode == Mode::Dark { "prefer-dark" } else { "default" };
     crate::shell::spawn(&["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", gtk]);
 }
 
@@ -735,8 +732,8 @@ fn write_gtk_css() {
 }
 
 /// The Redrob session's apps: current GTK4 ones, Plasma's as the fallback.
-pub const TERMINAL: &str = "command -v ptyxis >/dev/null && exec ptyxis --new-window || exec konsole";
-pub const FILES: &str = "command -v nautilus >/dev/null && exec nautilus --new-window || exec dolphin";
+pub const TERMINAL: &str = "exec ptyxis --new-window";
+pub const FILES: &str = "exec nautilus --new-window";
 /// Not a program: the dock asks the compositor to open Redrob 설정.
 pub const SETTINGS: &str = "redrob:settings";
 
@@ -761,7 +758,7 @@ fn default_launchers() -> Vec<Launcher> {
         Launcher {
             name: "Redrob Code",
             tile: Tile::App(APP_CODE),
-            command: sh("command -v redrob >/dev/null && exec konsole -e redrob || exec redrob-launcher redrob://open/code"),
+            command: sh("command -v redrob >/dev/null && exec ptyxis --new-window -x redrob || exec redrob-launcher redrob://open/code"),
             child: None,
             group: false,
         },

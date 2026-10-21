@@ -36,7 +36,7 @@ autopart --type=btrfs --noswap
 bootloader --append="quiet splash"
 # Firewall on; the agent only listens on loopback, the relay is outbound.
 firewall --enabled
-# Default network: first wired link with DHCP, Wi-Fi is set up in Plasma.
+# Default network: first wired link with DHCP, Wi-Fi is set up on the desktop.
 network --bootproto=dhcp --device=link --activate --onboot=on
 # Anaconda creates the user, so the Raspberry Pi first-boot wizard
 # (initial-setup, see config-rpi5.toml) must not run on an ISO install.

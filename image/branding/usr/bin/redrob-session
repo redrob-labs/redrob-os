@@ -1,0 +1,6 @@
+#!/usr/bin/bash
+# redrob-session -- the Redrob desktop session, started by greetd after login.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+export XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=Redrob XDG_SESSION_DESKTOP=redrob
+# A login shell, so /etc/profile.d (PATH, locale, flatpak exports) applies.
+exec /usr/bin/bash -lc 'exec /usr/bin/redrob-comp --drm'

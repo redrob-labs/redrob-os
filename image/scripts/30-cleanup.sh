@@ -35,7 +35,7 @@ echo "presets: user=${user_units[*]}"
 preset_units system "${system_units[@]}"
 preset_units user   "${user_units[@]}"
 
-# 1b. dconf system defaults (IBus engines, installer overlay) -> binary db. dconf
+# 1b. dconf system defaults (GTK fonts and theme, installer overlay) -> binary db. dconf
 #     only reads the compiled /etc/dconf/db/local, never the .d sources.
 dconf update
 [ -e /etc/dconf/db/local ] || { echo "error: dconf update produced no /etc/dconf/db/local" >&2; exit 1; }
@@ -81,18 +81,16 @@ for f in /usr/bin/redrob-launcher /usr/libexec/gvisor/runsc /usr/bin/bootc \
          /usr/lib/systemd/system/greenboot-healthcheck.service \
          /usr/bin/redrob-agent /usr/bin/redrob-broker /usr/bin/redrob-usb-broker /usr/bin/redrob-pairing \
          /etc/containers/policy.json /etc/containers/containers.conf.d/50-redrob-runsc.conf \
-         /usr/lib/plasmalogin/defaults.conf \
-         /usr/share/applications/org.freedesktop.IBus.Panel.Wayland.desktop \
-         /usr/share/wallpapers/Redrob/metadata.json /usr/share/color-schemes/Redrob.colors; do
+         /usr/bin/redrob-comp /usr/bin/redrob-session /etc/greetd/config.toml \
+         /usr/share/wallpapers/Redrob/metadata.json; do
   [ -e "${f}" ] || { echo "error: expected ${f} missing after build" >&2; exit 1; }
 done
-# The login branding targets Plasma Login Manager; if the base ever goes back to
-# SDDM this must be noticed, not silently ignored.
-rpm -q plasma-login-manager >/dev/null || { echo "error: plasma-login-manager not installed (login branding targets it)" >&2; exit 1; }
+# The desktop: greetd runs redrob-comp's login screen. Plasma must not come back
+# in through a dependency.
+rpm -q greetd >/dev/null || { echo "error: greetd not installed" >&2; exit 1; }
 rpm -q generic-logos >/dev/null || { echo "error: generic-logos not installed" >&2; exit 1; }
-# A dnf transaction with --allowerasing once removed the whole desktop; never ship that.
-for p in plasma-desktop kwin plasma-workspace plasma-discover; do
-  rpm -q "${p}" >/dev/null || { echo "error: desktop package ${p} missing after build" >&2; exit 1; }
+for p in plasma-workspace kwin plasma-login-manager; do
+  if rpm -q "${p}" >/dev/null 2>&1; then echo "error: ${p} is installed (Plasma came back)" >&2; exit 1; fi
 done
 if rpm -q fedora-logos >/dev/null 2>&1; then echo "error: fedora-logos still installed" >&2; exit 1; fi
 

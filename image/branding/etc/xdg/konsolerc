@@ -1,6 +1,0 @@
-# Copyright 2026 Janghoon Lee (Redrob) and contributors
-# SPDX-License-Identifier: Apache-2.0
-# Redrob OS: Konsole opens with the token-coloured Redrob profile
-# (/usr/share/konsole/Redrob.{profile,colorscheme}, tools/branding/make_assets.py).
-[Desktop Entry]
-DefaultProfile=Redrob.profile

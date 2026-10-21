@@ -3,7 +3,5 @@ Type=Application
 Name=Redrob apps setup
 Comment=Pick the Redrob apps to download (once) and install them through the Launcher
 Exec=/usr/libexec/redrob/apps-firstrun
-# After the Launcher (phase 2) so redrob:// links reach a running copy.
-X-KDE-autostart-phase=2
 NoDisplay=true
-OnlyShowIn=KDE;Redrob;
+OnlyShowIn=Redrob;

@@ -1,0 +1,7 @@
+# Redrob OS: GTK defaults for every user (compiled into /etc/dconf/db/local by
+# image/scripts/30-cleanup.sh). redrob-comp changes color-scheme live.
+[org/gnome/desktop/interface]
+color-scheme='prefer-dark'
+font-name='Pretendard 11'
+document-font-name='Pretendard 11'
+icon-theme='Adwaita'
