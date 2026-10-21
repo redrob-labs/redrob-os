@@ -292,3 +292,210 @@ fn defaults(style: Style) -> Vec<(Combo, Act)> {
     };
     set.iter().filter_map(|(c, a)| Some((Combo::parse(c)?, *a))).collect()
 }
+
+impl Act {
+    /// The settings-file name of the action (inverse of `parse`).
+    pub fn name(self) -> &'static str {
+        match self {
+            Act::Close => "close",
+            Act::Cycle => "cycle",
+            Act::Minimize => "minimize",
+            Act::Expose => "expose",
+            Act::Lock => "lock",
+            Act::Screenshot => "screenshot",
+            Act::ScreenshotRegion => "screenshot-region",
+            Act::Launcher => "launcher",
+            Act::ShowDesktop => "show-desktop",
+            Act::Maximize => "maximize",
+            Act::Restore => "restore",
+            Act::SnapLeft => "snap-left",
+            Act::SnapRight => "snap-right",
+            Act::Terminal => "terminal",
+            Act::Files => "files",
+            Act::Browser => "browser",
+            Act::Settings => "settings",
+            Act::ToggleTheme => "toggle-theme",
+        }
+    }
+
+    /// What the settings screen calls it.
+    pub fn label(self) -> &'static str {
+        match self {
+            Act::Close => "창 닫기",
+            Act::Cycle => "창 전환",
+            Act::Minimize => "창 최소화",
+            Act::Expose => "모든 창 보기",
+            Act::Lock => "화면 잠금",
+            Act::Screenshot => "스크린샷 (전체)",
+            Act::ScreenshotRegion => "스크린샷 (영역)",
+            Act::Launcher => "앱 찾기",
+            Act::ShowDesktop => "바탕화면 보기",
+            Act::Maximize => "최대화",
+            Act::Restore => "원래 크기",
+            Act::SnapLeft => "왼쪽 반에 붙이기",
+            Act::SnapRight => "오른쪽 반에 붙이기",
+            Act::Terminal => "터미널 열기",
+            Act::Files => "파일 열기",
+            Act::Browser => "브라우저 열기",
+            Act::Settings => "설정 열기",
+            Act::ToggleTheme => "라이트/다크 전환",
+        }
+    }
+
+    pub const ALL: [Act; 18] = [
+        Act::Launcher, Act::Cycle, Act::Expose, Act::Close, Act::Minimize, Act::Maximize, Act::Restore,
+        Act::SnapLeft, Act::SnapRight, Act::ShowDesktop, Act::Lock, Act::Screenshot, Act::ScreenshotRegion,
+        Act::Terminal, Act::Files, Act::Browser, Act::Settings, Act::ToggleTheme,
+    ];
+}
+
+impl Combo {
+    /// Settings-file spelling ("Super+Shift+4").
+    pub fn spec(&self) -> String {
+        let mut v: Vec<String> = Vec::new();
+        if self.mods & CTRL != 0 {
+            v.push("Ctrl".into());
+        }
+        if self.mods & ALT != 0 {
+            v.push("Alt".into());
+        }
+        if self.mods & SHIFT != 0 {
+            v.push("Shift".into());
+        }
+        if self.mods & SUPER != 0 {
+            v.push("Super".into());
+        }
+        if !self.key.is_empty() {
+            v.push(pretty_key(&self.key));
+        }
+        v.join("+")
+    }
+
+    /// How the settings screen shows it: Mac glyphs, or Windows words.
+    pub fn display(&self, style: Style) -> String {
+        match style {
+            Style::Mac => {
+                let mut s = String::new();
+                if self.mods & CTRL != 0 {
+                    s.push('⌃');
+                }
+                if self.mods & ALT != 0 {
+                    s.push('⌥');
+                }
+                if self.mods & SHIFT != 0 {
+                    s.push('⇧');
+                }
+                if self.mods & SUPER != 0 {
+                    s.push('⌘');
+                }
+                s + &pretty_key(&self.key)
+            }
+            Style::Windows => self.spec().replace("Super", "Win"),
+        }
+    }
+}
+
+fn pretty_key(k: &str) -> String {
+    match k {
+        "" => String::new(),
+        "space" => "Space".into(),
+        "return" => "Enter".into(),
+        "tab" => "Tab".into(),
+        "comma" => ",".into(),
+        "period" => ".".into(),
+        "up" => "↑".into(),
+        "down" => "↓".into(),
+        "left" => "←".into(),
+        "right" => "→".into(),
+        "print" => "PrtSc".into(),
+        "escape" => "Esc".into(),
+        k if k.len() == 1 => k.to_uppercase(),
+        k => {
+            let mut c = k.chars();
+            c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default()
+        }
+    }
+}
+
+/// Rewrite one top-level key (`style`, `theme`) in the user's settings file.
+pub fn set_value(key: &str, value: &str) {
+    edit(|lines| {
+        let mut done = false;
+        for l in lines.iter_mut() {
+            if l.trim_start().starts_with('[') {
+                break;
+            }
+            let k = l.split('=').next().unwrap_or("").trim();
+            if !l.trim_start().starts_with('#') && k.eq_ignore_ascii_case(key) {
+                *l = format!("{key} = {value}");
+                done = true;
+            }
+        }
+        if !done {
+            let at = lines.iter().position(|l| l.trim_start().starts_with('[')).unwrap_or(lines.len());
+            lines.insert(at, format!("{key} = {value}"));
+        }
+    });
+}
+
+/// Bind `combo` to `act` in [shortcuts], dropping any other line for that
+/// action or that combo. `act = None` writes "none" (unbinds the combo).
+pub fn set_shortcut(combo: &Combo, act: Option<Act>, replaces: &[Combo]) {
+    let spec = combo.spec();
+    edit(|lines| {
+        let start = lines.iter().position(|l| l.trim().eq_ignore_ascii_case("[shortcuts]"));
+        let start = match start {
+            Some(i) => i,
+            None => {
+                lines.push(String::new());
+                lines.push("[shortcuts]".into());
+                lines.len() - 1
+            }
+        };
+        let end = lines.iter().skip(start + 1).position(|l| l.trim_start().starts_with('[')).map(|i| i + start + 1).unwrap_or(lines.len());
+        let mut keep: Vec<String> = Vec::new();
+        for l in &lines[start + 1..end] {
+            let k = l.split('#').next().unwrap_or("").split('=').next().unwrap_or("").trim();
+            let same = Combo::parse(k).is_some_and(|c| c == *combo);
+            if !same {
+                keep.push(l.clone());
+            }
+        }
+        // The action's old default combos stop doing it.
+        for r in replaces {
+            if r != combo {
+                keep.push(format!("{} = none", r.spec()));
+            }
+        }
+        keep.push(format!("{spec} = {}", act.map(|a| a.name()).unwrap_or("none")));
+        lines.splice(start + 1..end, keep);
+    });
+}
+
+/// Back to the style's own shortcuts: empty the [shortcuts] section.
+pub fn reset_shortcuts() {
+    edit(|lines| {
+        if let Some(start) = lines.iter().position(|l| l.trim().eq_ignore_ascii_case("[shortcuts]")) {
+            let end = lines.iter().skip(start + 1).position(|l| l.trim_start().starts_with('[')).map(|i| i + start + 1).unwrap_or(lines.len());
+            lines.drain(start + 1..end);
+        }
+    });
+}
+
+fn edit(f: impl FnOnce(&mut Vec<String>)) {
+    let Some(path) = Config::user_path() else { return };
+    let old = std::fs::read_to_string(&path)
+        .or_else(|_| std::fs::read_to_string("/etc/redrob/desktop.conf"))
+        .unwrap_or_default();
+    let mut lines: Vec<String> = old.lines().map(String::from).collect();
+    f(&mut lines);
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::write(&path, lines.join("\n") + "\n");
+}
+
+/// The style's built-in combos for `act` (shown, and replaced on rebind).
+pub fn default_combos(style: Style, act: Act) -> Vec<Combo> {
+    defaults(style).into_iter().filter(|(_, a)| *a == act).map(|(c, _)| c).collect()
+}

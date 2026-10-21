@@ -88,6 +88,11 @@ impl Smallvil {
         // Data device is responsible for clipboard and drag-and-drop
         let data_device_state = DataDeviceState::new::<Self>(&dh);
         // Server-side decorations: Redrob draws the window frames.
+        // Text input + input method + virtual keyboard: Fcitx 5 (Korean) talks
+        // to apps through these.
+        smithay::wayland::text_input::TextInputManagerState::new::<Self>(&dh);
+        smithay::wayland::input_method::InputMethodManagerState::new::<Self, _>(&dh, |_client| true);
+        smithay::wayland::virtual_keyboard::VirtualKeyboardManagerState::new::<Self, _>(&dh, |_client| true);
         let xdg_decoration_state =
             smithay::wayland::shell::xdg::decoration::XdgDecorationState::new::<Self>(&dh);
 
@@ -98,7 +103,13 @@ impl Smallvil {
 
         // Notify clients that we have a keyboard, for the sake of the example we assume that keyboard is always present.
         // You may want to track keyboard hot-plug in real compositor.
-        seat.add_keyboard(Default::default(), 200, 25).unwrap();
+        // Korean keyboards: right Alt is 한/영 and right Ctrl is 한자 (the usual
+        // layout of laptops without dedicated keys); Fcitx 5 toggles on Hangul.
+        let xkb = smithay::input::keyboard::XkbConfig {
+            options: Some("korean:ralt_hangul,korean:rctrl_hanja".into()),
+            ..Default::default()
+        };
+        seat.add_keyboard(xkb, 200, 25).unwrap();
 
         // Notify clients that we have a pointer (mouse)
         // Here we assume that there is always pointer plugged in

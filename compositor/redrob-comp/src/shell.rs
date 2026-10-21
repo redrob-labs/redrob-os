@@ -54,10 +54,10 @@ impl Smallvil {
             Act::Lock => self.lock(),
             Act::Screenshot => self.shot = Some(None),
             Act::ScreenshotRegion => self.open_region(),
-            Act::Terminal => spawn(&["konsole"]),
-            Act::Files => spawn(&["dolphin"]),
+            Act::Terminal => spawn(&["sh", "-c", crate::chrome::TERMINAL]),
+            Act::Files => spawn(&["sh", "-c", crate::chrome::FILES]),
             Act::Browser => spawn(&["xdg-open", "https://redrob.ai"]),
-            Act::Settings => spawn(&["systemsettings"]),
+            Act::Settings => self.open_settings(),
             Act::ToggleTheme => self.chrome.toggle_theme(),
         }
     }

@@ -42,7 +42,8 @@ const ICON_CAMERA: &str = include_str!("../assets/icons/camera.svg");
 const ICON_LOCK: &str = include_str!("../assets/icons/lock.svg");
 
 pub enum Overlay {
-    Finder { query: String, sel: usize, top: usize, matches: Vec<usize> },
+    Finder { query: String, sel: usize, top: usize, matches: Vec<usize>, comp: crate::hangul::Composer },
+    Settings { page: usize, capture: Option<crate::config::Act> },
     Switcher { items: Vec<Window>, sel: usize },
     Expose { slots: Vec<(Window, Rectangle<i32, Logical>, f64)>, hover: Option<usize> },
     Lock { input: String, error: bool, busy: Option<Receiver<bool>> },
@@ -60,11 +61,13 @@ pub struct Layers {
     pub overlay: Option<Overlay>,
     pub dirty: bool,
     buf: Option<MemoryRenderBuffer>,
-    hits: Vec<(Rectangle<i32, Logical>, usize)>,
+    pub hits: Vec<(Rectangle<i32, Logical>, usize)>,
     minute: u32,
     pub apps: Vec<apps::App>,
     icons: HashMap<(String, u32), Option<Pixmap>>,
     pub toasts: Vec<Toast>,
+    /// The finder types Hangul (toggled with 한/영, right Alt or Shift+Space).
+    pub ko: bool,
     toast_buf: Option<(MemoryRenderBuffer, Point<i32, Logical>, Vec<(Rectangle<i32, Logical>, u32)>)>,
     toast_dirty: bool,
 }
@@ -162,7 +165,7 @@ impl Smallvil {
             return self.close_overlay();
         }
         self.layers.apps = apps::load();
-        let mut ov = Overlay::Finder { query: String::new(), sel: 0, top: 0, matches: vec![] };
+        let mut ov = Overlay::Finder { query: String::new(), sel: 0, top: 0, matches: vec![], comp: Default::default() };
         refilter(&self.layers.apps, &mut ov);
         self.open(ov);
     }
@@ -286,10 +289,23 @@ impl Smallvil {
                 self.layers.dirty = true;
             }
             _ if !pressed => {}
-            Overlay::Finder { query, sel, top, matches } => {
+            Overlay::Settings { .. } => return self.settings_key(pressed, mods, key),
+            Overlay::Finder { query, sel, top, matches, comp } => {
+                let toggle = raw == keysyms::KEY_Hangul || (raw == keysyms::KEY_space && mods.shift && !mods.ctrl && !mods.logo);
+                if toggle {
+                    query.push_str(&comp.flush());
+                    self.layers.ko = !self.layers.ko;
+                    self.layers.dirty = true;
+                    return;
+                }
+                let ko = self.layers.ko;
                 match raw {
                     keysyms::KEY_Escape => return self.close_overlay(),
                     keysyms::KEY_Return | keysyms::KEY_KP_Enter => {
+                        if !comp.is_empty() {
+                            query.push_str(&comp.flush());
+                            refilter_parts(&self.layers.apps, query, sel, top, matches);
+                        }
                         let pick = matches.get(*sel).copied();
                         self.close_overlay();
                         if let Some(i) = pick {
@@ -304,8 +320,11 @@ impl Smallvil {
                     }
                     keysyms::KEY_Up => *sel = sel.saturating_sub(1),
                     keysyms::KEY_BackSpace => {
-                        query.pop();
-                        refilter_parts(&self.layers.apps, query, sel, top, matches);
+                        if !comp.back() {
+                            query.pop();
+                        }
+                        let full = format!("{query}{}", comp.preedit());
+                        refilter_parts(&self.layers.apps, &full, sel, top, matches);
                     }
                     _ if mods.ctrl || mods.logo || mods.alt => {
                         // Command/Win+Space again closes, like Spotlight.
@@ -315,8 +334,15 @@ impl Smallvil {
                     }
                     _ => {
                         if let Some(c) = ch {
-                            query.push(c);
-                            refilter_parts(&self.layers.apps, query, sel, top, matches);
+                            match (ko, if ko { comp.feed(c) } else { None }) {
+                                (true, Some(done)) => query.push_str(&done),
+                                _ => {
+                                    query.push_str(&comp.flush());
+                                    query.push(c);
+                                }
+                            }
+                            let full = format!("{query}{}", comp.preedit());
+                            refilter_parts(&self.layers.apps, &full, sel, top, matches);
                         }
                     }
                 }
@@ -398,8 +424,9 @@ impl Smallvil {
             }
             _ if !pressed => {}
             _ => {
-                let hit = self.layers.hits.iter().find(|(r, _)| r.contains(pi)).map(|(_, i)| *i);
+                let hit = self.layers.hits.iter().rev().find(|(r, i)| *i != usize::MAX && r.contains(pi)).map(|(_, i)| *i);
                 match (self.layers.overlay.as_ref().unwrap(), hit) {
+                    (Overlay::Settings { .. }, Some(id)) => self.settings_click(id),
                     (Overlay::Finder { matches, .. }, Some(row)) => {
                         let pick = matches.get(row).copied();
                         self.close_overlay();
@@ -423,7 +450,7 @@ impl Smallvil {
                         }
                     }
                     // A click outside the panel closes it.
-                    (Overlay::Finder { .. } | Overlay::Switcher { .. } | Overlay::Expose { .. }, None) => {
+                    (Overlay::Finder { .. } | Overlay::Switcher { .. } | Overlay::Expose { .. } | Overlay::Settings { .. }, None) => {
                         let inside = self.layers.hits.iter().any(|(r, i)| *i == usize::MAX && r.contains(pi));
                         if !inside {
                             self.close_overlay();
@@ -583,7 +610,11 @@ impl Smallvil {
         let style = self.chrome.style;
         let ov = self.layers.overlay.take();
         match &ov {
-            Some(Overlay::Finder { query, sel, top, matches }) => self.paint_finder(&mut p, &t, style, query, *sel, *top, matches),
+            Some(Overlay::Finder { query, sel, top, matches, comp }) => {
+                let shown = format!("{query}{}", comp.preedit());
+                self.paint_finder(&mut p, &t, style, &shown, *sel, *top, matches)
+            }
+            Some(Overlay::Settings { page, capture }) => self.paint_settings(&mut p, *page, *capture),
             Some(Overlay::Switcher { items, sel }) => self.paint_switcher(&mut p, &t, items, *sel),
             Some(Overlay::Expose { slots, hover }) => {
                 fill_rect(&mut p, 0.0, 0.0, w as f32, h as f32, if mode == Mode::Dark { Rgba(0, 0, 0, 140) } else { Rgba(10, 11, 12, 70) });
@@ -671,6 +702,12 @@ impl Smallvil {
             let qw = draw::text_width(font, query, 19.0);
             fill_rect(p, tx + qw + 2.0, mid - 12.0, 2.0, 24.0, t.action_primary);
         }
+        // Input mode pill at the right of the field: 가 (Hangul) / A.
+        let mode_label = if self.layers.ko { "가" } else { "A" };
+        let (mx, my) = (xf + wf - 52.0, mid - 13.0);
+        fill_rrect(p, mx, my, 32.0, 26.0, theme::RADIUS_SM, if self.layers.ko { t.action_primary } else { t.surface_sunken });
+        let lw = draw::text_width(&self.chrome.fonts.semibold, mode_label, 13.0);
+        draw::draw_text(p, &self.chrome.fonts.semibold, mode_label, mx + (32.0 - lw) / 2.0, my + 18.0, 13.0, if self.layers.ko { Rgba(255, 255, 255, 255) } else { t.ink_secondary });
         fill_rect(p, xf, yf + FIELD_H as f32, wf, 1.0, t.border_subtle);
 
         // Results.
@@ -858,7 +895,7 @@ impl Smallvil {
 }
 
 fn refilter(apps: &[apps::App], ov: &mut Overlay) {
-    if let Overlay::Finder { query, sel, top, matches } = ov {
+    if let Overlay::Finder { query, sel, top, matches, .. } = ov {
         refilter_parts(apps, query, sel, top, matches);
     }
 }
@@ -870,4 +907,10 @@ fn refilter_parts(all: &[apps::App], query: &str, sel: &mut usize, top: &mut usi
     *matches = m.into_iter().map(|(_, i)| i).collect();
     *sel = 0;
     *top = 0;
+}
+
+impl Smallvil {
+    pub fn layers_hit(&mut self, r: Rectangle<i32, Logical>, id: usize) {
+        self.layers.hits.push((r, id));
+    }
 }

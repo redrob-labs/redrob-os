@@ -87,4 +87,24 @@ impl WaylandDndGrabHandler for Smallvil {
 
 impl OutputHandler for Smallvil {}
 
+impl smithay::wayland::input_method::InputMethodHandler for Smallvil {
+    fn new_popup(&mut self, surface: smithay::wayland::input_method::PopupSurface) {
+        if let Err(e) = self.popups.track_popup(smithay::desktop::PopupKind::from(surface)) {
+            tracing::warn!(?e, "input method popup");
+        }
+    }
+    fn popup_repositioned(&mut self, _: smithay::wayland::input_method::PopupSurface) {}
+    fn dismiss_popup(&mut self, surface: smithay::wayland::input_method::PopupSurface) {
+        if let Some(parent) = surface.get_parent().map(|p| p.surface.clone()) {
+            let _ = smithay::desktop::PopupManager::dismiss_popup(&parent, &smithay::desktop::PopupKind::from(surface));
+        }
+    }
+    fn parent_geometry(&self, parent: &WlSurface) -> smithay::utils::Rectangle<i32, smithay::utils::Logical> {
+        self.space
+            .elements()
+            .find_map(|w| (w.toplevel().map(|t| t.wl_surface()) == Some(parent)).then(|| w.geometry()))
+            .unwrap_or_default()
+    }
+}
+
 smithay::delegate_dispatch2!(Smallvil);

@@ -136,6 +136,8 @@ pub struct Chrome {
     /// Name of the focused app, for the Mac menu bar.
     pub app: String,
     pub status: crate::status::Status,
+    /// The settings tile was clicked; the compositor opens the window.
+    pub want_settings: bool,
 }
 
 fn load_font(env: &str, paths: &[&str]) -> fontdue::Font {
@@ -173,6 +175,7 @@ impl Chrome {
             hover: None,
             app: String::new(),
             status: Default::default(),
+            want_settings: false,
         }
     }
 
@@ -195,6 +198,10 @@ impl Chrome {
             Action::Network => crate::shell::spawn(&["systemsettings", "kcm_networkmanagement"]),
             Action::Launch(i) => {
                 let l = &mut self.launchers[i];
+                if l.command.first().map(String::as_str) == Some(SETTINGS) {
+                    self.want_settings = true;
+                    return;
+                }
                 if l.running() {
                     return;
                 }
@@ -216,6 +223,12 @@ impl Chrome {
         &self.shortcuts
     }
 
+    /// Re-read the settings file now (the settings window just wrote it).
+    pub fn reload_now(&mut self) {
+        self.stamp = None;
+        self.reload_if_changed();
+    }
+
     /// Re-read the settings file when it changed on disk (a settings app or an
     /// editor wrote it): style, theme and shortcuts apply live.
     fn reload_if_changed(&mut self) {
@@ -228,6 +241,9 @@ impl Chrome {
         tracing::info!(style = ?cfg.style, theme = ?cfg.theme, "desktop settings changed");
         if cfg.theme != self.mode {
             apply_qt_colors(cfg.theme);
+        }
+        if cfg.style != self.style {
+            apply_button_layout(cfg.style);
         }
         self.style = cfg.style;
         self.mode = cfg.theme;
@@ -637,17 +653,90 @@ pub fn apply_qt_colors(mode: Mode) {
     if std::env::var_os("REDROB_NESTED").is_some() {
         return; // a development run must not retheme the host desktop
     }
+    write_gtk_css();
     let (scheme, gtk) = if mode == Mode::Dark { ("RedrobDark", "prefer-dark") } else { ("Redrob", "default") };
     crate::shell::spawn_env(&["plasma-apply-colorscheme", scheme], &[("QT_QPA_PLATFORM", "offscreen")]);
     crate::shell::spawn(&["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", gtk]);
 }
 
 impl Chrome {
-    /// Bring apps in line with the current theme (session start).
+    /// Bring apps in line with the current theme and style (session start).
     pub fn apply_app_theme(&self) {
         apply_qt_colors(self.mode);
+        apply_button_layout(self.style);
     }
 }
+
+/// GTK window buttons on the side the style puts them.
+pub fn apply_button_layout(style: Style) {
+    if std::env::var_os("REDROB_NESTED").is_some() {
+        return;
+    }
+    let layout = match style {
+        Style::Mac => "close,minimize,maximize:",
+        Style::Windows => "appmenu:minimize,maximize,close",
+    };
+    crate::shell::spawn(&["gsettings", "set", "org.gnome.desktop.wm.preferences", "button-layout", layout]);
+}
+
+const GTK_MARK: &str = "/* Redrob palette -- written by redrob-comp; delete this line to keep your own edits. */";
+
+/// libadwaita / GTK 4 apps in the Redrob palette: the redrob-ui surface,
+/// ink, border and accent tokens for both schemes. Only our own file is
+/// replaced; a user's own gtk.css (no marker) is left alone.
+fn write_gtk_css() {
+    let Some(home) = std::env::var_os("HOME") else { return };
+    let path = std::path::PathBuf::from(home).join(".config/gtk-4.0/gtk.css");
+    if let Ok(old) = std::fs::read_to_string(&path) {
+        if !old.starts_with(GTK_MARK) {
+            return;
+        }
+    }
+    let css = format!(
+        "{GTK_MARK}\n{}",
+        r#":root {
+  --accent-bg-color: #2b52ff; --accent-fg-color: #ffffff; --accent-color: #1733d5;
+  --window-bg-color: #ffffff; --window-fg-color: #0a0b0c;
+  --view-bg-color: #ffffff; --view-fg-color: #0a0b0c;
+  --headerbar-bg-color: #f8f9fb; --headerbar-fg-color: #0a0b0c; --headerbar-backdrop-color: #ffffff;
+  --sidebar-bg-color: #f8f9fb; --sidebar-fg-color: #0a0b0c; --sidebar-backdrop-color: #ffffff;
+  --secondary-sidebar-bg-color: #f8f9fb;
+  --card-bg-color: #f8f9fb; --card-fg-color: #0a0b0c;
+  --popover-bg-color: #ffffff; --popover-fg-color: #0a0b0c;
+  --dialog-bg-color: #ffffff; --dialog-fg-color: #0a0b0c;
+  --thumbnail-bg-color: #f8f9fb;
+  --border-color: #dfe2e8;
+  --destructive-bg-color: #ff4b4b; --success-bg-color: #29e474; --warning-bg-color: #ff9c1b;
+  --window-radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-color: #8aafff;
+    --window-bg-color: #0a0b0c; --window-fg-color: #f8f9fb;
+    --view-bg-color: #0a0b0c; --view-fg-color: #f8f9fb;
+    --headerbar-bg-color: #141719; --headerbar-fg-color: #f8f9fb; --headerbar-backdrop-color: #0a0b0c;
+    --sidebar-bg-color: #141719; --sidebar-fg-color: #f8f9fb; --sidebar-backdrop-color: #0a0b0c;
+    --secondary-sidebar-bg-color: #141719;
+    --card-bg-color: #141719; --card-fg-color: #f8f9fb;
+    --popover-bg-color: #141719; --popover-fg-color: #f8f9fb;
+    --dialog-bg-color: #141719; --dialog-fg-color: #f8f9fb;
+    --thumbnail-bg-color: #141719;
+    --border-color: #292e37;
+  }
+}
+"#
+    );
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    let _ = std::fs::write(&path, css);
+}
+
+/// The Redrob session's apps: current GTK4 ones, Plasma's as the fallback.
+pub const TERMINAL: &str = "command -v ptyxis >/dev/null && exec ptyxis --new-window || exec konsole";
+pub const FILES: &str = "command -v nautilus >/dev/null && exec nautilus --new-window || exec dolphin";
+/// Not a program: the dock asks the compositor to open Redrob 설정.
+pub const SETTINGS: &str = "redrob:settings";
 
 fn sh(script: &str) -> Vec<String> {
     vec!["sh".into(), "-c".into(), script.into()]
@@ -658,8 +747,8 @@ fn sh(script: &str) -> Vec<String> {
 /// Install button. Override a command with REDROB_DOCK="name=cmd;...".
 fn default_launchers() -> Vec<Launcher> {
     let mut v = vec![
-        Launcher { name: "파일", tile: Tile::System(ICON_FOLDER), command: vec!["dolphin".into()], child: None, group: false },
-        Launcher { name: "터미널", tile: Tile::System(ICON_TERMINAL), command: vec!["konsole".into()], child: None, group: false },
+        Launcher { name: "파일", tile: Tile::System(ICON_FOLDER), command: sh(FILES), child: None, group: false },
+        Launcher { name: "터미널", tile: Tile::System(ICON_TERMINAL), command: sh(TERMINAL), child: None, group: false },
         Launcher {
             name: "Redrob Browser",
             tile: Tile::App(APP_BROWSER),
@@ -681,7 +770,7 @@ fn default_launchers() -> Vec<Launcher> {
             child: None,
             group: false,
         },
-        Launcher { name: "설정", tile: Tile::System(ICON_SETTINGS), command: vec!["systemsettings".into()], child: None, group: false },
+        Launcher { name: "설정", tile: Tile::System(ICON_SETTINGS), command: vec![SETTINGS.into()], child: None, group: false },
         Launcher { name: "Redrob Launcher", tile: Tile::App(APP_REDROB), command: vec!["redrob-launcher".into()], child: None, group: true },
     ];
     if let Ok(spec) = std::env::var("REDROB_DOCK") {

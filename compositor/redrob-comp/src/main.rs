@@ -1,6 +1,8 @@
 #![allow(irrefutable_let_patterns)]
 
 mod apps;
+mod hangul;
+mod settings;
 mod chrome;
 mod notify;
 mod overlay;
@@ -67,6 +69,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         // GTK apps on Wayland.
         std::env::set_var("GDK_BACKEND", "wayland,x11");
+        // Korean input through Fcitx 5: Qt and X11 apps use its modules, GTK 4
+        // speaks text-input-v3 to the compositor, which Fcitx serves.
+        std::env::set_var("QT_IM_MODULE", "fcitx");
+        std::env::set_var("XMODIFIERS", "@im=fcitx");
+        std::env::set_var("SDL_IM_MODULE", "fcitx");
     }
 
     // The login session runs the desktop's autostart entries (Redrob Launcher,
@@ -76,6 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         state.chrome.apply_app_theme();
         // Our own session bus services and status polling.
         crate::notify::serve(state.note_tx.clone());
+        crate::shell::spawn(&["sh", "-c", "command -v fcitx5 >/dev/null && exec fcitx5 -d --replace"]);
         crate::autostart::run();
     } else {
         spawn_client();

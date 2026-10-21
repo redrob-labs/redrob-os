@@ -101,6 +101,9 @@ impl Smallvil {
                             self.open_finder();
                         } else {
                             self.chrome.act(action);
+                            if std::mem::take(&mut self.chrome.want_settings) {
+                                self.open_settings();
+                            }
                         }
                         return;
                     }
@@ -309,6 +312,37 @@ impl Smallvil {
                 let grab = crate::grabs::MoveSurfaceGrab { start_data, window, initial_window_location };
                 pointer.set_grab(self, grab, serial, smithay::input::pointer::Focus::Clear);
             }
+        }
+    }
+}
+
+impl smithay::wayland::text_input::TextInputActivation for Smallvil {}
+
+/// Keys the input method sends back (Fcitx passes through what it does not
+/// compose): straight to the focused client, no shell shortcuts.
+impl smithay::wayland::virtual_keyboard::VirtualKeyboardHandler for Smallvil {
+    fn process_virtual_keyboard_event(
+        &mut self,
+        event: InputEvent<smithay::wayland::virtual_keyboard::VirtualKeyboardBackend>,
+    ) {
+        use smithay::wayland::virtual_keyboard::VirtualKeyboardSpecialEvent as Sp;
+        let keyboard = self.seat.get_keyboard().unwrap();
+        match event {
+            InputEvent::DeviceAdded { device } | InputEvent::Special(Sp::KeymapChanged { device }) => {
+                if let Some(keymap) = device.keymap() {
+                    if let Err(e) = keyboard.set_keymap_from_string(self, keymap.to_string()) {
+                        tracing::warn!(?e, "virtual keyboard keymap");
+                    }
+                }
+            }
+            InputEvent::Keyboard { event } => {
+                let serial = SERIAL_COUNTER.next_serial();
+                keyboard.input::<(), _>(self, event.key_code(), event.state(), serial, Event::time(&event), |_, _, _| FilterResult::Forward);
+            }
+            InputEvent::Special(Sp::Modifiers { mods_depressed, mods_latched, mods_locked, group, .. }) => {
+                keyboard.with_xkb_state(self, |mut c| c.set_modifier_mask(mods_depressed, mods_latched, mods_locked, group));
+            }
+            _ => {}
         }
     }
 }

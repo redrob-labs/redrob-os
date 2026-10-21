@@ -180,6 +180,26 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     /ctx/scripts/16-gaming.sh && \
     /ctx/scripts/18-debloat.sh
 
+# 2c. Redrob session apps: current GTK4/libadwaita apps (follow the shell's
+#     light/dark and accent through the portal and the Redrob GTK stylesheet),
+#     and Fcitx 5 with Hangul for Korean input in the Redrob session (it speaks
+#     the Wayland input-method protocol redrob-comp implements; ibus does not).
+#     Plasma keeps its own apps; nothing here replaces them.
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=tmpfs,dst=/tmp \
+    dnf5 -y install --setopt=install_weak_deps=False \
+        ptyxis \
+        nautilus \
+        gnome-text-editor \
+        loupe \
+        papers \
+        gnome-calculator \
+        fcitx5 \
+        fcitx5-hangul \
+        fcitx5-gtk \
+        fcitx5-qt \
+        fcitx5-configtool
+
 # 3. Our binaries (agent, credential broker, USB broker, pairing) from the build stage.
 COPY --from=redrob-build /out/ /usr/bin/
 
