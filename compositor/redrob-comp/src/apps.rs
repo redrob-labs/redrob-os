@@ -12,6 +12,8 @@ pub struct App {
     pub name: String,
     /// Lower-cased text the finder matches against.
     pub haystack: String,
+    /// Lower-cased generic name and keywords ("terminal", "browser").
+    pub kinds: String,
     pub exec: Vec<String>,
     pub icon: Option<String>,
     /// StartupWMClass, matched against a window's app id.
@@ -62,6 +64,7 @@ fn parse(path: &Path, id: String) -> Option<App> {
     let lang = std::env::var("LANG").unwrap_or_default();
     let ko = lang.starts_with("ko");
     let (mut name, mut name_ko, mut generic, mut exec, mut icon, mut kw, mut wm) = (None, None, None, None, None, String::new(), None);
+    let mut generic_all = String::new();
     let mut in_entry = false;
     let mut hidden = false;
     let mut only: Option<String> = None;
@@ -79,7 +82,12 @@ fn parse(path: &Path, id: String) -> Option<App> {
         match k.trim() {
             "Name" => name = Some(v),
             "Name[ko]" => name_ko = Some(v),
-            "GenericName" | "GenericName[ko]" | "Comment[ko]" => generic = Some(v),
+            "GenericName" | "GenericName[ko]" => {
+                generic_all.push(' ');
+                generic_all.push_str(&v);
+                generic = Some(v);
+            }
+            "Comment[ko]" => generic = Some(v),
             "Keywords" | "Keywords[ko]" => {
                 kw.push(' ');
                 kw.push_str(&v.replace(';', " "));
@@ -117,7 +125,8 @@ fn parse(path: &Path, id: String) -> Option<App> {
         exec.first().map(|e| e.rsplit('/').next().unwrap_or(e).to_string()).unwrap_or_default()
     )
     .to_lowercase();
-    Some(App { id, name: shown, haystack, exec, icon, wm_class: wm })
+    let kinds = format!("{} {}", generic_all, kw).to_lowercase();
+    Some(App { id, name: shown, haystack, kinds, exec, icon, wm_class: wm })
 }
 
 /// Split an Exec value into words, honouring double quotes.
@@ -149,15 +158,17 @@ pub fn split_exec(s: &str) -> Vec<String> {
 /// Finder ranking: name prefix, word prefix, then anywhere. `None` = no match.
 pub fn score(app: &App, q: &str) -> Option<u32> {
     if q.is_empty() {
-        return Some(3);
+        return Some(4);
     }
     let name = app.name.to_lowercase();
     if name.starts_with(q) {
         Some(0)
     } else if name.split_whitespace().any(|w| w.starts_with(q)) {
         Some(1)
-    } else if app.haystack.contains(q) {
+    } else if app.kinds.split_whitespace().any(|w| w.starts_with(q)) {
         Some(2)
+    } else if app.haystack.contains(q) {
+        Some(3)
     } else {
         None
     }

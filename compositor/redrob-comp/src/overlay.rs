@@ -470,6 +470,8 @@ impl Smallvil {
 
     /// Per-frame bookkeeping: lock results, notifications, toast expiry.
     pub fn poll_layers(&mut self) {
+        // Reap exited children (apps, helper tools) so none linger as zombies.
+        unsafe { while libc::waitpid(-1, std::ptr::null_mut(), libc::WNOHANG) > 0 {} }
         if let Some(Overlay::Lock { busy: Some(rx), error, .. }) = &mut self.layers.overlay {
             if let Ok(ok) = rx.try_recv() {
                 if ok {
