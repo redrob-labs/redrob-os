@@ -40,6 +40,9 @@ pub struct Smallvil {
     pub popups: PopupManager,
 
     pub seat: Seat<Self>,
+
+    /// Redrob bar + dock, drawn by the compositor.
+    pub chrome: crate::chrome::Chrome,
 }
 
 impl Smallvil {
@@ -104,6 +107,7 @@ impl Smallvil {
             data_device_state,
             popups,
             seat,
+            chrome: crate::chrome::Chrome::new(),
         }
     }
 

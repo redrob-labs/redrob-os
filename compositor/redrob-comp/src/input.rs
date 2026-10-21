@@ -64,6 +64,14 @@ impl Smallvil {
 
                 let button_state = event.state();
 
+                // The Redrob bar/dock sit above every window: a press on them is ours.
+                if ButtonState::Pressed == button_state {
+                    if let Some(action) = self.chrome.hit(pointer.current_location()) {
+                        self.chrome.act(action);
+                        return;
+                    }
+                }
+
                 if ButtonState::Pressed == button_state && !pointer.is_grabbed() {
                     if let Some((window, _loc)) = self
                         .space

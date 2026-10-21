@@ -8,6 +8,9 @@ license = "MIT"
 [dependencies]
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 bitflags = "2.2.1"
+resvg = { version = "=0.48.1", default-features = false }
+fontdue = "=0.9.5"
+chrono = { version = "=0.4.45", default-features = false, features = ["clock"] }
 
 # Smithay pinned to a commit (no release since 0.7.0 carries the API smallvil uses).
 [dependencies.smithay]

@@ -3,7 +3,7 @@ use std::time::Duration;
 use smithay::{
     backend::{
         renderer::{
-            damage::OutputDamageTracker, element::solid::SolidColorRenderElement, gles::GlesRenderer,
+            damage::OutputDamageTracker, element::memory::MemoryRenderBufferRenderElement, gles::GlesRenderer,
         },
         winit::{self, WinitEvent},
     },
@@ -12,7 +12,7 @@ use smithay::{
     utils::{Rectangle, Transform},
 };
 
-use crate::{Smallvil, chrome::{Chrome, GROUND}};
+use crate::Smallvil;
 
 pub fn init_winit(
     event_loop: &mut EventLoop<Smallvil>,
@@ -42,7 +42,6 @@ pub fn init_winit(
     state.space.map_output(&output, (0, 0));
 
     let mut damage_tracker = OutputDamageTracker::from_output(&output);
-    let chrome = Chrome::new();
 
     event_loop.handle().insert_source(winit, move |event, _, state| {
         match event {
@@ -63,11 +62,12 @@ pub fn init_winit(
                 let damage = Rectangle::from_size(size);
 
                 {
-                    let chrome_elements = chrome.elements(size);
+                    let ground = state.chrome.ground();
                     let (renderer, mut framebuffer) = backend.bind().unwrap();
+                    let chrome_elements = state.chrome.elements(renderer, size);
                     smithay::desktop::space::render_output::<
                         _,
-                        SolidColorRenderElement,
+                        MemoryRenderBufferRenderElement<GlesRenderer>,
                         _,
                         _,
                     >(
@@ -79,7 +79,7 @@ pub fn init_winit(
                         [&state.space],
                         &chrome_elements,
                         &mut damage_tracker,
-                        GROUND,
+                        ground,
                     )
                     .unwrap();
                 }
