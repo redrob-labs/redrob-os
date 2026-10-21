@@ -81,6 +81,16 @@ set_default_browser() {
   gio mime text/html              "${id}" >/dev/null 2>&1 || true
 }
 
+# Give up on what still is not installed after a few logins (a release with
+# no build for this OS would otherwise pop the Launcher at every login).
+tries="${state}/apps-tries"
+n="$(cat "${tries}" 2>/dev/null || echo 0)"
+if [ "${n}" -ge 3 ]; then
+  set_default_browser
+  exit 0
+fi
+echo $((n + 1)) > "${tries}"
+
 # ---- 3. Install what is wanted and missing, one at a time (the Launcher runs
 # one system installer at a time anyway; a second link while the first app is
 # still being checked could replace it).

@@ -165,6 +165,10 @@ impl Smallvil {
             return self.close_overlay();
         }
         self.layers.apps = apps::load();
+        // Start in the input mode the user is in (Fcitx: 2 = Korean active).
+        if let Ok(o) = std::process::Command::new("fcitx5-remote").output() {
+            self.layers.ko = String::from_utf8_lossy(&o.stdout).trim() == "2";
+        }
         let mut ov = Overlay::Finder { query: String::new(), sel: 0, top: 0, matches: vec![], comp: Default::default() };
         refilter(&self.layers.apps, &mut ov);
         self.open(ov);
@@ -295,6 +299,8 @@ impl Smallvil {
                 if toggle {
                     query.push_str(&comp.flush());
                     self.layers.ko = !self.layers.ko;
+                    // Keep Fcitx in the same mode, so apps continue in it.
+                    crate::shell::spawn(&["fcitx5-remote", if self.layers.ko { "-o" } else { "-c" }]);
                     self.layers.dirty = true;
                     return;
                 }
