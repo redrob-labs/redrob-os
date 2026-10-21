@@ -83,6 +83,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         state.chrome.apply_app_theme();
         // Our own session bus services and status polling.
         crate::notify::serve(state.note_tx.clone());
+        // D-Bus- and systemd-activated services (portals, Nautilus) need this
+        // session's environment; then bring up graphical-session.target.
+        crate::shell::spawn(&[
+            "sh",
+            "-c",
+            "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP \
+             QT_QPA_PLATFORMTHEME QT_STYLE_OVERRIDE QT_WAYLAND_DISABLE_WINDOWDECORATION QT_IM_MODULE XMODIFIERS \
+             SDL_IM_MODULE GDK_BACKEND; systemctl --user start redrob-session.target",
+        ]);
         crate::shell::spawn(&["sh", "-c", "command -v fcitx5 >/dev/null && exec fcitx5 -d --replace"]);
         crate::autostart::run();
     } else {

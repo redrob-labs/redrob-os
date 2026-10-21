@@ -1,0 +1,9 @@
+# Started by redrob-comp once its Wayland socket is up. Binding
+# graphical-session.target brings up what waits for a graphical session
+# (xdg-desktop-portal and its backends, so GTK apps see light/dark).
+[Unit]
+Description=Redrob session
+Documentation=man:systemd.special(7)
+BindsTo=graphical-session.target
+Wants=graphical-session-pre.target
+After=graphical-session-pre.target
