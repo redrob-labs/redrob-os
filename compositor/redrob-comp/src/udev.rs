@@ -195,6 +195,9 @@ fn render(d: &Rc<RefCell<Drm>>, state: &mut Smallvil) {
             window.render_elements(renderer, loc.to_physical(1), Scale::from(1.0), 1.0);
         elements.extend(w.into_iter().map(ShellElement::Window));
     }
+    if let Some(g) = state.chrome.ground_element(renderer, size) {
+        elements.push(ShellElement::Memory(g));
+    }
 
     match compositor.render_frame(renderer, &elements, state.chrome.ground(), FrameFlags::DEFAULT) {
         Ok(r) if !r.is_empty => match compositor.queue_frame(()) {

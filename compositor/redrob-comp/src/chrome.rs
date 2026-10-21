@@ -75,6 +75,7 @@ pub struct Chrome {
     key: Option<Key>,
     bar: Option<MemoryRenderBuffer>,
     cursor: Option<(Mode, MemoryRenderBuffer)>,
+    ground_px: Option<(Mode, MemoryRenderBuffer)>,
     dock: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
     hits: Vec<(Rectangle<i32, Logical>, Action)>,
 }
@@ -93,7 +94,7 @@ impl Chrome {
             Ok("light") => Mode::Light,
             _ => Mode::Dark,
         };
-        Self { mode, font, launchers: default_launchers(), key: None, bar: None, cursor: None, dock: None, hits: vec![] }
+        Self { mode, font, launchers: default_launchers(), key: None, bar: None, cursor: None, ground_px: None, dock: None, hits: vec![] }
     }
 
     /// What the pointer hit, in output-logical coordinates, if anything.
@@ -149,6 +150,25 @@ impl Chrome {
             }
         }
         v
+    }
+
+    /// The desktop ground as an explicit back-most element (a 1x1 surface-base
+    /// texel stretched over the output). The DRM compositor does not repaint the
+    /// clear colour into areas no element covers, so the ground must be drawn.
+    pub fn ground_element(
+        &mut self,
+        renderer: &mut GlesRenderer,
+        out: Size<i32, Physical>,
+    ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
+        if self.ground_px.as_ref().map(|(m, _)| *m) != Some(self.mode) {
+            let c = theme::theme(self.mode).surface_base;
+            let mut p = Pixmap::new(1, 1).unwrap();
+            p.fill(tiny_skia::Color::from_rgba8(c.0, c.1, c.2, 255));
+            self.ground_px = Some((self.mode, upload(p)));
+        }
+        let (_, buf) = self.ground_px.as_ref()?;
+        let size: Size<i32, Logical> = (out.w, out.h).into();
+        MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, Some(size), Kind::Unspecified).ok()
     }
 
     /// The pointer arrow (DRM backend only; nested runs use the host cursor):
