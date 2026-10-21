@@ -60,11 +60,6 @@ struct Drm {
     output: Output,
     /// A frame is queued and we are waiting for its vblank.
     pending: bool,
-    /// Ground colour of the last frame. On a theme change every swapchain
-    /// buffer is dropped so the next frames are full repaints: bochs/virtio
-    /// scan-out does not give reliable buffer ages, and partial repaints left
-    /// the old ground showing.
-    ground: [f32; 4],
 }
 
 pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> Result<(), Box<dyn std::error::Error>> {
@@ -135,7 +130,7 @@ pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> 
         Some(gbm),
     )?;
 
-    let drm_state = Rc::new(RefCell::new(Drm { renderer, compositor, output, pending: false, ground: [0.0; 4] }));
+    let drm_state = Rc::new(RefCell::new(Drm { renderer, compositor, output, pending: false }));
 
     // Scan-out finished: release the buffer and draw the next frame.
     let d = drm_state.clone();
@@ -200,11 +195,11 @@ fn render(d: &Rc<RefCell<Drm>>, state: &mut Smallvil) {
     if drm.pending {
         return;
     }
-    let ground = state.chrome.ground();
-    if drm.ground != ground {
-        drm.ground = ground;
-        drm.compositor.reset_buffers();
-    }
+    // Full repaint every frame. On bochs/virtio scan-out the swapchain's
+    // buffer ages do not match what is on screen, and age-based partial
+    // repaints left stale ground and missing chrome. The shell is small, so a
+    // full repaint is cheap; revisit with real GPUs.
+    drm.compositor.reset_buffer_ages();
     let Drm { renderer, compositor, output, pending, .. } = &mut *drm;
     let size = output.current_mode().unwrap().size;
 
