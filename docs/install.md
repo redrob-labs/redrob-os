@@ -155,7 +155,7 @@ when you open it in *Manual Partitioning*.
 
 - **Updates are automatic.** Redrob OS checks daily, downloads the next
   version in the background and switches to it at the next reboot. There is no
-  update dialog and nothing to click; apps from the Redrob Launcher and Discover
+  update dialog and nothing to click; apps from the Redrob Launcher and Software
   update the same way.
 - **Nothing breaks on update.** Every update is a complete new system image.
   If a new version fails to boot, the machine goes back to the previous one on

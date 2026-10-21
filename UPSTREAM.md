@@ -8,7 +8,7 @@ touching `agent/` or `image/base.env`. Org-wide fork rules are in
 | What | Upstream | Pinned at | Where the pin lives |
 |---|---|---|---|
 | `agent/` (git subtree, full history) | [zeroclaw-labs/zeroclaw](https://github.com/zeroclaw-labs/zeroclaw) | `05f9fe95d` = tag `v0.8.5`, vendored in `931684ff5` | `upstream-base.json` |
-| Base OS image (OCI reference) | [Fedora Kinoite](https://fedoraproject.org/atomic-desktops/kinoite/) — `quay.io/fedora-ostree-desktops/kinoite` | tag `44` (Fedora 44, KDE Plasma 6) | `image/base.env` (`BASE_IMAGE`, `BASE_TAG`), mirrored in `upstream-base.json` |
+| Base OS image (OCI reference) | [Fedora Atomic base](https://fedoraproject.org/atomic-desktops/) — `quay.io/fedora-ostree-desktops/base-atomic` | tag `44` (Fedora 44, no desktop) | `image/base.env` (`BASE_IMAGE`, `BASE_TAG`), mirrored in `upstream-base.json` |
 
 Until 2026-10-18 this repository also vendored
 [home-assistant/operating-system](https://github.com/home-assistant/operating-system)
@@ -20,7 +20,7 @@ first-boot and pairing logic under `image/agent/`; the attribution stays in `NOT
 
 The image is built `FROM ${BASE_IMAGE}:${BASE_TAG}` (`image/Containerfile`). The base is
 not vendored: nothing of it is in this repository except the reference. It supplies the
-kernel, systemd, the desktop, Flatpak, podman and bootc; we add our overlay on top.
+kernel, systemd, Flatpak, podman and bootc (the desktop is ours); we add our overlay on top.
 
 How the pin moves:
 

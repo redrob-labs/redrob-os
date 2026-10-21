@@ -40,6 +40,7 @@ pub enum Act {
     Lock,
     Screenshot,
     ScreenshotRegion,
+    ScreenshotWindow,
     Launcher,
     ShowDesktop,
     Maximize,
@@ -64,6 +65,7 @@ impl Act {
             "lock" => Act::Lock,
             "screenshot" => Act::Screenshot,
             "screenshot-region" => Act::ScreenshotRegion,
+            "screenshot-window" => Act::ScreenshotWindow,
             "launcher" | "search" | "start" => Act::Launcher,
             "show-desktop" => Act::ShowDesktop,
             "maximize" => Act::Maximize,
@@ -269,6 +271,7 @@ fn defaults(style: Style) -> Vec<(Combo, Act)> {
             ("Super+Shift+3", Act::Screenshot),
             ("Super+Shift+4", Act::ScreenshotRegion),
             ("Super+Shift+5", Act::ScreenshotRegion),
+            ("Super+Shift+6", Act::ScreenshotWindow),
             ("Ctrl+Super+F", Act::Maximize),
             ("Ctrl+Super+Left", Act::SnapLeft),
             ("Ctrl+Super+Right", Act::SnapRight),
@@ -293,6 +296,7 @@ fn defaults(style: Style) -> Vec<(Combo, Act)> {
             ("Print", Act::Screenshot),
             ("Super+Print", Act::Screenshot),
             ("Super+Shift+S", Act::ScreenshotRegion),
+            ("Alt+Print", Act::ScreenshotWindow),
             ("Super+Left", Act::SnapLeft),
             ("Super+Right", Act::SnapRight),
             ("Super+I", Act::Settings),
@@ -313,6 +317,7 @@ impl Act {
             Act::Lock => "lock",
             Act::Screenshot => "screenshot",
             Act::ScreenshotRegion => "screenshot-region",
+            Act::ScreenshotWindow => "screenshot-window",
             Act::Launcher => "launcher",
             Act::ShowDesktop => "show-desktop",
             Act::Maximize => "maximize",
@@ -337,6 +342,7 @@ impl Act {
             Act::Lock => "화면 잠금",
             Act::Screenshot => "스크린샷 (전체)",
             Act::ScreenshotRegion => "스크린샷 (영역)",
+            Act::ScreenshotWindow => "스크린샷 (창)",
             Act::Launcher => "앱 찾기",
             Act::ShowDesktop => "바탕화면 보기",
             Act::Maximize => "최대화",
@@ -351,9 +357,10 @@ impl Act {
         }
     }
 
-    pub const ALL: [Act; 18] = [
+    pub const ALL: [Act; 19] = [
         Act::Launcher, Act::Cycle, Act::Expose, Act::Close, Act::Minimize, Act::Maximize, Act::Restore,
         Act::SnapLeft, Act::SnapRight, Act::ShowDesktop, Act::Lock, Act::Screenshot, Act::ScreenshotRegion,
+        Act::ScreenshotWindow,
         Act::Terminal, Act::Files, Act::Browser, Act::Settings, Act::ToggleTheme,
     ];
 }

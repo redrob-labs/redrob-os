@@ -127,7 +127,8 @@ pub struct Chrome {
     bar: Option<(draw::Buf, Point<i32, Logical>)>,
     dock: Option<(draw::Buf, Point<i32, Logical>)>,
     cursor: Option<(Mode, f32, draw::Buf)>,
-    ground_px: Option<((Mode, i32, i32, u32), draw::Buf)>,
+    /// One per screen size.
+    ground_px: Vec<((Mode, i32, i32, u32), draw::Buf)>,
     wallpaper: Option<Option<Pixmap>>,
     frames: u32,
     ticks: u32,
@@ -167,7 +168,7 @@ impl Chrome {
             bar: None,
             dock: None,
             cursor: None,
-            ground_px: None,
+            ground_px: Vec::new(),
             wallpaper: None,
             frames: 0,
             ticks: 0,
@@ -314,7 +315,7 @@ impl Chrome {
         out: Size<i32, Physical>,
     ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
         let key = (self.mode, out.w, out.h, draw::k().to_bits());
-        if self.ground_px.as_ref().map(|(k, _)| *k) != Some(key) {
+        if !self.ground_px.iter().any(|(k, _)| *k == key) {
             let t = theme::theme(self.mode);
             let mut p = draw::canvas(out.w as f32, out.h as f32)?;
             let wall = if self.mode == Mode::Dark { self.wallpaper(p.width() as i32, p.height() as i32) } else { None };
@@ -322,9 +323,11 @@ impl Chrome {
                 Some(img) => draw::draw_cover(&mut p, img),
                 None => draw::fill_gradient(&mut p, t.ground),
             }
-            self.ground_px = Some((key, draw::upload_opaque(&p, true)));
+            self.ground_px.retain(|(k, _)| k.0 == key.0 && k.3 == key.3);
+            self.ground_px.truncate(3);
+            self.ground_px.push((key, draw::upload_opaque(&p, true)));
         }
-        let (_, buf) = self.ground_px.as_ref()?;
+        let (_, buf) = self.ground_px.iter().find(|(k, _)| *k == key)?;
         draw::element(renderer, (0.0, 0.0).into(), buf, Kind::Unspecified)
     }
 
@@ -648,7 +651,7 @@ impl Chrome {
     pub fn invalidate(&mut self) {
         self.key = None;
         self.cursor = None;
-        self.ground_px = None;
+        self.ground_px.clear();
     }
 
     /// Bring apps in line with the current theme and style (session start).

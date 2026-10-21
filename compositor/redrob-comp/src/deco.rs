@@ -105,6 +105,13 @@ impl Smallvil {
         Some(Rectangle::new(loc + geo.loc, geo.size))
     }
 
+    /// A window with its title bar, for a window screenshot.
+    pub fn window_shot_rect(&self, w: &Window) -> Option<Rectangle<i32, Logical>> {
+        let c = self.content_rect(w)?;
+        let top = if wants_frame(w) { TITLE_H } else { 0 };
+        Some(Rectangle::new((c.loc.x, c.loc.y - top).into(), (c.size.w, c.size.h + top).into()))
+    }
+
     pub fn is_focused(&self, w: &Window) -> bool {
         let focus = self.seat.get_keyboard().and_then(|k| k.current_focus());
         match (focus, w.toplevel()) {
@@ -161,6 +168,16 @@ impl Smallvil {
         renderer: &mut GlesRenderer,
         w: &Window,
     ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
+        self.frame_element_at(renderer, w, (0, 0).into())
+    }
+
+    /// The frame for a screen whose top-left is at `origin`.
+    pub fn frame_element_at(
+        &mut self,
+        renderer: &mut GlesRenderer,
+        w: &Window,
+        origin: Point<i32, Logical>,
+    ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
         if !wants_frame(w) {
             return None;
         }
@@ -184,7 +201,7 @@ impl Smallvil {
                 self.deco.cache.len() - 1
             }
         };
-        let at = Point::<i32, Logical>::from((c.loc.x - SHADOW, c.loc.y - TITLE_H - SHADOW));
+        let at = Point::<i32, Logical>::from((c.loc.x - SHADOW - origin.x, c.loc.y - TITLE_H - SHADOW - origin.y));
         draw::element(renderer, at.to_f64(), &self.deco.cache[idx].2, Kind::Unspecified)
     }
 }

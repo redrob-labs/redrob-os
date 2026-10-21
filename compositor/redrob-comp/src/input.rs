@@ -37,10 +37,16 @@ impl Smallvil {
             InputEvent::PointerMotion { event, .. } => {
                 // Relative mouse (real hardware): move and clamp to the output.
                 use smithay::backend::input::PointerMotionEvent;
-                let output = self.space.outputs().next().unwrap();
-                let geo = self.space.output_geometry(output).unwrap().to_f64();
                 let pointer = self.seat.get_pointer().unwrap();
                 let mut pos = pointer.current_location() + event.delta();
+                // The screen under the new x (screens sit side by side).
+                let geos: Vec<_> = self.space.outputs().filter_map(|o| self.space.output_geometry(o)).map(|g| g.to_f64()).collect();
+                let geo = geos
+                    .iter()
+                    .find(|g| pos.x >= g.loc.x && pos.x < g.loc.x + g.size.w)
+                    .or_else(|| if pos.x < 0.0 { geos.first() } else { geos.iter().max_by(|a, b| a.loc.x.total_cmp(&b.loc.x)) })
+                    .copied()
+                    .unwrap();
                 pos.x = pos.x.clamp(geo.loc.x, geo.loc.x + geo.size.w - 1.0);
                 pos.y = pos.y.clamp(geo.loc.y, geo.loc.y + geo.size.h - 1.0);
                 let under = self.surface_under(pos);

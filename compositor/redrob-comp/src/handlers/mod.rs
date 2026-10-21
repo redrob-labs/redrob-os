@@ -45,7 +45,24 @@ impl PointerConstraintsHandler for Smallvil {}
 //
 
 impl SelectionHandler for Smallvil {
-    type SelectionUserData = ();
+    /// Bytes the compositor itself offers (a screenshot PNG).
+    type SelectionUserData = std::sync::Arc<Vec<u8>>;
+
+    fn send_selection(
+        &mut self,
+        _ty: smithay::wayland::selection::SelectionTarget,
+        _mime_type: String,
+        fd: std::os::fd::OwnedFd,
+        _seat: Seat<Self>,
+        data: &Self::SelectionUserData,
+    ) {
+        let data = data.clone();
+        std::thread::spawn(move || {
+            use std::io::Write;
+            let mut f = std::fs::File::from(fd);
+            let _ = f.write_all(&data);
+        });
+    }
 }
 
 impl DataDeviceHandler for Smallvil {

@@ -54,6 +54,10 @@ impl Smallvil {
             Act::Lock => self.lock(),
             Act::Screenshot => self.shot = Some(None),
             Act::ScreenshotRegion => self.open_region(),
+            Act::ScreenshotWindow => {
+                let front = self.space.elements().last().cloned();
+                self.shot = Some(front.and_then(|w| self.window_shot_rect(&w)));
+            }
             Act::Terminal => spawn(&["sh", "-c", crate::chrome::TERMINAL]),
             Act::Files => spawn(&["sh", "-c", crate::chrome::FILES]),
             Act::Browser => spawn(&["xdg-open", "https://redrob.ai"]),
@@ -128,10 +132,44 @@ impl Smallvil {
             .and_then(|o| self.space.output_geometry(o))
             .unwrap_or_else(|| Rectangle::from_size((1280, 800).into()));
         let (top, bottom) = self.chrome.reserved();
+        // The agent sidebar docks on the right edge and keeps its strip.
+        let side = if self.space.elements().any(is_sidebar) { SIDEBAR_W } else { 0 };
         Rectangle::new(
             (out.loc.x, out.loc.y + top).into(),
-            (out.size.w, (out.size.h - top - bottom).max(1)).into(),
+            ((out.size.w - side).max(1), (out.size.h - top - bottom).max(1)).into(),
         )
+    }
+
+    /// Dock the Redrob Agent sidebar (agent-sidebar opens it) on the main
+    /// screen's right edge, full height under the bar.
+    pub fn pin_sidebar(&mut self, surface: &smithay::reexports::wayland_server::protocol::wl_surface::WlSurface) {
+        let Some(w) = self.space.elements().find(|w| w.toplevel().is_some_and(|t| t.wl_surface() == surface)).cloned() else { return };
+        if !is_sidebar(&w) {
+            return;
+        }
+        let out = self
+            .space
+            .outputs()
+            .next()
+            .and_then(|o| self.space.output_geometry(o))
+            .unwrap_or_else(|| Rectangle::from_size((1280, 800).into()));
+        let (top, bottom) = self.chrome.reserved();
+        let size = (SIDEBAR_W, (out.size.h - top - bottom).max(1));
+        let at = Point::<i32, Logical>::from((out.loc.x + out.size.w - SIDEBAR_W, out.loc.y + top));
+        let Some(t) = w.toplevel() else { return };
+        let geo = w.geometry();
+        let changed = t.with_pending_state(|s| {
+            let want = Some(smithay::utils::Size::from(size));
+            let c = s.size != want;
+            s.size = want;
+            c
+        });
+        if changed && t.is_initial_configure_sent() {
+            t.send_pending_configure();
+        }
+        if self.space.element_location(&w) != Some(at - geo.loc) {
+            self.space.map_element(w, at - geo.loc, false);
+        }
     }
 
     fn place_top(&mut self, place: Place) {
@@ -198,4 +236,20 @@ enum Place {
 
 fn is_max(t: &smithay::wayland::shell::xdg::ToplevelSurface) -> bool {
     t.with_pending_state(|s| s.states.contains(xdg_toplevel::State::Maximized))
+}
+
+/// Width of the docked agent sidebar.
+pub const SIDEBAR_W: i32 = 420;
+
+/// The Redrob Agent sidebar window: Redrob Browser in app mode on the
+/// agent's dashboard (`--class=redrob-agent-sidebar`; Chromium on Wayland may
+/// instead report an app id built from the URL).
+pub fn is_sidebar(w: &smithay::desktop::Window) -> bool {
+    use smithay::wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData};
+    let Some(t) = w.toplevel() else { return false };
+    let id = with_states(t.wl_surface(), |s| {
+        s.data_map.get::<XdgToplevelSurfaceData>().and_then(|d| d.lock().ok().and_then(|a| a.app_id.clone()))
+    })
+    .unwrap_or_default();
+    id == "redrob-agent-sidebar" || id.contains("127.0.0.1__")
 }

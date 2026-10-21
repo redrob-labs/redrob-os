@@ -48,6 +48,8 @@ pub enum Overlay {
     Expose { slots: Vec<(Window, Rectangle<i32, Logical>, f64)>, hover: Option<usize> },
     Lock { input: String, error: bool, busy: Option<Receiver<bool>> },
     Region { start: Option<Point<i32, Logical>>, cur: Point<i32, Logical> },
+    /// "Keep this resolution?" after a change; reverts at `until`.
+    KeepMode { back: Option<usize>, size: (i32, i32), until: Instant },
 }
 
 pub struct Toast {
@@ -170,6 +172,31 @@ impl Smallvil {
     }
 
     // ------------------------------------------------------------ openers
+
+    /// Ask whether to keep a new resolution; `back` is the mode to return to.
+    pub fn confirm_resolution(&mut self, back: Option<usize>, size: (i32, i32)) {
+        let until = Instant::now() + std::time::Duration::from_secs(15);
+        self.layers.overlay = Some(Overlay::KeepMode { back, size, until });
+        self.layers.dirty = true;
+    }
+
+    fn keep_mode(&mut self, keep: bool) {
+        let Some(Overlay::KeepMode { back, size, .. }) = self.layers.overlay.take() else { return };
+        if keep {
+            crate::config::set_value("resolution", &format!("{}x{}", size.0, size.1));
+            if let Some(i) = self.display.modes.iter().position(|m| (m.0, m.1) == size) {
+                self.display.current = i;
+            }
+            tracing::info!(?size, "display: resolution kept");
+        } else if let Some(i) = back {
+            self.display.request = Some(crate::display::Request::Revert(i));
+            self.display.current = i;
+        }
+        // Back to the settings window it came from.
+        self.layers.overlay = Some(Overlay::Settings { page: 5, capture: None });
+        self.layers.dirty = true;
+    }
+
 
     pub fn open_finder(&mut self) {
         if matches!(self.layers.overlay, Some(Overlay::Finder { .. })) {
@@ -370,11 +397,25 @@ impl Smallvil {
                 }
                 self.layers.dirty = true;
             }
+            Overlay::Region { .. } if raw == keysyms::KEY_space => {
+                let p = self.seat.get_pointer().unwrap().current_location();
+                let under = self.space.element_under(p).map(|(w, _)| w.clone());
+                self.layers.overlay = None;
+                self.layers.dirty = true;
+                if let Some(w) = under {
+                    self.shot = Some(self.window_shot_rect(&w));
+                }
+            }
             Overlay::Expose { .. } | Overlay::Region { .. } => {
                 if raw == keysyms::KEY_Escape {
                     self.close_overlay();
                 }
             }
+            Overlay::KeepMode { .. } => match raw {
+                keysyms::KEY_Return | keysyms::KEY_KP_Enter => self.keep_mode(true),
+                keysyms::KEY_Escape => self.keep_mode(false),
+                _ => {}
+            },
             Overlay::Lock { input, error, busy } => {
                 if busy.is_some() {
                     return;
@@ -463,6 +504,7 @@ impl Smallvil {
                         self.settings_slider(id, pi.x);
                     }
                     (Overlay::Settings { .. }, Some(id)) => self.settings_click(id),
+                    (Overlay::KeepMode { .. }, Some(id)) => self.keep_mode(id == 0),
                     (Overlay::Finder { matches, .. }, Some(row)) => {
                         let pick = matches.get(row).copied();
                         self.close_overlay();
@@ -558,6 +600,15 @@ impl Smallvil {
                 self.layers.dirty = true;
             }
         }
+        // A screenshot finished encoding: offer it as the clipboard.
+        if let Some(png) = crate::shot::CLIPBOARD.lock().ok().and_then(|mut c| c.take()) {
+            smithay::wayland::selection::data_device::set_data_device_selection(
+                &self.display_handle,
+                &self.seat,
+                vec!["image/png".into()],
+                std::sync::Arc::new(png),
+            );
+        }
         while let Ok(m) = self.note_rx.try_recv() {
             match m {
                 crate::notify::Msg::Show(n) => self.toast(n),
@@ -572,6 +623,15 @@ impl Smallvil {
         self.layers.toasts.retain(|t| t.until > now);
         if self.layers.toasts.len() != before {
             self.layers.toast_dirty = true;
+        }
+        if let Some(Overlay::KeepMode { until, .. }) = &self.layers.overlay {
+            let left = until.saturating_duration_since(now).as_secs();
+            if *until <= now {
+                self.keep_mode(false);
+            } else if left as u32 != self.layers.minute {
+                self.layers.minute = left as u32;
+                self.layers.dirty = true;
+            }
         }
         if let Some(Overlay::Lock { .. }) = &self.layers.overlay {
             use chrono::Timelike;
@@ -679,6 +739,31 @@ impl Smallvil {
                 }
             }
             Some(Overlay::Lock { input, error, busy }) => self.paint_lock(&mut p, input, *error, busy.is_some()),
+            Some(Overlay::KeepMode { size, until, .. }) => {
+                let left = until.saturating_duration_since(Instant::now()).as_secs() + 1;
+                fill_rect(&mut p, 0.0, 0.0, w as f32, h as f32, Rgba(0, 0, 0, 110));
+                let (cw, ch) = (440.0, 176.0);
+                let (cx, cy) = ((w as f32 - cw) / 2.0, (h as f32 - ch) / 2.0);
+                draw::shadow(&mut p, cx, cy, cw, ch, theme::RADIUS_LG, 24.0, 12.0, t.shadow_lg);
+                fill_rrect(&mut p, cx, cy, cw, ch, theme::RADIUS_LG, t.surface_base);
+                stroke_rrect(&mut p, cx + 0.5, cy + 0.5, cw - 1.0, ch - 1.0, theme::RADIUS_LG, t.border_subtle);
+                let sb = &self.chrome.fonts.semibold;
+                let md = &self.chrome.fonts.medium;
+                draw::draw_text(&mut p, sb, "이 해상도를 유지할까요?", cx + 24.0, cy + 40.0, 17.0, t.ink_primary);
+                let line = format!("{} × {} · {left}초 뒤 원래대로 돌아갑니다", size.0, size.1);
+                draw::draw_text(&mut p, md, &line, cx + 24.0, cy + 68.0, 13.0, t.ink_secondary);
+                let (bw, bh, by) = (120.0, 36.0, cy + ch - 24.0 - 36.0);
+                for (k, (label, primary)) in [("유지", true), ("되돌리기", false)].iter().enumerate() {
+                    let bx = cx + cw - 24.0 - bw - k as f32 * (bw + 10.0);
+                    fill_rrect(&mut p, bx, by, bw, bh, theme::RADIUS_MD, if *primary { t.action_primary } else { t.surface_raised });
+                    if !*primary {
+                        stroke_rrect(&mut p, bx + 0.5, by + 0.5, bw - 1.0, bh - 1.0, theme::RADIUS_MD, t.border_subtle);
+                    }
+                    let lw = draw::text_width(md, label, 14.0);
+                    draw::draw_text(&mut p, md, label, bx + (bw - lw) / 2.0, by + 23.0, 14.0, if *primary { Rgba(255, 255, 255, 255) } else { t.ink_primary });
+                    self.layers.hits.push((Rectangle::new((bx as i32, by as i32).into(), (bw as i32, bh as i32).into()), k));
+                }
+            }
             Some(Overlay::Region { start, cur }) => {
                 let dim = Rgba(0, 0, 0, 90);
                 match start {

@@ -245,8 +245,8 @@ impl Smallvil {
                 let col_w = cw / 2.0 - 6.0;
                 let shortcuts = self.chrome.shortcuts().to_vec();
                 for (k, act) in Act::ALL.iter().enumerate() {
-                    let (col, row) = (k / 9, k % 9);
-                    let (rx, ry) = (cx0 + col as f32 * (col_w + 12.0), cy0 + 48.0 + row as f32 * 44.0);
+                    let (col, row) = (k / 10, k % 10);
+                    let (rx, ry) = (cx0 + col as f32 * (col_w + 12.0), cy0 + 48.0 + row as f32 * 40.0);
                     let on = capture == Some(*act);
                     fill_rrect(p, rx, ry, col_w, 38.0, theme::RADIUS_MD, if on { with_alpha(t.action_primary, 40) } else { t.surface_raised });
                     if on {
@@ -455,6 +455,11 @@ impl Smallvil {
         if let Some((w, h, r)) = modes.get(cur) {
             let line = format!("{w} × {h} · {}Hz", (*r as f32 / 1000.0).round());
             draw::draw_text(p, md, &line, mx + mw + 24.0, my + 56.0, 13.0, t.ink_secondary);
+        }
+        if self.display.screens.len() > 1 {
+            let all = format!("화면 {}대: {}", self.display.screens.len(), self.display.screens.join(", "));
+            let all = draw::fit_text(&self.chrome.fonts.medium, &all, 12.0, cw - mw - 24.0);
+            draw::draw_text(p, &self.chrome.fonts.medium, &all, mx + mw + 24.0, my + 100.0, 12.0, t.ink_muted);
         }
         let sl = format!("배율 {}%", (scale * 100.0).round());
         draw::draw_text(p, md, &sl, mx + mw + 24.0, my + 78.0, 13.0, t.ink_secondary);
