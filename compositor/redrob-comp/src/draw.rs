@@ -15,10 +15,84 @@ use tiny_skia::{
 
 use crate::theme::Rgba;
 
-pub fn upload(p: &Pixmap) -> MemoryRenderBuffer {
+// Crisp output scale: the shell lays out in logical pixels, but every
+// pixmap is allocated and drawn at physical size (logical * k). Shapes go
+// through `t()`, text and icons are rasterised at k times their size. Code
+// that reads a pixmap's size uses `lw`/`lh` (logical).
+
+/// The current output scale, as f32.
+pub fn k() -> f32 {
+    crate::display::scale() as f32
+}
+
+/// Logical -> physical transform for paths and rects.
+pub fn t() -> tiny_skia::Transform {
+    let k = k();
+    tiny_skia::Transform::from_scale(k, k)
+}
+
+/// A transparent pixmap for a `w` x `h` logical area.
+pub fn canvas(w: f32, h: f32) -> Option<Pixmap> {
+    let k = k();
+    Pixmap::new((w * k).ceil().max(1.0) as u32, (h * k).ceil().max(1.0) as u32)
+}
+
+/// Logical width / height of a pixmap made by `canvas`.
+pub fn lw(p: &Pixmap) -> f32 {
+    (p.width() as f32 / k()).round()
+}
+pub fn lh(p: &Pixmap) -> f32 {
+    (p.height() as f32 / k()).round()
+}
+
+/// Draw `src` (already physical-size) into `dst` at logical (x, y).
+pub fn blit(dst: &mut Pixmap, src: &Pixmap, x: f32, y: f32, opacity: f32) {
+    let k = k();
+    let pp = PixmapPaint { opacity, ..Default::default() };
+    dst.draw_pixmap((x * k).round() as i32, (y * k).round() as i32, src.as_ref(), &pp, tiny_skia::Transform::identity(), None);
+}
+
+/// A physical-size shell buffer and the scale it was drawn at.
+pub struct Buf {
+    pub mem: MemoryRenderBuffer,
+    pub px: (i32, i32),
+    pub k: f32,
+}
+
+pub fn upload(p: &Pixmap) -> Buf {
+    upload_opaque(p, false)
+}
+
+/// `opaque`: the whole buffer covers what is behind it (the desktop ground).
+pub fn upload_opaque(p: &Pixmap, opaque: bool) -> Buf {
     // tiny-skia stores premultiplied RGBA bytes: that is DRM Abgr8888 (little-endian).
     let size = (p.width() as i32, p.height() as i32);
-    MemoryRenderBuffer::from_slice(p.data(), Fourcc::Abgr8888, size, 1, Transform::Normal, None)
+    let full = opaque.then(|| vec![smithay::utils::Rectangle::<i32, smithay::utils::Buffer>::from_size(size.into())]);
+    Buf { mem: MemoryRenderBuffer::from_slice(p.data(), Fourcc::Abgr8888, size, 1, Transform::Normal, full), px: size, k: k() }
+}
+
+/// A render element for `b` with its top-left at logical `at`: the whole
+/// buffer, shown at its logical size (so it is pixel-exact at the scale it
+/// was drawn at).
+pub fn element(
+    renderer: &mut smithay::backend::renderer::gles::GlesRenderer,
+    at: smithay::utils::Point<f64, smithay::utils::Logical>,
+    b: &Buf,
+    kind: smithay::backend::renderer::element::Kind,
+) -> Option<smithay::backend::renderer::element::memory::MemoryRenderBufferRenderElement<smithay::backend::renderer::gles::GlesRenderer>> {
+    let src = smithay::utils::Rectangle::<f64, smithay::utils::Logical>::from_size((b.px.0 as f64, b.px.1 as f64).into());
+    let size: smithay::utils::Size<i32, smithay::utils::Logical> =
+        ((b.px.0 as f32 / b.k).round() as i32, (b.px.1 as f32 / b.k).round() as i32).into();
+    smithay::backend::renderer::element::memory::MemoryRenderBufferRenderElement::from_buffer(
+        renderer,
+        at.to_physical(crate::display::scale()),
+        &b.mem,
+        None,
+        Some(src),
+        Some(size),
+        kind,
+    )
+    .ok()
 }
 
 pub fn paint(c: Rgba) -> Paint<'static> {
@@ -34,7 +108,7 @@ pub fn with_alpha(c: Rgba, a: u8) -> Rgba {
 
 pub fn fill_rect(p: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, c: Rgba) {
     if let Some(r) = Rect::from_xywh(x, y, w, h) {
-        p.fill_rect(r, &paint(c), tiny_skia::Transform::identity(), None);
+        p.fill_rect(r, &paint(c), t(), None);
     }
 }
 
@@ -59,20 +133,20 @@ pub fn rrect_path(x: f32, y: f32, w: f32, h: f32, r: f32, top_only: bool) -> Opt
 
 pub fn fill_rrect(p: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, r: f32, c: Rgba) {
     if let Some(path) = rrect_path(x, y, w, h, r, false) {
-        p.fill_path(&path, &paint(c), FillRule::Winding, tiny_skia::Transform::identity(), None);
+        p.fill_path(&path, &paint(c), FillRule::Winding, t(), None);
     }
 }
 
 pub fn stroke_rrect(p: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, r: f32, c: Rgba) {
     if let Some(path) = rrect_path(x, y, w, h, r, false) {
         let s = Stroke { width: 1.0, ..Default::default() };
-        p.stroke_path(&path, &paint(c), &s, tiny_skia::Transform::identity(), None);
+        p.stroke_path(&path, &paint(c), &s, t(), None);
     }
 }
 
 pub fn fill_circle(p: &mut Pixmap, cx: f32, cy: f32, r: f32, c: Rgba) {
     if let Some(path) = PathBuilder::from_circle(cx, cy, r) {
-        p.fill_path(&path, &paint(c), FillRule::Winding, tiny_skia::Transform::identity(), None);
+        p.fill_path(&path, &paint(c), FillRule::Winding, t(), None);
     }
 }
 
@@ -82,7 +156,7 @@ pub fn line(p: &mut Pixmap, x0: f32, y0: f32, x1: f32, y1: f32, width: f32, c: R
     pb.line_to(x1, y1);
     if let Some(path) = pb.finish() {
         let s = Stroke { width, ..Default::default() };
-        p.stroke_path(&path, &paint(c), &s, tiny_skia::Transform::identity(), None);
+        p.stroke_path(&path, &paint(c), &s, t(), None);
     }
 }
 
@@ -136,7 +210,7 @@ pub fn fill_rrect_vgrad(p: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, r: f32, 
     };
     let paint: Paint<'_> = Paint { shader, anti_alias: true, ..Default::default() };
     let _: &Shader = &paint.shader;
-    p.fill_path(&path, &paint, FillRule::Winding, tiny_skia::Transform::identity(), None);
+    p.fill_path(&path, &paint, FillRule::Winding, t(), None);
 }
 
 /// Cover-scale `src` into `dst` (centre crop), like a wallpaper.
@@ -161,7 +235,9 @@ impl IconCache {
     /// Draw `svg` into `p` at (x, y), `size` px square. `ink` replaces
     /// `currentColor` (the redrob-ui glyphs are stroke="currentColor").
     pub fn draw(&mut self, p: &mut Pixmap, svg: &'static str, ink: Option<Rgba>, x: f32, y: f32, size: f32) {
-        let px = size.round().max(1.0) as u32;
+        let kk = k();
+        let (x, y) = (x * kk, y * kk);
+        let px = (size * kk).round().max(1.0) as u32;
         let key = (svg.as_ptr() as usize, ink.map(|c| (c.0, c.1, c.2, c.3)), px);
         if !self.map.contains_key(&key) {
             let Some(img) = render_svg(svg, ink, px) else { return };
@@ -195,8 +271,11 @@ pub fn text_width(font: &fontdue::Font, s: &str, px: f32) -> f32 {
     s.chars().map(|c| font.metrics(c, px).advance_width).sum()
 }
 
-/// Draw a single line of text with its baseline at `baseline`.
+/// Draw a single line of text with its baseline at `baseline` (logical
+/// units; rasterised at the output scale).
 pub fn draw_text(p: &mut Pixmap, font: &fontdue::Font, s: &str, x: f32, baseline: f32, px: f32, c: Rgba) {
+    let kk = k();
+    let (x, baseline, px) = (x * kk, baseline * kk, px * kk);
     let (pw, ph) = (p.width() as i32, p.height() as i32);
     let mut pen = x;
     for ch in s.chars() {

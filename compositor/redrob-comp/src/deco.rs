@@ -14,7 +14,7 @@ use smithay::{
     backend::renderer::{
         element::{
             Kind,
-            memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
+            memory::MemoryRenderBufferRenderElement,
         },
         gles::GlesRenderer,
     },
@@ -23,7 +23,6 @@ use smithay::{
     utils::{IsAlive, Logical, Point, Rectangle},
     wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData},
 };
-use tiny_skia::Pixmap;
 
 use crate::{
     config::Style,
@@ -55,9 +54,15 @@ struct Key {
     hover: Option<DecoHit>,
 }
 
+impl Decorations {
+    pub fn invalidate(&mut self) {
+        self.cache.clear();
+    }
+}
+
 #[derive(Default)]
 pub struct Decorations {
-    cache: Vec<(Window, Key, MemoryRenderBuffer)>,
+    cache: Vec<(Window, Key, draw::Buf)>,
     /// The frame control under the pointer, for hover states.
     pub hover: Option<(Window, DecoHit)>,
 }
@@ -180,25 +185,16 @@ impl Smallvil {
             }
         };
         let at = Point::<i32, Logical>::from((c.loc.x - SHADOW, c.loc.y - TITLE_H - SHADOW));
-        MemoryRenderBufferRenderElement::from_buffer(
-            renderer,
-            at.to_f64().to_physical(crate::display::scale()),
-            &self.deco.cache[idx].2,
-            None,
-            None,
-            None,
-            Kind::Unspecified,
-        )
-        .ok()
+        draw::element(renderer, at.to_f64(), &self.deco.cache[idx].2, Kind::Unspecified)
     }
 }
 
-fn paint_frame(chrome: &mut crate::chrome::Chrome, k: &Key) -> Option<MemoryRenderBuffer> {
+fn paint_frame(chrome: &mut crate::chrome::Chrome, k: &Key) -> Option<draw::Buf> {
     let t = theme::theme(k.mode);
     let (cw, ch) = k.size;
     let (fw, fh) = (cw as f32, (ch + TITLE_H) as f32);
     let s = SHADOW as f32;
-    let mut p = Pixmap::new((cw + 2 * SHADOW) as u32, (ch + TITLE_H + 2 * SHADOW) as u32)?;
+    let mut p = draw::canvas((cw + 2 * SHADOW) as f32, (ch + TITLE_H + 2 * SHADOW) as f32)?;
     let r = theme::RADIUS_LG;
 
     // Shadow: deeper on the window in front.
@@ -207,16 +203,16 @@ fn paint_frame(chrome: &mut crate::chrome::Chrome, k: &Key) -> Option<MemoryRend
 
     // Body (under the client, in case it is smaller than its geometry) and bar.
     if let Some(path) = draw::rrect_path(s, s, fw, fh, r, true) {
-        p.fill_path(&path, &draw::paint(t.surface_base), tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
+        p.fill_path(&path, &draw::paint(t.surface_base), tiny_skia::FillRule::Winding, draw::t(), None);
     }
     let bar = if k.focused { t.surface_raised } else { t.surface_base };
     if let Some(path) = draw::rrect_path(s, s, fw, TITLE_H as f32, r, true) {
-        p.fill_path(&path, &draw::paint(bar), tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
+        p.fill_path(&path, &draw::paint(bar), tiny_skia::FillRule::Winding, draw::t(), None);
     }
     fill_rect(&mut p, s, s + TITLE_H as f32 - 1.0, fw, 1.0, t.border_subtle);
     if let Some(path) = draw::rrect_path(s - 0.5, s - 0.5, fw + 1.0, fh + 1.0, r + 0.5, true) {
         let st = tiny_skia::Stroke { width: 1.0, ..Default::default() };
-        p.stroke_path(&path, &draw::paint(t.border_subtle), &st, tiny_skia::Transform::identity(), None);
+        p.stroke_path(&path, &draw::paint(t.border_subtle), &st, draw::t(), None);
     }
 
     let mid = s + TITLE_H as f32 / 2.0;
@@ -261,7 +257,7 @@ fn paint_frame(chrome: &mut crate::chrome::Chrome, k: &Key) -> Option<MemoryRend
                 Some(DecoHit::Close) => {
                     // Fill the close button to the frame's rounded corner.
                     if let Some(path) = draw::rrect_path(bx(0), s, bw, th, r, true) {
-                        p.fill_path(&path, &draw::paint(t.danger), tiny_skia::FillRule::Winding, tiny_skia::Transform::identity(), None);
+                        p.fill_path(&path, &draw::paint(t.danger), tiny_skia::FillRule::Winding, draw::t(), None);
                         fill_rect(&mut p, bx(0), s, bw - r, th, t.danger);
                     }
                 }

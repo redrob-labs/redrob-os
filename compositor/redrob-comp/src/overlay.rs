@@ -16,7 +16,7 @@ use smithay::{
     backend::renderer::{
         element::{
             AsRenderElements, Kind,
-            memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
+            memory::MemoryRenderBufferRenderElement,
             surface::WaylandSurfaceRenderElement,
         },
         gles::GlesRenderer,
@@ -60,7 +60,7 @@ pub struct Toast {
 pub struct Layers {
     pub overlay: Option<Overlay>,
     pub dirty: bool,
-    buf: Option<MemoryRenderBuffer>,
+    buf: Option<draw::Buf>,
     pub hits: Vec<(Rectangle<i32, Logical>, usize)>,
     /// Settings volume sliders (id, track) and the one being dragged.
     pub sliders: Vec<(usize, Rectangle<i32, Logical>)>,
@@ -71,7 +71,7 @@ pub struct Layers {
     pub toasts: Vec<Toast>,
     /// The finder types Hangul (toggled with 한/영, right Alt or Shift+Space).
     pub ko: bool,
-    toast_buf: Option<(MemoryRenderBuffer, Point<i32, Logical>, Vec<(Rectangle<i32, Logical>, u32)>)>,
+    toast_buf: Option<(draw::Buf, Point<i32, Logical>, Vec<(Rectangle<i32, Logical>, u32)>)>,
     toast_dirty: bool,
 }
 
@@ -83,7 +83,15 @@ const TOAST_W: i32 = 360;
 const TOAST_H: i32 = 76;
 
 impl Layers {
+    pub fn invalidate(&mut self) {
+        self.dirty = true;
+        self.toast_dirty = true;
+        self.icons.clear();
+    }
+
+    /// `px` is logical; the icon is rendered at the output scale.
     fn icon(&mut self, name: &str, px: u32) -> Option<&Pixmap> {
+        let px = (px as f32 * draw::k()).round() as u32;
         let key = (name.to_string(), px);
         if !self.icons.contains_key(&key) {
             let img = apps::icon(name, px);
@@ -119,7 +127,7 @@ fn title(w: &Window) -> String {
 }
 
 fn blit(dst: &mut Pixmap, src: &Pixmap, x: f32, y: f32) {
-    dst.draw_pixmap(x.round() as i32, y.round() as i32, src.as_ref(), &tiny_skia::PixmapPaint::default(), tiny_skia::Transform::identity(), None);
+    draw::blit(dst, src, x, y, 1.0);
 }
 
 fn letter_tile(p: &mut Pixmap, font: &fontdue::Font, name: &str, x: f32, y: f32, size: f32, t: &theme::Theme) {
@@ -610,7 +618,7 @@ impl Smallvil {
         }
         if !self.locked() {
             if let Some((buf, at, _)) = &self.layers.toast_buf {
-                if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_f64().to_physical(crate::display::scale()), buf, None, None, None, Kind::Unspecified) {
+                if let Some(e) = draw::element(renderer, at.to_f64(), buf, Kind::Unspecified) {
                     front.push(e);
                 }
             }
@@ -623,7 +631,7 @@ impl Smallvil {
             self.layers.dirty = false;
         }
         if let Some(buf) = &self.layers.buf {
-            if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, None, Kind::Unspecified) {
+            if let Some(e) = draw::element(renderer, (0.0, 0.0).into(), buf, Kind::Unspecified) {
                 front.push(e);
             }
         }
@@ -644,7 +652,7 @@ impl Smallvil {
         self.layers.sliders.clear();
         let mode = self.chrome.mode;
         let t = theme::theme(mode);
-        let Some(mut p) = Pixmap::new(w.max(1) as u32, h.max(1) as u32) else { return };
+        let Some(mut p) = draw::canvas(w.max(1) as f32, h.max(1) as f32) else { return };
         let style = self.chrome.style;
         let ov = self.layers.overlay.take();
         match &ov {
@@ -707,7 +715,7 @@ impl Smallvil {
 
     #[allow(clippy::too_many_arguments)]
     fn paint_finder(&mut self, p: &mut Pixmap, t: &theme::Theme, style: Style, query: &str, sel: usize, top: usize, matches: &[usize]) {
-        let (w, h) = (p.width() as i32, p.height() as i32);
+        let (w, h) = (draw::lw(p) as i32, draw::lh(p) as i32);
         let rows = matches.len().saturating_sub(top).min(ROWS) as i32;
         let list_h = if rows > 0 { rows * ROW_H + 12 } else { 52 };
         let ph = FIELD_H + 1 + list_h;
@@ -784,7 +792,7 @@ impl Smallvil {
     }
 
     fn paint_switcher(&mut self, p: &mut Pixmap, t: &theme::Theme, items: &[Window], sel: usize) {
-        let (w, h) = (p.width() as f32, p.height() as f32);
+        let (w, h) = (draw::lw(p), draw::lh(p));
         let card = 112.0;
         let gap = 8.0;
         let pad = 16.0;
@@ -820,7 +828,7 @@ impl Smallvil {
 
     fn paint_lock(&mut self, p: &mut Pixmap, input: &str, error: bool, busy: bool) {
         use chrono::{Datelike, Timelike};
-        let (w, h) = (p.width() as f32, p.height() as f32);
+        let (w, h) = (draw::lw(p), draw::lh(p));
         // Always the dark ground: the lock screen reads the same in both themes.
         let t = theme::theme(Mode::Dark);
         draw::fill_gradient(p, t.ground);
@@ -895,7 +903,7 @@ impl Smallvil {
         let gap = 10;
         let bw = TOAST_W + 2 * m;
         let bh = n * TOAST_H + (n - 1) * gap + 2 * m;
-        let Some(mut p) = Pixmap::new(bw as u32, bh as u32) else { return };
+        let Some(mut p) = draw::canvas(bw as f32, bh as f32) else { return };
         let mut hits = Vec::new();
         let notes: Vec<Note> = self.layers.toasts.iter().rev().map(|t| t.note.clone()).collect();
         for (i, note) in notes.iter().enumerate() {

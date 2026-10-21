@@ -247,6 +247,9 @@ fn render(d: &Rc<RefCell<Drm>>, state: &mut Smallvil) {
                 crate::display::set_scale(s);
                 output.change_current_state(None, None, Some(smithay::output::Scale::Fractional(s)), None);
                 crate::config::set_value("scale", &format!("{s}"));
+                state.chrome.invalidate();
+                state.deco.invalidate();
+                state.layers.invalidate();
                 tracing::info!(s, "display: scale");
             }
         }

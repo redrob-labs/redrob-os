@@ -47,6 +47,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         crate::udev::init_udev(&mut event_loop, &mut state)?;
     } else {
         unsafe { std::env::set_var("REDROB_NESTED", "1") };
+        // Development: try a scale in a window (REDROB_SCALE=1.5).
+        if let Some(s) = std::env::var("REDROB_SCALE").ok().and_then(|v| v.parse().ok()) {
+            crate::display::set_scale(s);
+        }
         crate::winit::init_winit(&mut event_loop, &mut state)?;
     }
 

@@ -19,11 +19,11 @@ use smithay::{
     backend::renderer::{
         element::{
             Kind,
-            memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
+            memory::MemoryRenderBufferRenderElement,
         },
         gles::GlesRenderer,
     },
-    utils::{Logical, Physical, Point, Rectangle, Size, Transform},
+    utils::{Logical, Physical, Point, Rectangle, Size},
 };
 use tiny_skia::{FillRule, PathBuilder, Pixmap, Stroke};
 
@@ -124,10 +124,10 @@ pub struct Chrome {
     pub icons: IconCache,
     launchers: Vec<Launcher>,
     key: Option<Key>,
-    bar: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
-    dock: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
-    cursor: Option<(Mode, MemoryRenderBuffer)>,
-    ground_px: Option<((Mode, i32, i32), MemoryRenderBuffer)>,
+    bar: Option<(draw::Buf, Point<i32, Logical>)>,
+    dock: Option<(draw::Buf, Point<i32, Logical>)>,
+    cursor: Option<(Mode, f32, draw::Buf)>,
+    ground_px: Option<((Mode, i32, i32, u32), draw::Buf)>,
     wallpaper: Option<Option<Pixmap>>,
     frames: u32,
     ticks: u32,
@@ -297,9 +297,7 @@ impl Chrome {
         }
         let mut v = Vec::new();
         for (buf, loc) in [&self.dock, &self.bar].into_iter().flatten() {
-            if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(
-                renderer, loc.to_f64().to_physical(crate::display::scale()), buf, None, None, None, Kind::Unspecified,
-            ) {
+            if let Some(e) = draw::element(renderer, loc.to_f64(), buf, Kind::Unspecified) {
                 v.push(e);
             }
         }
@@ -315,30 +313,19 @@ impl Chrome {
         renderer: &mut GlesRenderer,
         out: Size<i32, Physical>,
     ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
-        let key = (self.mode, out.w, out.h);
+        let key = (self.mode, out.w, out.h, draw::k().to_bits());
         if self.ground_px.as_ref().map(|(k, _)| *k) != Some(key) {
             let t = theme::theme(self.mode);
-            let mut p = Pixmap::new(out.w.max(1) as u32, out.h.max(1) as u32)?;
-            let wall = if self.mode == Mode::Dark { self.wallpaper(out.w, out.h) } else { None };
+            let mut p = draw::canvas(out.w as f32, out.h as f32)?;
+            let wall = if self.mode == Mode::Dark { self.wallpaper(p.width() as i32, p.height() as i32) } else { None };
             match wall {
                 Some(img) => draw::draw_cover(&mut p, img),
                 None => draw::fill_gradient(&mut p, t.ground),
             }
-            let full = Rectangle::<i32, smithay::utils::Buffer>::from_size((out.w, out.h).into());
-            let buf = MemoryRenderBuffer::from_slice(
-                p.data(),
-                smithay::backend::allocator::Fourcc::Abgr8888,
-                (out.w, out.h),
-                1,
-                Transform::Normal,
-                Some(vec![full]),
-            );
-            self.ground_px = Some((key, buf));
+            self.ground_px = Some((key, draw::upload_opaque(&p, true)));
         }
         let (_, buf) = self.ground_px.as_ref()?;
-        MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, None, Kind::Unspecified)
-            .map_err(|e| tracing::warn!(?e, "ground texture"))
-            .ok()
+        draw::element(renderer, (0.0, 0.0).into(), buf, Kind::Unspecified)
     }
 
     /// A copy of the wallpaper for other layers (the lock screen).
@@ -375,9 +362,9 @@ impl Chrome {
         renderer: &mut GlesRenderer,
         at: Point<f64, Logical>,
     ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
-        if self.cursor.as_ref().map(|(m, _)| *m) != Some(self.mode) {
+        if self.cursor.as_ref().map(|(m, k, _)| (*m, *k)) != Some((self.mode, draw::k())) {
             let t = theme::theme(self.mode);
-            let mut p = Pixmap::new(24, 24).unwrap();
+            let mut p = draw::canvas(24.0, 24.0).unwrap();
             let mut pb = PathBuilder::new();
             pb.move_to(2.0, 2.0);
             pb.line_to(2.0, 19.0);
@@ -388,14 +375,14 @@ impl Chrome {
             pb.line_to(16.0, 14.0);
             pb.close();
             if let Some(path) = pb.finish() {
-                p.fill_path(&path, &draw::paint(t.ink_primary), FillRule::Winding, tiny_skia::Transform::identity(), None);
+                p.fill_path(&path, &draw::paint(t.ink_primary), FillRule::Winding, draw::t(), None);
                 let s = Stroke { width: 1.5, ..Default::default() };
-                p.stroke_path(&path, &draw::paint(t.surface_base), &s, tiny_skia::Transform::identity(), None);
+                p.stroke_path(&path, &draw::paint(t.surface_base), &s, draw::t(), None);
             }
-            self.cursor = Some((self.mode, upload(&p)));
+            self.cursor = Some((self.mode, draw::k(), upload(&p)));
         }
-        let (_, buf) = self.cursor.as_ref()?;
-        MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_physical(crate::display::scale()), buf, None, None, None, Kind::Cursor).ok()
+        let (_, _, buf) = self.cursor.as_ref()?;
+        draw::element(renderer, at, buf, Kind::Cursor)
     }
 
     fn repaint(&mut self, key: &Key) {
@@ -438,7 +425,7 @@ impl Chrome {
         let t = theme::theme(key.mode);
         let (w, _) = key.size;
         let bh = theme::BAR_H;
-        let mut bar = Pixmap::new(w.max(1) as u32, bh as u32).unwrap();
+        let mut bar = draw::canvas(w.max(1) as f32, bh as f32).unwrap();
         fill_rect(&mut bar, 0.0, 0.0, w as f32, bh as f32, t.surface_material);
         fill_rect(&mut bar, 0.0, bh as f32 - 1.0, w as f32, 1.0, with_alpha(t.border_subtle, 160));
         let mid = bh as f32 / 2.0;
@@ -507,7 +494,7 @@ impl Chrome {
         let (m, tip) = (28.0, 40.0);
         let bw = dw + 2.0 * m;
         let bh = dh + m + tip + 4.0;
-        let mut p = Pixmap::new(bw.ceil() as u32, bh.ceil() as u32).unwrap();
+        let mut p = draw::canvas(bw.ceil(), bh.ceil()).unwrap();
         let (x0, y0) = (m, tip + 4.0);
         let r = theme::RADIUS_2XL.min(dh / 2.0);
         draw::shadow(&mut p, x0, y0, dw, dh, r, 24.0, 8.0, t.shadow_lg);
@@ -561,7 +548,7 @@ impl Chrome {
         let (w, h) = key.size;
         let th = theme::TASKBAR_H;
         let y0 = h - th; // taskbar top, in output coordinates
-        let mut bar = Pixmap::new(w.max(1) as u32, th as u32).unwrap();
+        let mut bar = draw::canvas(w.max(1) as f32, th as f32).unwrap();
         fill_rect(&mut bar, 0.0, 0.0, w as f32, th as f32, t.surface_material);
         fill_rect(&mut bar, 0.0, 0.0, w as f32, 1.0, with_alpha(t.border_subtle, 200));
 
@@ -657,6 +644,13 @@ pub fn apply_qt_colors(mode: Mode) {
 }
 
 impl Chrome {
+    /// Drop every cached buffer (the output scale changed).
+    pub fn invalidate(&mut self) {
+        self.key = None;
+        self.cursor = None;
+        self.ground_px = None;
+    }
+
     /// Bring apps in line with the current theme and style (session start).
     pub fn apply_app_theme(&self) {
         apply_qt_colors(self.mode);

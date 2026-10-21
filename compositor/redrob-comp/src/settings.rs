@@ -159,7 +159,7 @@ impl Smallvil {
     pub fn paint_settings(&mut self, p: &mut Pixmap, page: usize, capture: Option<Act>) {
         let mode = self.chrome.mode;
         let t = theme::theme(mode);
-        let (sw, sh) = (p.width() as i32, p.height() as i32);
+        let (sw, sh) = (draw::lw(p) as i32, draw::lh(p) as i32);
         fill_rect(p, 0.0, 0.0, sw as f32, sh as f32, Rgba(0, 0, 0, if mode == Mode::Dark { 110 } else { 50 }));
         let (x, y) = ((sw - W) / 2, (sh - H) / 2);
         let (xf, yf) = (x as f32, y as f32);
@@ -312,9 +312,9 @@ impl Smallvil {
 /// A tiny picture of a layout: ground, bar / dock or taskbar, one window.
 fn mini_desktop(p: &mut Pixmap, t: &theme::Theme, s: Style, x: f32, y: f32, w: f32, h: f32) {
     let dark = theme::theme(Mode::Dark);
-    let mut g = Pixmap::new(w as u32, h as u32).unwrap();
+    let mut g = draw::canvas(w, h).unwrap();
     draw::fill_gradient(&mut g, &[(0.0, 0x0a0b0c), (0.6, 0x0a0b0c), (1.0, 0x09209c)]);
-    p.draw_pixmap(x as i32, y as i32, g.as_ref(), &tiny_skia::PixmapPaint::default(), tiny_skia::Transform::identity(), None);
+    draw::blit(p, &g, x, y, 1.0);
     let win = |p: &mut Pixmap, wx: f32, wy: f32| {
         fill_rrect(p, wx, wy, w * 0.5, h * 0.45, 4.0, dark.surface_raised);
         fill_rect(p, wx, wy + 9.0, w * 0.5, 1.0, dark.border_subtle);
@@ -443,9 +443,9 @@ impl Smallvil {
         let (mx, my, mw, mh) = (x, y0 + 26.0, 200.0, 112.0);
         fill_rrect(p, mx, my, mw, mh, theme::RADIUS_MD, t.surface_sunken);
         stroke_rrect(p, mx + 0.5, my + 0.5, mw - 1.0, mh - 1.0, theme::RADIUS_MD, t.border_strong);
-        let mut g = Pixmap::new((mw - 16.0) as u32, (mh - 16.0) as u32).unwrap();
+        let mut g = draw::canvas(mw - 16.0, mh - 16.0).unwrap();
         draw::fill_gradient(&mut g, &[(0.0, 0x0a0b0c), (0.6, 0x0a0b0c), (1.0, 0x09209c)]);
-        p.draw_pixmap((mx + 8.0) as i32, (my + 8.0) as i32, g.as_ref(), &tiny_skia::PixmapPaint::default(), tiny_skia::Transform::identity(), None);
+        draw::blit(p, &g, mx + 8.0, my + 8.0, 1.0);
         fill_rect(p, mx + mw / 2.0 - 20.0, my + mh, 40.0, 10.0, t.border_strong);
         fill_rrect(p, mx + mw / 2.0 - 40.0, my + mh + 10.0, 80.0, 5.0, 2.5, t.border_strong);
         let sb = &self.chrome.fonts.semibold;
