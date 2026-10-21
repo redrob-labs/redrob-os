@@ -174,7 +174,10 @@ impl Chrome {
             let c = theme::theme(self.mode).surface_base;
             let mut p = Pixmap::new(out.w.max(1) as u32, out.h.max(1) as u32).unwrap();
             p.fill(tiny_skia::Color::from_rgba8(c.0, c.1, c.2, 255));
-            self.ground_px = Some((key, upload(p)));
+            // Mark it opaque so the DRM compositor treats it as the bottom of the stack.
+            let full = Rectangle::<i32, smithay::utils::Buffer>::from_size((out.w, out.h).into());
+            let buf = MemoryRenderBuffer::from_slice(p.data(), Fourcc::Abgr8888, (out.w, out.h), 1, Transform::Normal, Some(vec![full]));
+            self.ground_px = Some((key, buf));
         }
         let (_, buf) = self.ground_px.as_ref()?;
         let size: Size<i32, Logical> = (out.w, out.h).into();

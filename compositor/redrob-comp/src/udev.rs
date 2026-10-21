@@ -123,7 +123,8 @@ pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> 
         None,
         allocator,
         exporter,
-        [Fourcc::Argb8888, Fourcc::Xrgb8888],
+        // Opaque scan-out first: the desktop has no transparency to show through.
+        [Fourcc::Xrgb8888, Fourcc::Argb8888],
         renderer_formats,
         drm.cursor_size(),
         Some(gbm),
