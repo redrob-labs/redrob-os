@@ -117,16 +117,21 @@ allowed_domains = []
 # Local gateway (pairing + dashboard). Bound to all interfaces so a paired
 # phone on the SAME NETWORK can reach it directly (QR carries the LAN address).
 # Every route is gated by the one-time pairing token (require_pairing), so an
-# unpaired host on the LAN gets nothing. Caveat: this listener is plain HTTP,
-# so dashboard traffic is unencrypted on the local network -- fine for a trusted
-# home/office LAN, not for a hostile one. For off-LAN/remote access use the
-# [relay] bridge instead (docs/remote-access.md).
+# unpaired host on the LAN gets nothing. The listener serves HTTPS with a
+# certificate the agent self-provisions on first start (data dir gateway-tls/)
+# and reuses afterwards; the pairing QR carries its SHA-256 fingerprint so the
+# phone pins it. Loopback callers (health check, pairing banner) may still use
+# plain HTTP. Set [gateway.tls] enabled = false for plain HTTP everywhere. For
+# off-LAN/remote access use the [relay] bridge (docs/remote-access.md).
 # ---------------------------------------------------------------------------
 [gateway]
 host = "0.0.0.0"
 port = 42617
 allow_public_bind = true
 require_pairing = true
+
+[gateway.tls]
+enabled = true   # empty cert_path/key_path = self-provisioned certificate
 
 [memory]
 backend = "sqlite"

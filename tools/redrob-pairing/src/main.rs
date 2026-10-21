@@ -7,7 +7,9 @@
 //! `/run/redrob-pairing/pairing.json` for the display module. Headless devices expose the
 //! same code over the agent's channels.
 //!
-//! The QR encodes `redrob://pair?device=<id>&host=<ip>:<port>&code=<code>`.
+//! The QR encodes `redrob://pair?device=<id>&host=<ip>:<port>&code=<code>[&fp=<sha256>]`.
+//! `fp` is the hex SHA-256 fingerprint of the gateway's TLS certificate (present when
+//! `[gateway.tls]` is enabled); the phone connects over `https://` and pins it.
 //!
 //! `--notify` is the desktop half (Redrob OS bootc image, KDE): run from the user's
 //! session autostart, it reads the `pairing.json` the root service keeps fresh and
@@ -125,8 +127,12 @@ pub fn qr_text(data: &str) -> Option<String> {
     Some(s)
 }
 
-pub fn pairing_uri(device: &str, host: &str, code: &str) -> String {
-    format!("redrob://pair?device={device}&host={host}&code={code}")
+pub fn pairing_uri(device: &str, host: &str, code: &str, fp: Option<&str>) -> String {
+    let mut uri = format!("redrob://pair?device={device}&host={host}&code={code}");
+    if let Some(fp) = fp {
+        uri.push_str(&format!("&fp={fp}"));
+    }
+    uri
 }
 
 /// What `pairing.json` says right now, as far as the desktop notification cares.
@@ -135,6 +141,7 @@ pub struct PairingState {
     pub device: String,
     pub host: String,
     pub code: Option<String>,
+    pub fp: Option<String>,
 }
 
 /// First address from the flat `"addresses":["a","b"]` array, if any.
@@ -169,6 +176,7 @@ pub fn parse_pairing_json(body: &str) -> Option<PairingState> {
         device,
         host,
         code: json_str(body, "code"),
+        fp: json_str(body, "tls_fingerprint"),
     })
 }
 
@@ -180,7 +188,7 @@ pub fn notify_body(st: &PairingState, code: &str) -> String {
          device at  {host}\n\
          or open  {uri}",
         host = st.host,
-        uri = pairing_uri(&st.device, &st.host, code)
+        uri = pairing_uri(&st.device, &st.host, code, st.fp.as_deref())
     )
 }
 
@@ -272,6 +280,7 @@ pub fn banner(
     addrs: &[String],
     port: &str,
     code: Option<&str>,
+    fp: Option<&str>,
 ) -> String {
     let mut b = String::new();
     b.push_str("\n  Redrob OS -- pair this device\n");
@@ -284,7 +293,7 @@ pub fn banner(
     match code {
         Some(c) => {
             b.push_str(&format!("  code     {c}\n\n"));
-            let uri = pairing_uri(device, &host, c);
+            let uri = pairing_uri(device, &host, c, fp);
             if let Some(qr) = qr_text(&uri) {
                 for line in qr.lines() {
                     b.push_str("  ");
@@ -339,23 +348,31 @@ fn main() {
     // The timer's first run lands while the agent may still be starting; a few short
     // retries avoid printing an ambiguous banner for a whole timer period.
     let mut code = None;
+    let mut fp = None;
     for attempt in 0..8 {
-        code = read_trim(&o.data_dir.join("gateway-admin.token"))
-            .and_then(|t| {
-                http_get(
-                    &o.gateway,
-                    "/admin/paircode",
-                    &[("x-zeroclaw-admin-token", &t)],
-                )
-            })
-            .and_then(|b| json_str(&b, "pairing_code"));
+        let body = read_trim(&o.data_dir.join("gateway-admin.token")).and_then(|t| {
+            http_get(
+                &o.gateway,
+                "/admin/paircode",
+                &[("x-zeroclaw-admin-token", &t)],
+            )
+        });
+        code = body.as_deref().and_then(|b| json_str(b, "pairing_code"));
+        fp = body.as_deref().and_then(|b| json_str(b, "tls_fingerprint"));
         if code.is_some() || attempt == 7 {
             break;
         }
         std::thread::sleep(std::time::Duration::from_secs(2));
     }
 
-    let text = banner(&device, &hostname, &addrs, &port, code.as_deref());
+    let text = banner(
+        &device,
+        &hostname,
+        &addrs,
+        &port,
+        code.as_deref(),
+        fp.as_deref(),
+    );
     if o.stdout {
         print!("{text}");
     }
@@ -364,7 +381,7 @@ fn main() {
         (
             &o.json_path,
             format!(
-                "{{\"device\":\"{device}\",\"hostname\":\"{hostname}\",\"addresses\":[{}],\"port\":{port},\"code\":{}}}\n",
+                "{{\"device\":\"{device}\",\"hostname\":\"{hostname}\",\"addresses\":[{}],\"port\":{port},\"code\":{},\"tls_fingerprint\":{}}}\n",
                 addrs
                     .iter()
                     .map(|a| format!("\"{a}\""))
@@ -372,6 +389,9 @@ fn main() {
                     .join(","),
                 code.as_deref()
                     .map(|c| format!("\"{c}\""))
+                    .unwrap_or_else(|| "null".into()),
+                fp.as_deref()
+                    .map(|f| format!("\"{f}\""))
                     .unwrap_or_else(|| "null".into())
             ),
         ),
@@ -391,7 +411,8 @@ mod tests {
 
     #[test]
     fn qr_renders_and_uri_is_stable() {
-        let uri = pairing_uri("abc", "10.0.0.5:42617", "CODE1234");
+        assert!(pairing_uri("abc", "h:1", "C", Some("ab12")).ends_with("&code=C&fp=ab12"));
+        let uri = pairing_uri("abc", "10.0.0.5:42617", "CODE1234", None);
         assert_eq!(
             uri,
             "redrob://pair?device=abc&host=10.0.0.5:42617&code=CODE1234"
@@ -415,12 +436,13 @@ mod tests {
             &["192.168.1.9".into()],
             "42617",
             Some("XYZ"),
+            None,
         );
         assert!(
             b.contains("code     XYZ")
                 && b.contains("redrob://pair?device=dev-1&host=192.168.1.9:42617&code=XYZ")
         );
-        let b2 = banner("dev-1", "redrob-abc123", &[], "42617", None);
+        let b2 = banner("dev-1", "redrob-abc123", &[], "42617", None, None);
         assert!(b2.contains("already paired") && b2.contains("<no address yet>:42617"));
     }
 

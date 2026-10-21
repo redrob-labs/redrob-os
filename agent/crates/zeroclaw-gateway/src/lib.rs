@@ -1885,7 +1885,12 @@ pub async fn run_gateway_with_plugin_webhooks(
     }
 
     let pfx = path_prefix.unwrap_or("");
-    println!("🦀 ZeroClaw Gateway listening on http://{display_addr}{pfx}");
+    let scheme = if config.gateway.tls.as_ref().is_some_and(|t| t.enabled) {
+        "https"
+    } else {
+        "http"
+    };
+    println!("🦀 ZeroClaw Gateway listening on {scheme}://{display_addr}{pfx}");
     if let Some(ref url) = tunnel_url {
         println!("  🌐 Public URL: {url}");
     }
@@ -2507,7 +2512,19 @@ pub async fn run_gateway_with_plugin_webhooks(
                     "TLS enabled (no client certificate requirement)"
                 );
             }
-            Some(tls::build_tls_acceptor(tls_cfg)?)
+            let acceptor = tls::build_tls_acceptor(tls_cfg, &config.data_dir)?;
+            if let Some(fp) = tls::served_cert_fingerprint(tls_cfg, &config.data_dir) {
+                ::zeroclaw_log::record!(
+                    INFO,
+                    ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note)
+                        .with_attrs(::serde_json::json!({"sha256": fp})),
+                    "Gateway TLS certificate fingerprint"
+                );
+            }
+            // Loopback peers may still speak plain HTTP (greenboot health check,
+            // the pairing banner) unless mTLS is on: a local plaintext path would
+            // otherwise bypass the client-certificate requirement.
+            Some((acceptor, !has_mtls))
         }
         _ => None,
     };
@@ -2516,7 +2533,7 @@ pub async fn run_gateway_with_plugin_webhooks(
         readiness.report_ready(actual_addr);
     }
 
-    if let Some(tls_acceptor) = tls_acceptor {
+    if let Some((tls_acceptor, loopback_plain)) = tls_acceptor {
         // Manual TLS accept loop — serves each connection via hyper.
         let app = app.into_make_service_with_connect_info::<SocketAddr>();
         let mut app = app;
@@ -2549,26 +2566,43 @@ pub async fn run_gateway_with_plugin_webhooks(
                     .expect("infallible make_service");
 
                     zeroclaw_spawn::spawn!(async move {
-                        let tls_stream = match tls_acceptor.accept(tcp_stream).await {
-                            Ok(s) => s,
-                            Err(e) => {
-                                ::zeroclaw_log::record!(DEBUG, ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note).with_attrs(::serde_json::json!({"error": format!("{}", e), "remote_addr": remote_addr})), "TLS handshake failed from");
-                                return;
-                            }
-                        };
-                        let io = hyper_util::rt::TokioIo::new(tls_stream);
                         let hyper_svc = hyper::service::service_fn(move |req: hyper::Request<hyper::body::Incoming>| {
                             let mut svc = svc.clone();
                             async move {
                                 tower::Service::call(&mut svc, req).await
                             }
                         });
-                        if let Err(e) = hyper_util::server::conn::auto::Builder::new(
+                        let builder = hyper_util::server::conn::auto::Builder::new(
                             hyper_util::rt::TokioExecutor::new(),
-                        )
-                        .serve_connection(io, hyper_svc)
-                        .await
-                        {
+                        );
+                        // A TLS ClientHello starts with the handshake record type 0x16;
+                        // anything else from a loopback peer is plain HTTP.
+                        let mut first = [0u8; 1];
+                        let plain = loopback_plain
+                            && remote_addr.ip().is_loopback()
+                            && matches!(
+                                tokio::time::timeout(Duration::from_secs(10), tcp_stream.peek(&mut first)).await,
+                                Ok(Ok(1))
+                            )
+                            && first[0] != 0x16;
+                        // `with_upgrades` keeps WebSocket routes (dashboard chat) working.
+                        let served = if plain {
+                            builder
+                                .serve_connection_with_upgrades(hyper_util::rt::TokioIo::new(tcp_stream), hyper_svc)
+                                .await
+                        } else {
+                            let tls_stream = match tls_acceptor.accept(tcp_stream).await {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    ::zeroclaw_log::record!(DEBUG, ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note).with_attrs(::serde_json::json!({"error": format!("{}", e), "remote_addr": remote_addr})), "TLS handshake failed from");
+                                    return;
+                                }
+                            };
+                            builder
+                                .serve_connection_with_upgrades(hyper_util::rt::TokioIo::new(tls_stream), hyper_svc)
+                                .await
+                        };
+                        if let Err(e) = served {
                             ::zeroclaw_log::record!(DEBUG, ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note).with_attrs(::serde_json::json!({"error": format!("{}", e), "remote_addr": remote_addr})), "connection error from");
                         }
                     });
@@ -4980,8 +5014,18 @@ async fn handle_admin_paircode(
     require_localhost(&peer)?;
     require_gateway_admin_token(&state, &headers)?;
     let code = state.pairing.pairing_code();
+    // Lets the pairing banner put the served certificate's fingerprint in the QR
+    // so the phone can pin the LAN listener's (self-provisioned) certificate.
+    let tls_fingerprint = {
+        let cfg = state.config.read();
+        cfg.gateway
+            .tls
+            .as_ref()
+            .filter(|t| t.enabled)
+            .and_then(|t| tls::served_cert_fingerprint(t, &cfg.data_dir))
+    };
 
-    let body = if let Some(c) = code {
+    let mut body = if let Some(c) = code {
         serde_json::json!({
             "success": true,
             "pairing_required": state.pairing.require_pairing(),
@@ -5000,6 +5044,7 @@ async fn handle_admin_paircode(
             }
         })
     };
+    body["tls_fingerprint"] = serde_json::json!(tls_fingerprint);
 
     Ok((StatusCode::OK, Json(body)))
 }
