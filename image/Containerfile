@@ -35,18 +35,22 @@ COPY image/scripts/ /scripts/
 # same version the agent's upstream CI uses; bump together with agent/.
 FROM docker.io/library/rust:1.98.0-bookworm AS redrob-build
 RUN apt-get update && \
-    apt-get install -y -q --no-install-recommends libudev-dev pkg-config libssl-dev && \
+    apt-get install -y -q --no-install-recommends libudev-dev pkg-config libssl-dev \
+        libseat-dev libinput-dev libgbm-dev libxkbcommon-dev && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY agent/ /src/agent/
 COPY modules/credential-broker/ /src/modules/credential-broker/
 COPY modules/usb-broker/ /src/modules/usb-broker/
 COPY tools/redrob-pairing/ /src/tools/redrob-pairing/
+# Experiment: Redrob's own compositor + shell (Smithay), offered as the "Redrob" session.
+COPY compositor/redrob-comp/ /src/compositor/redrob-comp/
 RUN --mount=type=cache,dst=/usr/local/cargo/registry \
     --mount=type=cache,dst=/src/agent/target \
     --mount=type=cache,dst=/src/modules/credential-broker/broker/target \
     --mount=type=cache,dst=/src/modules/usb-broker/broker/target \
     --mount=type=cache,dst=/src/tools/redrob-pairing/target \
+    --mount=type=cache,dst=/src/compositor/redrob-comp/target \
     set -eu && mkdir -p /out && \
     # the gateway embeds web/dist at compile time; the OS serves no web dashboard
     mkdir -p agent/web/dist && touch agent/web/dist/.gitkeep && \
@@ -57,7 +61,9 @@ RUN --mount=type=cache,dst=/usr/local/cargo/registry \
     (cd modules/usb-broker/broker && cargo build --release --locked) && \
     install -m 0755 modules/usb-broker/broker/target/release/redrob-usb-broker /out/ && \
     (cd tools/redrob-pairing && cargo build --release --locked) && \
-    install -m 0755 tools/redrob-pairing/target/release/redrob-pairing /out/
+    install -m 0755 tools/redrob-pairing/target/release/redrob-pairing /out/ && \
+    (cd compositor/redrob-comp && cargo build --release --locked) && \
+    install -m 0755 compositor/redrob-comp/target/release/redrob-comp /out/
 
 # NVIDIA kernel module, built against the exact kernel the base image ships (the
 # akmods pattern Universal Blue uses; a bootc image cannot build modules on the
@@ -149,7 +155,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         tuned-ppd \
         bluez \
         pipewire \
-        kvantum \
+        libseat \
         zstd \
         unzip \
         tar
@@ -159,9 +165,7 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/scripts/10-pins.sh && \
     /ctx/scripts/20-launcher.sh && \
-    /ctx/scripts/25-fonts.sh && \
-    /ctx/scripts/26-mac-theme.sh && \
-    /ctx/scripts/27-win-theme.sh
+    /ctx/scripts/25-fonts.sh
 
 # 2b. Hardware layer: RPM Fusion codecs, NVIDIA (userspace + the kernel module built
 #     in the `akmods` stage, one transaction), fingerprint, KDE Connect.
@@ -172,6 +176,26 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     /ctx/scripts/15-hardware.sh && \
     /ctx/scripts/16-gaming.sh && \
     /ctx/scripts/18-debloat.sh
+
+# 2c. Redrob session apps: current GTK4/libadwaita apps (follow the shell's
+#     light/dark and accent through the portal and the Redrob GTK stylesheet),
+#     and Fcitx 5 with Hangul for Korean input in the Redrob session (it speaks
+#     the Wayland input-method protocol redrob-comp implements; ibus does not).
+#     These are the desktop's apps; the Plasma session is not offered.
+RUN --mount=type=cache,dst=/var/cache/libdnf5 \
+    --mount=type=tmpfs,dst=/tmp \
+    dnf5 -y install --setopt=install_weak_deps=False \
+        ptyxis \
+        nautilus \
+        gnome-text-editor \
+        loupe \
+        papers \
+        gnome-calculator \
+        fcitx5 \
+        fcitx5-hangul \
+        fcitx5-gtk \
+        fcitx5-qt \
+        fcitx5-configtool
 
 # 3. Our binaries (agent, credential broker, USB broker, pairing) from the build stage.
 COPY --from=redrob-build /out/ /usr/bin/

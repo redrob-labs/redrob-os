@@ -1,0 +1,16 @@
+# Redrob default: English and Korean (two-set), Korean ready to switch to.
+[Groups/0]
+Name=기본
+Default Layout=us
+DefaultIM=hangul
+
+[Groups/0/Items/0]
+Name=keyboard-us
+Layout=
+
+[Groups/0/Items/1]
+Name=hangul
+Layout=
+
+[GroupOrder]
+0=기본

@@ -1,7 +1,7 @@
 # Redrob task sandbox -- the container the agent runs every task in.
 # Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 #
-# Published by .github/workflows/build-image.yml as ghcr.io/redrob-labs/redrob-sandbox
+# Published by .github/workflows/release.yml as ghcr.io/redrob-labs/redrob-os:sandbox
 # (tags: stable, sha-<short>) next to the OS image, and logically bound to the OS
 # image (image/Containerfile), so bootc pulls both together and the first task
 # works offline. The OS runs it under gVisor (runsc) with --read-only, no network,

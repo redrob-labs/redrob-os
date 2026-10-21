@@ -17,10 +17,15 @@ Full steps: [docs/install.md](./docs/install.md).
 
 ## Desktop
 
-A familiar desktop: taskbar, start menu, system tray and a Settings app. Apps come from the **Discover** store (Flathub) and update themselves. The
-**Redrob Launcher** starts at login and installs the Redrob apps (Browser, Office,
-Canvas, Code) into your home directory. Korean input is built in (Shift+Space or the
-한/영 key). Tour: [docs/desktop.md](./docs/desktop.md).
+The desktop is **redrob-comp**, Redrob's own Wayland compositor and shell (Smithay,
+`compositor/redrob-comp/`), drawn with the Redrob design system. Pick a Mac layout (menu
+bar + dock) or a Windows layout (taskbar + start button), dark or light, in **Redrob
+Settings** (`⌘,` / `Win+I`), which also covers shortcuts, input, sound and display
+(resolution, scale). App search, window switcher, overview, lock screen, screenshots and
+notifications are built in. Apps are current GTK4 apps (Ptyxis, Files, Text Editor, ...);
+the **Redrob Launcher** installs the Redrob apps (Browser, Office, Canvas, Code) on first
+login. Korean input is Fcitx 5 (right Alt, Shift+Space or Ctrl+Space; Hanja on right Ctrl).
+Tour: [docs/desktop.md](./docs/desktop.md).
 
 ## Updates and rollback
 
