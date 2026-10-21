@@ -75,7 +75,7 @@ pub struct Chrome {
     key: Option<Key>,
     bar: Option<MemoryRenderBuffer>,
     cursor: Option<(Mode, MemoryRenderBuffer)>,
-    ground_px: Option<(Mode, MemoryRenderBuffer)>,
+    ground_px: Option<((Mode, i32, i32), MemoryRenderBuffer)>,
     dock: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
     hits: Vec<(Rectangle<i32, Logical>, Action)>,
 }
@@ -160,11 +160,14 @@ impl Chrome {
         renderer: &mut GlesRenderer,
         out: Size<i32, Physical>,
     ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
-        if self.ground_px.as_ref().map(|(m, _)| *m) != Some(self.mode) {
+        // A full-size buffer, not a stretched texel: a fresh buffer of the
+        // output's size damages the whole output when the theme changes.
+        let key = (self.mode, out.w, out.h);
+        if self.ground_px.as_ref().map(|(k, _)| *k) != Some(key) {
             let c = theme::theme(self.mode).surface_base;
-            let mut p = Pixmap::new(1, 1).unwrap();
+            let mut p = Pixmap::new(out.w.max(1) as u32, out.h.max(1) as u32).unwrap();
             p.fill(tiny_skia::Color::from_rgba8(c.0, c.1, c.2, 255));
-            self.ground_px = Some((self.mode, upload(p)));
+            self.ground_px = Some((key, upload(p)));
         }
         let (_, buf) = self.ground_px.as_ref()?;
         let size: Size<i32, Logical> = (out.w, out.h).into();

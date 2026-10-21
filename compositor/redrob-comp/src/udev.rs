@@ -60,8 +60,6 @@ struct Drm {
     output: Output,
     /// A frame is queued and we are waiting for its vblank.
     pending: bool,
-    /// Ground colour of the last frame; a theme change repaints every buffer.
-    ground: [f32; 4],
 }
 
 pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> Result<(), Box<dyn std::error::Error>> {
@@ -131,7 +129,7 @@ pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> 
         Some(gbm),
     )?;
 
-    let drm_state = Rc::new(RefCell::new(Drm { renderer, compositor, output, pending: false, ground: [0.0; 4] }));
+    let drm_state = Rc::new(RefCell::new(Drm { renderer, compositor, output, pending: false }));
 
     // Scan-out finished: release the buffer and draw the next frame.
     let d = drm_state.clone();
@@ -195,11 +193,6 @@ fn render(d: &Rc<RefCell<Drm>>, state: &mut Smallvil) {
     let mut drm = d.borrow_mut();
     if drm.pending {
         return;
-    }
-    let ground = state.chrome.ground();
-    if drm.ground != ground {
-        drm.ground = ground;
-        drm.compositor.reset_buffers();
     }
     let Drm { renderer, compositor, output, pending, .. } = &mut *drm;
     let size = output.current_mode().unwrap().size;
