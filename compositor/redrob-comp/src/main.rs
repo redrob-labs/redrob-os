@@ -45,6 +45,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         std::env::set_var("XDG_CURRENT_DESKTOP", "Redrob");
         std::env::set_var("XDG_SESSION_DESKTOP", "Redrob");
+        // Qt/KDE apps: the KDE platform theme reads kdeglobals (Breeze widgets,
+        // the Redrob colour scheme, fonts, icons). Without it Qt falls back to
+        // its bare built-in palette. They also ask us for server-side frames.
+        if std::env::var_os("QT_QPA_PLATFORMTHEME").is_none() {
+            std::env::set_var("QT_QPA_PLATFORMTHEME", "kde");
+        }
+        std::env::set_var("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
+        // GTK apps on Wayland.
+        std::env::set_var("GDK_BACKEND", "wayland,x11");
     }
 
     // The login session runs the desktop's autostart entries (Redrob Launcher,
