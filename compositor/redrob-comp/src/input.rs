@@ -49,6 +49,7 @@ impl Smallvil {
                 let output_geo = self.space.output_geometry(output).unwrap();
 
                 let pos = event.position_transformed(output_geo.size) + output_geo.loc.to_f64();
+                tracing::debug!(?pos, "abs motion");
 
                 let serial = SERIAL_COUNTER.next_serial();
 
@@ -79,7 +80,9 @@ impl Smallvil {
 
                 // The Redrob bar/dock sit above every window: a press on them is ours.
                 if ButtonState::Pressed == button_state {
-                    if let Some(action) = self.chrome.hit(pointer.current_location()) {
+                    let hit = self.chrome.hit(pointer.current_location());
+                    tracing::info!(loc = ?pointer.current_location(), ?hit, button, "press");
+                    if let Some(action) = hit {
                         self.chrome.act(action);
                         return;
                     }
@@ -159,6 +162,7 @@ impl Smallvil {
                 pointer.axis(self, frame);
                 pointer.frame(self);
             }
+            InputEvent::DeviceAdded { device } => tracing::info!(name = smithay::backend::input::Device::name(&device), "input device"),
             _ => {}
         }
     }
