@@ -103,6 +103,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             crate::shell::spawn(&["sh", "-c", "[ -x /usr/libexec/redrob/ptyxis-setup ] && exec /usr/libexec/redrob/ptyxis-setup"]);
             crate::autostart::run();
         });
+    } else if std::env::var_os("REDROB_XWAYLAND").is_some() {
+        // Development: Xwayland in a nested run too (needs Xwayland on PATH).
+        state.start_xwayland(|_| spawn_client());
     } else {
         spawn_client();
     }

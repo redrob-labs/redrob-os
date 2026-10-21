@@ -1,10 +1,8 @@
 [1/4] STEP 1/3: FROM scratch AS ctx
 [1/4] STEP 2/3: COPY image/pins.env /pins.env
---> Using cache 23f518957f9464efc13ad6bd5e8f2c9f7b8c23d1556c9bd0226e655501c1a17d
---> 23f518957f94
+--> 959522062221
 [1/4] STEP 3/3: COPY image/scripts/ /scripts/
---> Using cache bb18d7d25f49bad6cf94fd35f0c25d3381c54635311e391e7232125f7ecaf684
---> bb18d7d25f49
+--> 14fdf86e7a9d
 [2/4] STEP 1/9: FROM docker.io/library/rust:1.98.0-bookworm AS redrob-build
 [2/4] STEP 2/9: RUN apt-get update &&     apt-get install -y -q --no-install-recommends libudev-dev pkg-config libssl-dev         libseat-dev libinput-dev libgbm-dev libxkbcommon-dev &&     rm -rf /var/lib/apt/lists/*
 --> Using cache d7915c046193c6f544f19333fb7e5ee280695b5ca11fc328d40809030be765f9
@@ -25,11 +23,30 @@
 --> Using cache 0c365fe26c5b78a70b7396f2f90af27dcdd74288b47b877c8f694e68b7d69cb7
 --> 0c365fe26c5b
 [2/4] STEP 8/9: COPY compositor/redrob-comp/ /src/compositor/redrob-comp/
---> Using cache f65ae458aaec4b692612cbfdea8905bbb23121bba111909c2bb91793b5e84750
---> f65ae458aaec
+--> 9323679549d4
 [2/4] STEP 9/9: RUN --mount=type=cache,dst=/usr/local/cargo/registry     --mount=type=cache,dst=/src/agent/target     --mount=type=cache,dst=/src/modules/credential-broker/broker/target     --mount=type=cache,dst=/src/modules/usb-broker/broker/target     --mount=type=cache,dst=/src/tools/redrob-pairing/target     --mount=type=cache,dst=/src/compositor/redrob-comp/target     set -eu && mkdir -p /out &&     mkdir -p agent/web/dist && touch agent/web/dist/.gitkeep &&     (cd agent && cargo build --release --locked --bin zeroclaw) &&     install -m 0755 agent/target/release/zeroclaw /out/redrob-agent &&     (cd modules/credential-broker/broker && cargo build --release --locked) &&     install -m 0755 modules/credential-broker/broker/target/release/redrob-broker /out/ &&     (cd modules/usb-broker/broker && cargo build --release --locked) &&     install -m 0755 modules/usb-broker/broker/target/release/redrob-usb-broker /out/ &&     (cd tools/redrob-pairing && cargo build --release --locked) &&     install -m 0755 tools/redrob-pairing/target/release/redrob-pairing /out/ &&     (cd compositor/redrob-comp && cargo build --release --locked) &&     install -m 0755 compositor/redrob-comp/target/release/redrob-comp /out/
---> Using cache 5536ee08a04debfbc555fd1b1386a1a53829eb82b477360ad9fffdb0ebca25ca
---> 5536ee08a04d
+    Finished `release` profile [optimized] target(s) in 0.34s
+    Finished `release` profile [optimized] target(s) in 0.08s
+    Finished `release` profile [optimized] target(s) in 0.03s
+    Finished `release` profile [optimized] target(s) in 0.00s
+    Updating git repository `https://github.com/Smithay/smithay`
+ Downloading crates ...
+  Downloaded rustversion v1.0.23
+  Downloaded encoding_rs v0.8.42
+   Compiling rustversion v1.0.23
+   Compiling x11rb-protocol v0.13.2
+   Compiling smithay v0.7.0 (https://github.com/Smithay/smithay?rev=24647fc#24647fc8)
+   Compiling multiversion_no_op v1.0.0
+   Compiling scopeguard v1.2.0
+   Compiling core_detect v1.0.0
+   Compiling simdutf8 v0.1.5
+   Compiling encoding_rs v0.8.42
+   Compiling x11rb v0.13.2
+   Compiling winit-x11 v0.31.0-beta.3
+   Compiling winit v0.31.0-beta.3
+   Compiling redrob-comp v0.0.1 (/src/compositor/redrob-comp)
+    Finished `release` profile [optimized] target(s) in 35.84s
+--> 2a0747ead6a2
 [3/4] STEP 1/3: FROM quay.io/fedora-ostree-desktops/base-atomic:44 AS akmods
 [3/4] STEP 2/3: ARG TARGETARCH
 --> Using cache 7f4aebf74258787fa31d6d4524fab118c17c8ab9ec99aba12ffa6d8f66f24c3c
@@ -57,30 +74,560 @@
 --> Using cache 4f9fd5c4d1ab601214f5bd2668198dd196563732a34624786b8d0de7e683d24b
 --> 4f9fd5c4d1ab
 [4/4] STEP 8/18: RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro     --mount=type=tmpfs,dst=/tmp     /ctx/scripts/10-pins.sh &&     /ctx/scripts/20-launcher.sh &&     /ctx/scripts/25-fonts.sh
---> Using cache 3a34013d9087ffc46da70bf0ef7107bf2640758055260f7a888d4ea3b7ed95b1
---> 3a34013d9087
+fetching GVISOR x86_64: https://storage.googleapis.com/gvisor/releases/release/20261012.0/x86_64/gvisor.tar.zstd
+GVISOR: checksum OK
+gVisor 20261012.0 (x86_64) installed to /usr/libexec/gvisor
+fetching REDROB_LAUNCHER x86_64: https://github.com/redrob-labs/redrob-launcher/releases/download/v0.11.8/redrob-launcher-0.11.8-linux-x86_64.tar.gz
+REDROB_LAUNCHER: checksum OK
+Redrob Launcher 0.11.8 (x86_64) installed to /usr/bin/redrob-launcher
+fetching PRETENDARD x86_64: https://github.com/orioncactus/pretendard/releases/download/v1.3.9/Pretendard-1.3.9.zip
+PRETENDARD: checksum OK
+Pretendard 1.3.9: 6 faces
+fetching WANTED_SANS x86_64: https://github.com/wanteddev/wanted-sans/releases/download/v1.0.3/WantedSans-1.0.3.zip
+WANTED_SANS: checksum OK
+Wanted Sans 1.0.3: 5 faces
+--> ad692adaa514
 [4/4] STEP 9/18: RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro     --mount=type=bind,from=akmods,src=/out,dst=/akmods,ro     --mount=type=cache,dst=/var/cache/libdnf5     --mount=type=tmpfs,dst=/tmp     /ctx/scripts/15-hardware.sh &&     /ctx/scripts/16-gaming.sh &&     /ctx/scripts/18-debloat.sh
---> Using cache c54ba1cf537359fb931f4f661fd63cc0b793511325e9795c17fc8b022313b23c
---> c54ba1cf5373
-[4/4] STEP 10/18: RUN --mount=type=cache,dst=/var/cache/libdnf5     --mount=type=tmpfs,dst=/tmp     dnf5 -y install --setopt=install_weak_deps=False         ptyxis         nautilus         gnome-text-editor         loupe         papers         gnome-calculator         fcitx5         fcitx5-hangul         fcitx5-gtk         fcitx5-qt         fcitx5-configtool
---> Using cache 5fb56a3465d4fe1e9b96c0b837b6da8f0f2a90476f86413a0c533cc19394e6ee
---> 5fb56a3465d4
+Updating and loading repositories:
+Repositories loaded.
+ https://download1.rpmfusion.org/free/f 100% |   5.0 KiB/s |  11.5 KiB |  00m02s
+Total size of inbound packages is 11 KiB. Need to download 0 B.
+After this operation, 6 KiB extra will be used (install 6 KiB, remove 0 B).
+Running transaction
+Package                 Arch   Version Repository        Size
+Installing:
+ rpmfusion-free-release noarch 0:44-3  @commandline   5.6 KiB
+
+Transaction Summary:
+ Installing:         1 package
+
+[1/3] Verify package files              100% | 500.0   B/s |   1.0   B |  00m00s
+[2/3] Prepare transaction               100% |  22.0   B/s |   1.0   B |  00m00s
+[3/3] Installing rpmfusion-free-release 100% | 135.4 KiB/s |   7.2 KiB |  00m00s
+Warning: skipped OpenPGP checks for 1 package from repository: @commandline
+Complete!
+Updating and loading repositories:
+Repositories loaded.
+ https://download1.rpmfusion.org/nonfre 100% |   3.5 KiB/s |  11.5 KiB |  00m03s
+Total size of inbound packages is 11 KiB. Need to download 0 B.
+After this operation, 6 KiB extra will be used (install 6 KiB, remove 0 B).
+Running transaction
+Package                    Arch   Version Repository        Size
+Installing:
+ rpmfusion-nonfree-release noarch 0:44-3  @commandline   5.8 KiB
+
+Transaction Summary:
+ Installing:         1 package
+
+[1/3] Verify package files              100% | 500.0   B/s |   1.0   B |  00m00s
+[2/3] Prepare transaction               100% |  22.0   B/s |   1.0   B |  00m00s
+[3/3] Installing rpmfusion-nonfree-rele 100% | 141.9 KiB/s |   7.4 KiB |  00m00s
+Warning: skipped OpenPGP checks for 1 package from repository: @commandline
+Complete!
+Updating and loading repositories:
+Repositories loaded.
+Package "gstreamer1-plugin-libav-1.28.8-1.fc44.x86_64" is already installed.
+
+Total size of inbound packages is 18 MiB. Need to download 18 MiB.
+After this operation, 66 MiB extra will be used (install 66 MiB, remove 0 B).
+Package                             Arch   Version                            Repository                  Size
+Changing reason:
+ gstreamer1-plugin-libav            x86_64 0:1.28.8-1.fc44                    @System                339.3 KiB
+   External User -> User                                                                                      
+Installing:
+ gstreamer1-plugins-bad-free-extras x86_64 0:1.28.8-1.fc44                    updates                  1.1 MiB
+ gstreamer1-plugins-ugly            x86_64 1:1.28.8-1.fc44                    rpmfusion-free-updates 134.3 KiB
+ libavcodec-freeworld               x86_64 0:8.1.3-1.fc44                     rpmfusion-free-updates  13.8 MiB
+ libva-utils                        x86_64 0:2.23.0-2.fc44                    fedora                   3.2 MiB
+Installing dependencies:
+ cpuinfo                            x86_64 0:24.09.26-2.git1e83a2f.fc44.5     fedora                 106.3 KiB
+ ladspa                             x86_64 0:1.17-9.fc44                      fedora                 133.6 KiB
+ libavtp                            x86_64 0:0.2.0-15.fc44                    fedora                  16.5 KiB
+ libdca                             x86_64 0:0.0.7-15.fc44                    fedora                 216.9 KiB
+ liblrdf                            x86_64 0:0.5.0-34.fc44                    fedora                  56.8 KiB
+ libmicrodns                        x86_64 0:0.2.0-15.fc44                    fedora                  56.9 KiB
+ libmpcdec                          x86_64 0:1.3.0^20110810svn475-7.fc44      fedora                  76.0 KiB
+ librtmp                            x86_64 0:2.6-4.fc44                       updates                164.2 KiB
+ mjpegtools-libs                    x86_64 0:2.2.1-12.fc44                    fedora                 433.7 KiB
+ onnx-libs                          x86_64 0:1.17.0-12.fc44                   fedora                   3.7 MiB
+ onnxruntime                        x86_64 0:1.22.2-2.fc44                    fedora                  14.2 MiB
+ protobuf                           x86_64 0:3.19.6-20.fc44                   fedora                   3.3 MiB
+ raptor2                            x86_64 0:2.0.15-50.fc44                   fedora                 571.1 KiB
+ re2                                x86_64 2:20251105-4.fc44                  fedora                 606.8 KiB
+ vvenc-libs                         x86_64 0:1.13.1-5.fc44                    rpmfusion-free           3.3 MiB
+ x264-libs                          x86_64 0:0.165-5.20250608gitb35605ac.fc44 rpmfusion-free           2.8 MiB
+ x265-libs                          x86_64 0:4.1-4.fc44                       rpmfusion-free          16.7 MiB
+ yajl                               x86_64 0:2.1.0-40.fc44                    fedora                  81.7 KiB
+ zxing-cpp                          x86_64 0:2.2.1-6.fc44                     fedora                   1.3 MiB
+
+Transaction Summary:
+ Installing:        23 packages
+ Changing reason:    1 package
+
+[ 1/23] vvenc-libs-0:1.13.1-5.fc44.x86_ 100% | 573.1 KiB/s |   1.3 MiB |  00m02s
+[ 2/23] x264-libs-0:0.165-5.20250608git 100% |   3.3 MiB/s | 705.2 KiB |  00m00s
+[ 3/23] x265-libs-0:4.1-4.fc44.x86_64   100% |   6.4 MiB/s |   1.4 MiB |  00m00s
+[ 4/23] libavcodec-freeworld-0:8.1.3-1. 100% |   2.0 MiB/s |   5.7 MiB |  00m03s
+[ 5/23] gstreamer1-plugins-ugly-1:1.28. 100% | 292.1 KiB/s |  60.5 KiB |  00m00s
+[ 6/23] gstreamer1-plugins-bad-free-ext 100% | 681.3 KiB/s | 370.0 KiB |  00m01s
+[ 7/23] libavtp-0:0.2.0-15.fc44.x86_64  100% | 123.0   B/s |  14.5 KiB |  02m00s
+>>> Curl error (28): Timeout was reached for https://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libavtp-0.2.0-15.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - https://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libavtp-0.2.0-15.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for http://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libavtp-0.2.0-15.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - http://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libavtp-0.2.0-15.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libavtp-0.2.0-15.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libavtp-0.2.0-15.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for http://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libavtp-0.2.0-15.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - http://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libavtp-0.2.0-15.fc44.x86_64.rpm
+[ 8/23] liblrdf-0:0.5.0-34.fc44.x86_64  100% | 286.7 KiB/s |  29.2 KiB |  00m00s
+[ 9/23] libmicrodns-0:0.2.0-15.fc44.x86 100% | 340.6 KiB/s |  32.0 KiB |  00m00s
+[10/23] libdca-0:0.0.7-15.fc44.x86_64   100% | 957.0   B/s | 112.3 KiB |  02m00s
+>>> Curl error (28): Timeout was reached for https://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libdca-0.0.7-15.fc44.x86_64.rpm [Connection timed out after 30001 milliseconds] - https://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libdca-0.0.7-15.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for http://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libdca-0.0.7-15.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - http://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libdca-0.0.7-15.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libdca-0.0.7-15.fc44.x86_64.rpm [Connection timed out after 30001 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libdca-0.0.7-15.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for http://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libdca-0.0.7-15.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - http://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libdca-0.0.7-15.fc44.x86_64.rpm
+[11/23] libmpcdec-0:1.3.0^20110810svn47 100% | 397.9 KiB/s |  43.8 KiB |  00m00s
+[12/23] mjpegtools-libs-0:2.2.1-12.fc44 100% |   1.4 MiB/s | 177.2 KiB |  00m00s
+[13/23] zxing-cpp-0:2.2.1-6.fc44.x86_64 100% |   3.3 MiB/s | 641.0 KiB |  00m00s
+[14/23] ladspa-0:1.17-9.fc44.x86_64     100% | 497.2 KiB/s |  43.8 KiB |  00m00s
+[15/23] raptor2-0:2.0.15-50.fc44.x86_64 100% |   2.8 MiB/s | 218.3 KiB |  00m00s
+[16/23] yajl-0:2.1.0-40.fc44.x86_64     100% | 492.3 KiB/s |  39.4 KiB |  00m00s
+[17/23] onnxruntime-0:1.22.2-2.fc44.x86 100% |  19.8 MiB/s |   4.2 MiB |  00m00s
+[18/23] cpuinfo-0:24.09.26-2.git1e83a2f 100% | 661.6 KiB/s |  44.3 KiB |  00m00s
+[19/23] onnx-libs-0:1.17.0-12.fc44.x86_ 100% |  12.9 MiB/s |   1.0 MiB |  00m00s
+[20/23] librtmp-0:2.6-4.fc44.x86_64     100% | 219.8 KiB/s |  80.7 KiB |  00m00s
+[21/23] protobuf-0:3.19.6-20.fc44.x86_6 100% |  13.5 MiB/s |   1.0 MiB |  00m00s
+[22/23] re2-2:20251105-4.fc44.x86_64    100% |   3.1 MiB/s | 250.9 KiB |  00m00s
+[23/23] libva-utils-0:2.23.0-2.fc44.x86 100% |   3.9 KiB/s | 591.4 KiB |  02m30s
+>>> Curl error (28): Timeout was reached for https://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - https://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for http://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - http://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for https://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm [Connection timed out after 30001 milliseconds] - https://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for http://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - http://mirrors.ustc.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/releases/44/Everything/x86_64/os/Packages/l/libva-utils-2.23.0-2.fc44.x86_64.rpm
+--------------------------------------------------------------------------------
+[23/23] Total                           100% | 120.4 KiB/s |  18.0 MiB |  02m33s
+Running transaction
+Importing OpenPGP key 0xD651FF2E:
+ UserID     : "RPM Fusion free repository for Fedora (2020) <rpmfusion-buildsys@lists.rpmfusion.org>"
+ Fingerprint: E9A491A3DE247814E7E067EAE06F8ECDD651FF2E
+ From       : file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmfusion-free-fedora-44
+The key was successfully imported.
+[ 1/26] Verify package files            100% | 348.0   B/s |  23.0   B |  00m00s
+[ 2/26] Prepare transaction             100% | 182.0   B/s |  23.0   B |  00m00s
+[ 3/26] Installing protobuf-0:3.19.6-20 100% | 298.7 MiB/s |   3.3 MiB |  00m00s
+[ 4/26] Installing x264-libs-0:0.165-5. 100% | 395.4 MiB/s |   2.8 MiB |  00m00s
+[ 5/26] Installing onnx-libs-0:1.17.0-1 100% | 406.9 MiB/s |   3.7 MiB |  00m00s
+[ 6/26] Installing re2-2:20251105-4.fc4 100% | 198.0 MiB/s | 608.2 KiB |  00m00s
+[ 7/26] Installing cpuinfo-0:24.09.26-2 100% |   7.1 MiB/s | 109.0 KiB |  00m00s
+[ 8/26] Installing onnxruntime-0:1.22.2 100% | 429.7 MiB/s |  14.2 MiB |  00m00s
+[ 9/26] Installing librtmp-0:2.6-4.fc44 100% | 161.6 MiB/s | 165.5 KiB |  00m00s
+[10/26] Installing yajl-0:2.1.0-40.fc44 100% |   5.9 MiB/s |  84.2 KiB |  00m00s
+[11/26] Installing raptor2-0:2.0.15-50. 100% |  37.4 MiB/s | 574.0 KiB |  00m00s
+[12/26] Installing ladspa-0:1.17-9.fc44 100% |   9.6 MiB/s | 138.0 KiB |  00m00s
+[13/26] Installing liblrdf-0:0.5.0-34.f 100% |  57.0 MiB/s |  58.4 KiB |  00m00s
+[14/26] Installing zxing-cpp-0:2.2.1-6. 100% | 265.3 MiB/s |   1.3 MiB |  00m00s
+[15/26] Installing mjpegtools-libs-0:2. 100% | 106.4 MiB/s | 435.8 KiB |  00m00s
+[16/26] Installing libmpcdec-0:1.3.0^20 100% |  37.9 MiB/s |  77.7 KiB |  00m00s
+[17/26] Installing libmicrodns-0:0.2.0- 100% |  57.2 MiB/s |  58.6 KiB |  00m00s
+[18/26] Installing libdca-0:0.0.7-15.fc 100% | 106.8 MiB/s | 218.7 KiB |  00m00s
+[19/26] Installing libavtp-0:0.2.0-15.f 100% |  17.2 MiB/s |  17.6 KiB |  00m00s
+[20/26] Installing x265-libs-0:4.1-4.fc 100% | 697.6 MiB/s |  16.7 MiB |  00m00s
+[21/26] Installing vvenc-libs-0:1.13.1- 100% | 362.5 MiB/s |   3.3 MiB |  00m00s
+[22/26] Installing libavcodec-freeworld 100% | 405.0 MiB/s |  13.8 MiB |  00m00s
+[23/26] Installing gstreamer1-plugins-b 100% | 143.8 MiB/s |   1.2 MiB |  00m00s
+[24/26] Installing gstreamer1-plugins-u 100% | 133.2 MiB/s | 136.4 KiB |  00m00s
+[25/26] Installing libva-utils-0:2.23.0 100% |  17.3 MiB/s |   3.3 MiB |  00m00s
+Complete!
+Updating and loading repositories:
+Repositories loaded.
+Package      Arch   Version           Repository      Size
+Installing:
+ fprintd     x86_64 0:1.94.5-5.fc44   fedora     829.1 KiB
+ fprintd-pam x86_64 0:1.94.5-5.fc44   fedora      30.3 KiB
+Installing dependencies:
+ libfprint   x86_64 0:1.94.100-1.fc44 updates    949.6 KiB
+
+Transaction Summary:
+ Installing:         3 packages
+
+Total size of inbound packages is 596 KiB. Need to download 596 KiB.
+After this operation, 2 MiB extra will be used (install 2 MiB, remove 0 B).
+[1/3] fprintd-pam-0:1.94.5-5.fc44.x86_6 100% |  50.1 KiB/s |  22.6 KiB |  00m00s
+[2/3] fprintd-0:1.94.5-5.fc44.x86_64    100% | 306.4 KiB/s | 182.9 KiB |  00m01s
+[3/3] libfprint-0:1.94.100-1.fc44.x86_6 100% | 128.3 KiB/s | 390.6 KiB |  00m03s
+--------------------------------------------------------------------------------
+[3/3] Total                             100% | 128.5 KiB/s | 596.2 KiB |  00m05s
+Running transaction
+[1/5] Verify package files              100% | 750.0   B/s |   3.0   B |  00m00s
+[2/5] Prepare transaction               100% |  25.0   B/s |   3.0   B |  00m00s
+[3/5] Installing libfprint-0:1.94.100-1 100% | 155.0 MiB/s | 952.1 KiB |  00m00s
+[4/5] Installing fprintd-0:1.94.5-5.fc4 100% |  23.6 MiB/s | 844.5 KiB |  00m00s
+[5/5] Installing fprintd-pam-0:1.94.5-5 100% |  74.7 KiB/s |  31.4 KiB |  00m00s
+Complete!
+Updating and loading repositories:
+Repositories loaded.
+Total size of inbound packages is 345 MiB. Need to download 336 MiB.
+After this operation, 1 GiB extra will be used (install 1 GiB, remove 0 B).
+Package                             Arch   Version                           Repository                     Size
+Installing:
+ intel-media-driver                 x86_64 0:26.1.5-1.fc44                   rpmfusion-nonfree-updates  39.6 MiB
+ kmod-nvidia-7.2.11-200.fc44.x86_64 x86_64 3:615.78.08-1.fc44                @commandline               12.3 MiB
+ libva-nvidia-driver                x86_64 0:0.0.18-1.fc44                   updates                   166.7 KiB
+ xorg-x11-drv-nvidia-power          x86_64 3:615.78.08-1.fc44                rpmfusion-nonfree-updates   5.1 MiB
+Installing dependencies:
+ OpenCL-ICD-Loader                  x86_64 0:3.0.6-7.20250722gitad770a1.fc44 fedora                     90.6 KiB
+ egl-gbm                            x86_64 2:1.1.4-3.fc44                    updates                    29.2 KiB
+ egl-wayland                        x86_64 0:1.1.24-1.fc44                   updates                    87.4 KiB
+ egl-wayland2                       x86_64 0:1.0.2-1.fc44                    updates                   102.3 KiB
+ egl-x11                            x86_64 0:1.0.6-1.fc44                    updates                   173.6 KiB
+ grubby                             x86_64 0:8.40-88.fc44                    fedora                     45.9 KiB
+ nvidia-modprobe                    x86_64 3:615.78.08-1.fc44                rpmfusion-nonfree-updates  50.7 KiB
+ nvidia-settings                    x86_64 3:615.78.08-1.fc44                rpmfusion-nonfree-updates   4.5 MiB
+ opencl-filesystem                  noarch 0:1.0-24.fc44                     fedora                      0.0   B
+ xorg-x11-drv-nvidia                x86_64 3:615.78.08-1.fc44                rpmfusion-nonfree-updates 185.0 MiB
+ xorg-x11-drv-nvidia-cuda-libs      x86_64 3:615.78.08-1.fc44                rpmfusion-nonfree-updates 487.3 MiB
+ xorg-x11-drv-nvidia-libs           x86_64 3:615.78.08-1.fc44                rpmfusion-nonfree-updates 357.1 MiB
+
+Transaction Summary:
+ Installing:        16 packages
+
+[ 1/15] nvidia-modprobe-3:615.78.08-1.f 100% |  52.2 KiB/s |  32.1 KiB |  00m01s
+[ 2/15] nvidia-settings-3:615.78.08-1.f 100% | 859.8 KiB/s |   1.7 MiB |  00m02s
+[ 3/15] xorg-x11-drv-nvidia-power-3:615 100% |   5.1 MiB/s |   1.1 MiB |  00m00s
+[ 4/15] intel-media-driver-0:26.1.5-1.f 100% |  12.8 MiB/s |   8.0 MiB |  00m01s
+[ 5/15] xorg-x11-drv-nvidia-libs-3:615. 100% |  14.0 MiB/s |  99.8 MiB |  00m07s
+[ 6/15] xorg-x11-drv-nvidia-3:615.78.08 100% |  14.5 MiB/s | 133.3 MiB |  00m09s
+[ 7/15] libva-nvidia-driver-0:0.0.18-1. 100% |   2.6 KiB/s |  80.2 KiB |  00m31s
+>>> Curl error (28): Timeout was reached for https://mirrors.qlu.edu.cn/fedora/updates/44/Everything/x86_64/Packages/l/libva-nvidia-driver-0.0.18-1.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - https://mirrors.qlu.edu.cn/fedora/updates/44/Everything/x86_64/Packages/l/libva-nvidia-driver-0.0.18-1.fc44.x86_64.rpm
+[ 8/15] egl-wayland2-0:1.0.2-1.fc44.x86 100% | 310.7 KiB/s |  52.5 KiB |  00m00s
+[ 9/15] egl-x11-0:1.0.6-1.fc44.x86_64   100% | 342.0 KiB/s |  59.8 KiB |  00m00s
+[10/15] egl-gbm-2:1.1.4-3.fc44.x86_64   100% | 741.0   B/s |  21.8 KiB |  00m30s
+>>> Curl error (28): Timeout was reached for https://mirrors.qlu.edu.cn/fedora/updates/44/Everything/x86_64/Packages/e/egl-gbm-1.1.4-3.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - https://mirrors.qlu.edu.cn/fedora/updates/44/Everything/x86_64/Packages/e/egl-gbm-1.1.4-3.fc44.x86_64.rpm
+[11/15] opencl-filesystem-0:1.0-24.fc44 100% |  37.7 KiB/s |   7.6 KiB |  00m00s
+[12/15] OpenCL-ICD-Loader-0:3.0.6-7.202 100% | 501.5 KiB/s |  36.1 KiB |  00m00s
+[13/15] grubby-0:8.40-88.fc44.x86_64    100% | 244.5 KiB/s |  25.4 KiB |  00m00s
+[14/15] egl-wayland-0:1.1.24-1.fc44.x86 100% |   1.5 KiB/s |  46.3 KiB |  00m30s
+>>> Curl error (28): Timeout was reached for https://mirrors.qlu.edu.cn/fedora/updates/44/Everything/x86_64/Packages/e/egl-wayland-1.1.24-1.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - https://mirrors.qlu.edu.cn/fedora/updates/44/Everything/x86_64/Packages/e/egl-wayland-1.1.24-1.fc44.x86_64.rpm
+[15/15] xorg-x11-drv-nvidia-cuda-libs-3 100% |  14.2 MiB/s |  91.5 MiB |  00m06s
+--------------------------------------------------------------------------------
+[15/15] Total                           100% |   7.9 MiB/s | 335.8 MiB |  00m42s
+Running transaction
+Importing OpenPGP key 0x94843C65:
+ UserID     : "RPM Fusion nonfree repository for Fedora (2020) <rpmfusion-buildsys@lists.rpmfusion.org>"
+ Fingerprint: 79BDB88F9BBF73910FD4095B6A2AF96194843C65
+ From       : file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rpmfusion-nonfree-fedora-44
+The key was successfully imported.
+[ 1/18] Verify package files            100% |  12.0   B/s |  16.0   B |  00m01s
+[ 2/18] Prepare transaction             100% | 128.0   B/s |  16.0   B |  00m00s
+[ 3/18] Installing grubby-0:8.40-88.fc4 100% |   1.8 MiB/s |  47.0 KiB |  00m00s
+[ 4/18] Installing OpenCL-ICD-Loader-0: 100% |  44.8 MiB/s |  91.7 KiB |  00m00s
+[ 5/18] Installing opencl-filesystem-0: 100% |   0.0   B/s | 380.0   B |  00m00s
+[ 6/18] Installing xorg-x11-drv-nvidia- 100% | 557.6 MiB/s | 487.4 MiB |  00m01s
+[ 7/18] Installing egl-x11-0:1.0.6-1.fc 100% |  57.3 MiB/s | 176.0 KiB |  00m00s
+[ 8/18] Installing egl-wayland2-0:1.0.2 100% |  50.7 MiB/s | 103.9 KiB |  00m00s
+[ 9/18] Installing egl-wayland-0:1.1.24 100% |  43.4 MiB/s |  89.0 KiB |  00m00s
+[10/18] Installing egl-gbm-2:1.1.4-3.fc 100% |  14.9 MiB/s |  30.5 KiB |  00m00s
+[11/18] Installing xorg-x11-drv-nvidia- 100% | 514.6 MiB/s | 357.1 MiB |  00m01s
+[12/18] Installing nvidia-modprobe-3:61 100% |   3.9 MiB/s |  51.8 KiB |  00m00s
+[13/18] Installing kmod-nvidia-7.2.11-2 100% |   2.2 MiB/s |  12.3 MiB |  00m06s
+[14/18] Installing xorg-x11-drv-nvidia- 100% | 536.2 MiB/s | 185.0 MiB |  00m00s
+[15/18] Installing nvidia-settings-3:61 100% | 171.2 MiB/s |   4.5 MiB |  00m00s
+[16/18] Installing xorg-x11-drv-nvidia- 100% |  85.4 MiB/s |   5.1 MiB |  00m00s
+>>> Running %post scriptlet: xorg-x11-drv-nvidia-power-3:615.78.08-1.fc44.x86_64
+>>> Finished %post scriptlet: xorg-x11-drv-nvidia-power-3:615.78.08-1.fc44.x86_64
+>>> Scriptlet output:
+>>> Created symlink '/etc/systemd/system/systemd-hibernate.service.wants/nvidia-hibernate.service' → '/usr/lib/systemd/system/nvidia-hibernate.service'.
+>>> Created symlink '/etc/systemd/system/systemd-suspend-then-hibernate.service.wants/nvidia-suspend-then-hibernate.service' → '/usr/lib/systemd/system/nvidia-suspend-then-hibernate.service'.
+>>> Created symlink '/etc/systemd/system/multi-user.target.wants/nvidia-powerd.service' → '/usr/lib/systemd/system/nvidia-powerd.service'.
+>>> Created symlink '/etc/systemd/system/systemd-suspend.service.wants/nvidia-resume.service' → '/usr/lib/systemd/system/nvidia-resume.service'.
+>>> Created symlink '/etc/systemd/system/systemd-hibernate.service.wants/nvidia-resume.service' → '/usr/lib/systemd/system/nvidia-resume.service'.
+>>> Created symlink '/etc/systemd/system/systemd-suspend-then-hibernate.service.wants/nvidia-resume.service' → '/usr/lib/systemd/system/nvidia-resume.service'.
+>>> Created symlink '/etc/systemd/system/systemd-suspend.service.wants/nvidia-suspend.service' → '/usr/lib/systemd/system/nvidia-suspend.service'.
+>>> 
+[17/18] Installing libva-nvidia-driver- 100% | 164.1 MiB/s | 168.0 KiB |  00m00s
+[18/18] Installing intel-media-driver-0 100% | 150.1 MiB/s |  39.6 MiB |  00m00s
+Warning: skipped OpenPGP checks for 1 package from repository: @commandline
+Complete!
+Removed 47 files, 31 directories (total of 171 MiB). 0 errors occurred.
+Updating and loading repositories:
+ Fedora 44 - x86_64 - Updates Archive   100% |  19.1 MiB/s |  46.9 MiB |  00m02s
+ Fedora 44 - x86_64 - Updates           100% |   2.7 MiB/s |  12.7 MiB |  00m05s
+ RPM Fusion for Fedora 44 - Nonfree - U 100% |   9.2 KiB/s |  47.0 KiB |  00m05s
+ RPM Fusion for Fedora 44 - Nonfree     100% |  17.4 KiB/s |  94.9 KiB |  00m05s
+ RPM Fusion for Fedora 44 - Free - Upda 100% |  14.9 KiB/s |  78.6 KiB |  00m05s
+ RPM Fusion for Fedora 44 - Free        100% |  28.8 KiB/s | 152.4 KiB |  00m05s
+ Fedora 44 openh264 (From Cisco) - x86_ 100% |   1.0 KiB/s |   5.3 KiB |  00m05s
+ Fedora 44 - x86_64                     100% |   7.0 MiB/s |  38.5 MiB |  00m05s
+Repositories loaded.
+Package "gamemode-1.8.2-4.fc44.x86_64" is already installed.
+
+Total size of inbound packages is 5 MiB. Need to download 5 MiB.
+After this operation, 17 MiB extra will be used (install 17 MiB, remove 0 B).
+Package                  Arch   Version                                Repository      Size
+Changing reason:
+ gamemode                x86_64 0:1.8.2-4.fc44                         @System    294.8 KiB
+   External User -> User                                                                   
+Installing:
+ gamescope               x86_64 0:3.16.29-1.fc44                       updates      4.0 MiB
+ mangohud                x86_64 0:0.8.3~rc1-2.fc44                     fedora       9.0 MiB
+ steam-devices           noarch 0:1.0.0.101^git20260625.22ec85e-1.fc44 updates     15.5 KiB
+Installing dependencies:
+ glfw                    x86_64 1:3.4-6.fc44                           fedora     386.1 KiB
+ jsoncpp                 x86_64 0:1.9.6-3.fc44                         fedora     285.6 KiB
+ libXmu                  x86_64 0:1.2.1-5.fc44                         fedora     191.1 KiB
+ libeis                  x86_64 0:1.6.0-2.fc44                         updates    127.4 KiB
+ libliftoff              x86_64 0:0.5.0-5.fc44                         fedora      43.1 KiB
+ luajit                  x86_64 0:2.1.1767980792-1.fc44                fedora       1.4 MiB
+ openvr-api              x86_64 0:2.12.14-2.fc44                       fedora      70.3 KiB
+ spdlog                  x86_64 0:1.15.3-4.fc44                        fedora     380.4 KiB
+ wlroots                 x86_64 0:0.20.2-1.fc44                        updates      1.4 MiB
+ xcb-util-errors         x86_64 0:1.0.1-7.fc44                         fedora      40.3 KiB
+
+Transaction Summary:
+ Installing:        13 packages
+ Changing reason:    1 package
+
+[ 1/13] libliftoff-0:0.5.0-5.fc44.x86_6 100% | 120.6 KiB/s |  26.8 KiB |  00m00s
+[ 2/13] libXmu-0:1.2.1-5.fc44.x86_64    100% | 240.4 KiB/s |  79.6 KiB |  00m00s
+[ 3/13] openvr-api-0:2.12.14-2.fc44.x86 100% | 347.0 KiB/s |  33.7 KiB |  00m00s
+[ 4/13] luajit-0:2.1.1767980792-1.fc44. 100% |   1.1 MiB/s | 442.5 KiB |  00m00s
+[ 5/13] jsoncpp-0:1.9.6-3.fc44.x86_64   100% | 536.7 KiB/s | 110.0 KiB |  00m00s
+[ 6/13] gamescope-0:3.16.29-1.fc44.x86_ 100% |   1.8 MiB/s |   1.2 MiB |  00m01s
+[ 7/13] spdlog-0:1.15.3-4.fc44.x86_64   100% |   1.7 MiB/s | 128.7 KiB |  00m00s
+[ 8/13] glfw-1:3.4-6.fc44.x86_64        100% |   1.2 MiB/s | 131.6 KiB |  00m00s
+[ 9/13] steam-devices-0:1.0.0.101^git20 100% | 167.9 KiB/s |  11.9 KiB |  00m00s
+[10/13] libeis-0:1.6.0-2.fc44.x86_64    100% | 673.6 KiB/s |  58.6 KiB |  00m00s
+[11/13] mangohud-0:0.8.3~rc1-2.fc44.x86 100% |   7.2 MiB/s |   2.0 MiB |  00m00s
+[12/13] wlroots-0:0.20.2-1.fc44.x86_64  100% |   5.1 MiB/s | 498.2 KiB |  00m00s
+[13/13] xcb-util-errors-0:1.0.1-7.fc44. 100% | 254.0 KiB/s |  19.8 KiB |  00m00s
+--------------------------------------------------------------------------------
+[13/13] Total                           100% |   5.2 MiB/s |   4.7 MiB |  00m01s
+Running transaction
+[ 1/16] Verify package files            100% | 722.0   B/s |  13.0   B |  00m00s
+[ 2/16] Prepare transaction             100% | 105.0   B/s |  13.0   B |  00m00s
+[ 3/16] Installing libliftoff-0:0.5.0-5 100% |  21.7 MiB/s |  44.5 KiB |  00m00s
+[ 4/16] Installing xcb-util-errors-0:1. 100% |  40.5 MiB/s |  41.5 KiB |  00m00s
+[ 5/16] Installing wlroots-0:0.20.2-1.f 100% | 340.5 MiB/s |   1.4 MiB |  00m00s
+[ 6/16] Installing libeis-0:1.6.0-2.fc4 100% |  62.7 MiB/s | 128.5 KiB |  00m00s
+[ 7/16] Installing spdlog-0:1.15.3-4.fc 100% | 124.3 MiB/s | 381.8 KiB |  00m00s
+[ 8/16] Installing glfw-1:3.4-6.fc44.x8 100% | 189.2 MiB/s | 387.4 KiB |  00m00s
+[ 9/16] Installing jsoncpp-0:1.9.6-3.fc 100% | 140.2 MiB/s | 287.1 KiB |  00m00s
+[10/16] Installing openvr-api-0:2.12.14 100% |  69.9 MiB/s |  71.5 KiB |  00m00s
+[11/16] Installing luajit-0:2.1.1767980 100% |  77.2 MiB/s |   1.4 MiB |  00m00s
+[12/16] Installing libXmu-0:1.2.1-5.fc4 100% |  62.8 MiB/s | 193.0 KiB |  00m00s
+[13/16] Installing gamescope-0:3.16.29- 100% | 160.6 MiB/s |   4.0 MiB |  00m00s
+[14/16] Installing mangohud-0:0.8.3~rc1 100% | 290.3 MiB/s |   9.0 MiB |  00m00s
+[15/16] Installing steam-devices-0:1.0. 100% | 120.2 KiB/s |  16.2 KiB |  00m00s
+Complete!
+Removed 45 files, 26 directories (total of 171 MiB). 0 errors occurred.
+After this operation, 342 MiB will be freed (install 0 B, remove 342 MiB).
+Running transaction
+Package            Arch   Version        Repository      Size
+Removing:
+ firefox           x86_64 0:158.0-1.fc44 <unknown>  293.2 MiB
+Removing dependent packages:
+ firefox-langpacks x86_64 0:158.0-1.fc44 <unknown>   48.7 MiB
+
+Transaction Summary:
+ Removing:           2 packages
+
+[1/3] Prepare transaction               100% |  28.0   B/s |   2.0   B |  00m00s
+[2/3] Removing firefox-langpacks-0:158. 100% |   6.2 KiB/s | 115.0   B |  00m00s
+[3/3] Removing firefox-0:158.0-1.fc44.x 100% | 840.0   B/s |  95.0   B |  00m00s
+Complete!
+Removed 0 files, 0 directories (total of 0 B). 0 errors occurred.
+--> 0feae81dd862
+[4/4] STEP 10/18: RUN --mount=type=cache,dst=/var/cache/libdnf5     --mount=type=tmpfs,dst=/tmp     dnf5 -y install --setopt=install_weak_deps=False         ptyxis         nautilus         gnome-text-editor         loupe         papers         gnome-calculator         fcitx5         fcitx5-hangul         fcitx5-gtk         fcitx5-qt         fcitx5-configtool         xorg-x11-server-Xwayland
+Updating and loading repositories:
+ Fedora 44 - x86_64 - Updates Archive   100% |   1.5 MiB/s |  46.9 MiB |  00m31s
+ RPM Fusion for Fedora 44 - Nonfree - U 100% | 733.0   B/s |  47.0 KiB |  01m06s
+ RPM Fusion for Fedora 44 - Nonfree     100% |   1.4 KiB/s |  94.9 KiB |  01m06s
+ RPM Fusion for Fedora 44 - Free - Upda 100% |   1.2 KiB/s |  78.6 KiB |  01m07s
+ RPM Fusion for Fedora 44 - Free        100% |   2.3 KiB/s | 152.4 KiB |  01m07s
+ Fedora 44 openh264 (From Cisco) - x86_ 100% |  77.0   B/s |   5.2 KiB |  01m08s
+>>> Status code: 404 for https://codecs.fedoraproject.org/openh264/44/x86_64/repodata/ef464269998980f44c8b2c94cf023d2343751c9c2325e8197a457b378f451226-primary.xml.zst (IP: 54.205.131.252) - https://codecs.fedoraproject.org/openh264/44/x86_64/repodata/ef464269998980f44c8b2c94cf023d2343751c9c2325e8197a457b378f451226-primary.xml.zst
+>>> Status code: 404 for https://codecs.fedoraproject.org/openh264/44/x86_64/repodata/ef464269998980f44c8b2c94cf023d2343751c9c2325e8197a457b378f451226-primary.xml.zst (IP: 54.205.131.252) - https://codecs.fedoraproject.org/openh264/44/x86_64/repodata/ef464269998980f44c8b2c94cf023d2343751c9c2325e8197a457b378f451226-primary.xml.zst
+>>> Status code: 404 for https://codecs.fedoraproject.org/openh264/44/x86_64/repodata/ef464269998980f44c8b2c94cf023d2343751c9c2325e8197a457b378f451226-primary.xml.zst (IP: 54.205.131.252) - https://codecs.fedoraproject.org/openh264/44/x86_64/repodata/ef464269998980f44c8b2c94cf023d2343751c9c2325e8197a457b378f451226-primary.xml.zst
+>>> Status code: 404 for https://codecs.fedoraproject.org/openh264/44/x86_64/repodata/ef464269998980f44c8b2c94cf023d2343751c9c2325e8197a457b378f451226-primary.xml.zst (IP: 54.205.131.252) - https://codecs.fedoraproject.org/openh264/44/x86_64/repodata/ef464269998980f44c8b2c94cf023d2343751c9c2325e8197a457b378f451226-primary.xml.zst
+>>> No more mirrors to try - All mirrors were already tried without success
+ Fedora 44 - x86_64                     100% | 547.1 KiB/s |  36.9 MiB |  01m09s
+ Fedora 44 - x86_64 - Updates           100% | 171.9 KiB/s |  12.1 MiB |  01m12s
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/repodata/repomd.xml [Connection timed out after 30000 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/repodata/repomd.xml
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/repodata/f91cb3323268adf1cd767ba685042fe898e0698e45d53d603d053b62b7fa0494-primary.xml.zck [Connection timed out after 30000 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/repodata/f91cb3323268adf1cd767ba685042fe898e0698e45d53d603d053b62b7fa0494-primary.xml.zck
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/repodata/e43af6c409ab4a1552a595ffae9bd8cd72cf4b059180da53b2e1a440d694db53-comps-Everything.x86_64.xml.zst [Connection timed out after 30000 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/repodata/e43af6c409ab4a1552a595ffae9bd8cd72cf4b059180da53b2e1a440d694db53-comps-Everything.x86_64.xml.zst
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/repodata/e1d3402144e7befb3df586c59d19ef85ce3232352b62e9633644bfa07e15dd71-updateinfo.xml.zck [Connection timed out after 30001 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/repodata/e1d3402144e7befb3df586c59d19ef85ce3232352b62e9633644bfa07e15dd71-updateinfo.xml.zck
+Repositories loaded.
+Package "xorg-x11-server-Xwayland-24.1.14-1.fc44.x86_64" is already installed.
+
+Total size of inbound packages is 32 MiB. Need to download 32 MiB.
+After this operation, 116 MiB extra will be used (install 116 MiB, remove 0 B).
+Package                        Arch   Version          Repository      Size
+Changing reason:
+ xorg-x11-server-Xwayland      x86_64 0:24.1.14-1.fc44 @System      2.4 MiB
+   External User -> User                                                   
+Installing:
+ fcitx5                        x86_64 0:5.1.23-1.fc44  updates      4.8 MiB
+ fcitx5-configtool             x86_64 0:5.1.16-1.fc44  updates    993.8 KiB
+ fcitx5-gtk                    x86_64 0:5.1.7-1.fc44   updates     70.4 KiB
+ fcitx5-hangul                 x86_64 0:5.1.11-1.fc44  updates    203.5 KiB
+ fcitx5-qt                     x86_64 0:5.1.16-1.fc44  updates     26.0 KiB
+ gnome-calculator              x86_64 0:50.0-1.fc44    fedora       8.1 MiB
+ gnome-text-editor             x86_64 0:50.1-1.fc44    updates      2.5 MiB
+ loupe                         x86_64 0:50.0-1.fc44    fedora       7.5 MiB
+ nautilus                      x86_64 0:50.4-1.fc44    updates     13.9 MiB
+ papers                        x86_64 0:49.8-1.fc44    updates     14.6 MiB
+ ptyxis                        x86_64 0:50.1-2.fc44    updates      2.1 MiB
+Installing dependencies:
+ djvulibre-libs                x86_64 0:3.5.30-1.fc44  updates      1.8 MiB
+ editorconfig-libs             x86_64 0:0.12.11-1.fc44 updates     38.1 KiB
+ fcitx5-data                   noarch 0:5.1.23-1.fc44  updates     11.0 MiB
+ fcitx5-gtk3                   x86_64 0:5.1.7-1.fc44   updates    120.5 KiB
+ fcitx5-gtk4                   x86_64 0:5.1.7-1.fc44   updates    116.5 KiB
+ fcitx5-libs                   x86_64 0:5.1.23-1.fc44  updates      1.9 MiB
+ fcitx5-qt-libfcitx5qt6widgets x86_64 0:5.1.16-1.fc44  updates    107.3 KiB
+ fcitx5-qt-qt6gui              x86_64 0:5.1.16-1.fc44  updates    284.5 KiB
+ fcitx5-qt6                    x86_64 0:5.1.16-1.fc44  updates    757.6 KiB
+ geocode-glib                  x86_64 0:3.26.4-15.fc44 fedora     226.8 KiB
+ glycin-gtk4-libs              x86_64 0:2.1.5-1.fc44   updates    286.2 KiB
+ gnome-autoar                  x86_64 0:0.4.5-4.fc44   fedora     150.8 KiB
+ gnome-desktop3                x86_64 0:44.5-1.fc44    fedora       3.0 MiB
+ gnome-desktop4                x86_64 0:44.5-1.fc44    fedora     471.2 KiB
+ gtksourceview5                x86_64 0:5.20.0-1.fc44  fedora       4.6 MiB
+ gweather-locations            x86_64 0:2026.2-1.fc44  fedora      20.3 MiB
+ gweather-locations-common     noarch 0:2026.2-1.fc44  fedora       1.6 MiB
+ kde-filesystem                x86_64 0:5-7.fc44       fedora     774.0   B
+ kf6-filesystem                x86_64 0:6.31.0-1.fc44  updates      1.5 KiB
+ kf6-kitemviews                x86_64 0:6.31.0-1.fc44  updates    380.3 KiB
+ kf6-kwidgetsaddons            x86_64 0:6.31.0-1.fc44  updates      5.0 MiB
+ libgee                        x86_64 0:0.20.8-3.fc44  fedora     952.6 KiB
+ libgweather                   x86_64 0:4.6.0-1.fc44   fedora       1.8 MiB
+ libmpc                        x86_64 0:1.4.1-1.fc44   updates    168.7 KiB
+ libspelling                   x86_64 0:0.4.10-1.fc44  fedora     244.8 KiB
+ nautilus-extensions           x86_64 0:50.4-1.fc44    updates     82.6 KiB
+ papers-libs                   x86_64 0:49.8-1.fc44    updates    936.3 KiB
+ papers-previewer              x86_64 0:49.8-1.fc44    updates     51.5 KiB
+ papers-thumbnailer            x86_64 0:49.8-1.fc44    updates      1.8 MiB
+ simdutf                       x86_64 0:7.2.1-3.fc44   fedora     611.3 KiB
+ vte-profile                   x86_64 0:0.84.1-1.fc44  updates     52.1 KiB
+ vte291                        x86_64 0:0.84.1-1.fc44  updates      1.2 MiB
+ vte291-gtk4                   x86_64 0:0.84.1-1.fc44  updates      1.0 MiB
+ xcb-imdkit                    x86_64 0:1.0.9-6.fc44   fedora     548.1 KiB
+
+Transaction Summary:
+ Installing:        45 packages
+ Changing reason:    1 package
+
+[ 1/45] geocode-glib-0:3.26.4-15.fc44.x 100% | 143.5 KiB/s |  71.3 KiB |  00m00s
+[ 2/45] libgweather-0:4.6.0-1.fc44.x86_ 100% | 440.8 KiB/s | 352.6 KiB |  00m01s
+[ 3/45] loupe-0:50.0-1.fc44.x86_64      100% |   2.1 MiB/s |   2.5 MiB |  00m01s
+[ 4/45] gnome-autoar-0:0.4.5-4.fc44.x86 100% | 621.8 KiB/s |  57.2 KiB |  00m00s
+[ 5/45] gnome-desktop4-0:44.5-1.fc44.x8 100% |   2.2 MiB/s | 153.3 KiB |  00m00s
+[ 6/45] gnome-desktop3-0:44.5-1.fc44.x8 100% |   6.2 MiB/s | 663.3 KiB |  00m00s
+[ 7/45] ptyxis-0:50.1-2.fc44.x86_64     100% |  15.6 KiB/s | 512.0 KiB |  00m33s
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/Packages/p/ptyxis-50.1-2.fc44.x86_64.rpm [Connection timed out after 30000 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/Packages/p/ptyxis-50.1-2.fc44.x86_64.rpm
+[ 8/45] gtksourceview5-0:5.20.0-1.fc44. 100% |  10.0 MiB/s | 987.0 KiB |  00m00s
+[ 9/45] libspelling-0:0.4.10-1.fc44.x86 100% |   1.5 MiB/s | 112.6 KiB |  00m00s
+[10/45] gnome-text-editor-0:50.1-1.fc44 100% |  24.5 KiB/s | 785.5 KiB |  00m32s
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/Packages/g/gnome-text-editor-50.1-1.fc44.x86_64.rpm [Connection timed out after 30001 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/Packages/g/gnome-text-editor-50.1-1.fc44.x86_64.rpm
+[11/45] gnome-calculator-0:50.0-1.fc44. 100% |  13.9 MiB/s |   1.7 MiB |  00m00s
+[12/45] libgee-0:0.20.8-3.fc44.x86_64   100% |   4.0 MiB/s | 284.5 KiB |  00m00s
+[13/45] fcitx5-0:5.1.23-1.fc44.x86_64   100% |   1.4 MiB/s |   1.4 MiB |  00m01s
+[14/45] xcb-imdkit-0:1.0.9-6.fc44.x86_6 100% |   4.6 MiB/s | 333.1 KiB |  00m00s
+[15/45] fcitx5-hangul-0:5.1.11-1.fc44.x 100% | 325.6 KiB/s |  97.3 KiB |  00m00s
+[16/45] fcitx5-gtk-0:5.1.7-1.fc44.x86_6 100% | 136.2 KiB/s |  34.5 KiB |  00m00s
+[17/45] fcitx5-qt-0:5.1.16-1.fc44.x86_6 100% |  77.0 KiB/s |  19.6 KiB |  00m00s
+[18/45] papers-0:49.8-1.fc44.x86_64     100% |   1.1 MiB/s |   3.9 MiB |  00m04s
+[19/45] nautilus-0:50.4-1.fc44.x86_64   100% |  70.6 KiB/s |   2.5 MiB |  00m37s
+>>> Curl error (28): Timeout was reached for https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/Packages/n/nautilus-50.4-1.fc44.x86_64.rpm [Connection timed out after 30001 milliseconds] - https://mirrors.tuna.tsinghua.edu.cn/fedora/updates/44/Everything/x86_64/Packages/n/nautilus-50.4-1.fc44.x86_64.rpm
+[20/45] simdutf-0:7.2.1-3.fc44.x86_64   100% |   2.4 MiB/s | 167.2 KiB |  00m00s
+[21/45] vte291-gtk4-0:0.84.1-1.fc44.x86 100% | 834.5 KiB/s | 424.7 KiB |  00m01s
+[22/45] fcitx5-configtool-0:5.1.16-1.fc 100% | 138.0 KiB/s | 322.7 KiB |  00m02s
+[23/45] papers-previewer-0:49.8-1.fc44. 100% | 127.0 KiB/s |  31.9 KiB |  00m00s
+[24/45] glycin-gtk4-libs-0:2.1.5-1.fc44 100% | 572.1 KiB/s | 147.6 KiB |  00m00s
+[25/45] papers-libs-0:49.8-1.fc44.x86_6 100% | 336.0 KiB/s | 306.4 KiB |  00m01s
+[26/45] nautilus-extensions-0:50.4-1.fc 100% | 132.8 KiB/s |  36.4 KiB |  00m00s
+[27/45] editorconfig-libs-0:0.12.11-1.f 100% | 113.3 KiB/s |  28.0 KiB |  00m00s
+[28/45] papers-thumbnailer-0:49.8-1.fc4 100% | 565.3 KiB/s | 643.9 KiB |  00m01s
+[29/45] fcitx5-qt-libfcitx5qt6widgets-0 100% | 186.5 KiB/s |  47.4 KiB |  00m00s
+[30/45] fcitx5-qt-qt6gui-0:5.1.16-1.fc4 100% | 318.8 KiB/s | 104.9 KiB |  00m00s
+[31/45] fcitx5-qt6-0:5.1.16-1.fc44.x86_ 100% | 342.4 KiB/s | 249.9 KiB |  00m01s
+[32/45] fcitx5-libs-0:5.1.23-1.fc44.x86 100% | 334.4 KiB/s | 657.4 KiB |  00m02s
+[33/45] kf6-kitemviews-0:6.31.0-1.fc44. 100% | 333.8 KiB/s | 167.2 KiB |  00m01s
+[34/45] gweather-locations-0:2026.2-1.f 100% |  21.7 MiB/s |   2.8 MiB |  00m00s
+[35/45] gweather-locations-common-0:202 100% |   2.8 MiB/s | 187.5 KiB |  00m00s
+[36/45] libmpc-0:1.4.1-1.fc44.x86_64    100% | 151.6 KiB/s |  75.5 KiB |  00m00s
+[37/45] vte291-0:0.84.1-1.fc44.x86_64   100% | 310.3 KiB/s | 503.6 KiB |  00m02s
+[38/45] vte-profile-0:0.84.1-1.fc44.x86 100% | 122.5 KiB/s |  27.8 KiB |  00m00s
+[39/45] fcitx5-data-0:5.1.23-1.fc44.noa 100% |   1.4 MiB/s |   6.8 MiB |  00m05s
+[40/45] kf6-filesystem-0:6.31.0-1.fc44. 100% |  35.3 KiB/s |  11.2 KiB |  00m00s
+[41/45] kde-filesystem-0:5-7.fc44.x86_6 100% | 590.8 KiB/s |  37.8 KiB |  00m00s
+[42/45] fcitx5-gtk4-0:5.1.7-1.fc44.x86_ 100% | 150.0 KiB/s |  53.4 KiB |  00m00s
+[43/45] kf6-kwidgetsaddons-0:6.31.0-1.f 100% | 486.1 KiB/s |   1.7 MiB |  00m04s
+[44/45] fcitx5-gtk3-0:5.1.7-1.fc44.x86_ 100% | 125.9 KiB/s |  54.0 KiB |  00m00s
+[45/45] djvulibre-libs-0:3.5.30-1.fc44. 100% | 303.1 KiB/s | 701.8 KiB |  00m02s
+--------------------------------------------------------------------------------
+[45/45] Total                           100% | 728.2 KiB/s |  32.5 MiB |  00m46s
+Running transaction
+[ 1/48] Verify package files            100% | 416.0   B/s |  45.0   B |  00m00s
+[ 2/48] Prepare transaction             100% | 319.0   B/s |  45.0   B |  00m00s
+[ 3/48] Installing fcitx5-libs-0:5.1.23 100% | 211.2 MiB/s |   1.9 MiB |  00m00s
+[ 4/48] Installing gtksourceview5-0:5.2 100% | 140.0 MiB/s |   4.6 MiB |  00m00s
+[ 5/48] Installing fcitx5-qt6-0:5.1.16- 100% |  46.4 MiB/s | 759.7 KiB |  00m00s
+[ 6/48] Installing libspelling-0:0.4.10 100% |  17.8 MiB/s | 255.3 KiB |  00m00s
+[ 7/48] Installing fcitx5-qt-libfcitx5q 100% |  53.0 MiB/s | 108.5 KiB |  00m00s
+[ 8/48] Installing simdutf-0:7.2.1-3.fc 100% | 199.5 MiB/s | 612.8 KiB |  00m00s
+[ 9/48] Installing fcitx5-qt-qt6gui-0:5 100% |  56.4 MiB/s | 288.7 KiB |  00m00s
+[10/48] Installing fcitx5-gtk-0:5.1.7-1 100% |  35.1 MiB/s |  71.9 KiB |  00m00s
+[11/48] Installing fcitx5-gtk4-0:5.1.7- 100% |   8.8 MiB/s | 117.7 KiB |  00m00s
+[12/48] Installing fcitx5-gtk3-0:5.1.7- 100% |   9.1 MiB/s | 121.6 KiB |  00m00s
+[13/48] Installing kde-filesystem-0:5-7 100% |   3.8 MiB/s |  54.2 KiB |  00m00s
+[14/48] Installing kf6-filesystem-0:6.3 100% |   3.6 MiB/s |   3.7 KiB |  00m00s
+[15/48] Installing kf6-kitemviews-0:6.3 100% |  20.5 MiB/s | 398.8 KiB |  00m00s
+[16/48] Installing kf6-kwidgetsaddons-0 100% | 201.1 MiB/s |   5.0 MiB |  00m00s
+[17/48] Installing djvulibre-libs-0:3.5 100% | 308.0 MiB/s |   1.8 MiB |  00m00s
+[18/48] Installing papers-libs-0:49.8-1 100% | 153.3 MiB/s | 941.6 KiB |  00m00s
+[19/48] Installing papers-previewer-0:4 100% |   3.9 MiB/s |  52.5 KiB |  00m00s
+[20/48] Installing papers-thumbnailer-0 100% | 108.3 MiB/s |   1.8 MiB |  00m00s
+[21/48] Installing vte-profile-0:0.84.1 100% |  52.1 MiB/s |  53.4 KiB |  00m00s
+[22/48] Installing vte291-0:0.84.1-1.fc 100% |  62.2 MiB/s |   1.2 MiB |  00m00s
+[23/48] Installing vte291-gtk4-0:0.84.1 100% | 249.0 MiB/s |   1.0 MiB |  00m00s
+[24/48] Installing libmpc-0:1.4.1-1.fc4 100% |  83.2 MiB/s | 170.4 KiB |  00m00s
+[25/48] Installing gweather-locations-c 100% | 539.5 MiB/s |   1.6 MiB |  00m00s
+[26/48] Installing gweather-locations-0 100% | 383.8 MiB/s |  20.3 MiB |  00m00s
+[27/48] Installing editorconfig-libs-0: 100% |  19.5 MiB/s |  40.0 KiB |  00m00s
+[28/48] Installing nautilus-extensions- 100% |  41.1 MiB/s |  84.2 KiB |  00m00s
+[29/48] Installing glycin-gtk4-libs-0:2 100% | 140.1 MiB/s | 287.0 KiB |  00m00s
+[30/48] Installing xcb-imdkit-0:1.0.9-6 100% | 178.9 MiB/s | 549.5 KiB |  00m00s
+[31/48] Installing fcitx5-0:5.1.23-1.fc 100% | 101.1 MiB/s |   4.9 MiB |  00m00s
+[32/48] Installing fcitx5-data-0:5.1.23 100% | 334.7 MiB/s |  11.0 MiB |  00m00s
+[33/48] Installing libgee-0:0.20.8-3.fc 100% | 233.1 MiB/s | 954.7 KiB |  00m00s
+[34/48] Installing gnome-desktop3-0:44. 100% | 100.0 MiB/s |   3.0 MiB |  00m00s
+[35/48] Installing gnome-desktop4-0:44. 100% |  92.7 MiB/s | 474.8 KiB |  00m00s
+[36/48] Installing gnome-autoar-0:0.4.5 100% |  49.9 MiB/s | 153.3 KiB |  00m00s
+[37/48] Installing geocode-glib-0:3.26. 100% |  75.1 MiB/s | 230.7 KiB |  00m00s
+[38/48] Installing libgweather-0:4.6.0- 100% |  84.9 MiB/s |   1.8 MiB |  00m00s
+[39/48] Installing loupe-0:50.0-1.fc44. 100% | 148.5 MiB/s |   7.6 MiB |  00m00s
+[40/48] Installing nautilus-0:50.4-1.fc 100% | 232.9 MiB/s |  14.0 MiB |  00m00s
+[41/48] Installing gnome-calculator-0:5 100% | 105.6 MiB/s |   8.3 MiB |  00m00s
+[42/48] Installing fcitx5-hangul-0:5.1. 100% |  34.6 MiB/s | 212.4 KiB |  00m00s
+[43/48] Installing gnome-text-editor-0: 100% |  72.1 MiB/s |   2.6 MiB |  00m00s
+[44/48] Installing ptyxis-0:50.1-2.fc44 100% |  73.2 MiB/s |   2.1 MiB |  00m00s
+[45/48] Installing papers-0:49.8-1.fc44 100% | 115.3 MiB/s |  15.0 MiB |  00m00s
+[46/48] Installing fcitx5-configtool-0: 100% |  54.2 MiB/s | 998.2 KiB |  00m00s
+[47/48] Installing fcitx5-qt-0:5.1.16-1 100% |  97.0 KiB/s |  26.7 KiB |  00m00s
+Complete!
+--> 0622c282fdd9
 [4/4] STEP 11/18: COPY --from=redrob-build /out/ /usr/bin/
---> Using cache 067b39f3af769fc15024b13a8aea5d121bf7f7ff00795d560141c5db519744bc
---> 067b39f3af76
+--> c0c908bcaf3c
 [4/4] STEP 12/18: COPY image/files/ /
---> 874cc95a37c4
+--> f246a78ebd1e
 [4/4] STEP 13/18: COPY image/branding/ /
---> 5ed719ec5891
+--> ab49328fa238
 [4/4] STEP 14/18: COPY image/agent/ /
---> 47e736a3f4bd
+--> 91ac0f94345d
 [4/4] STEP 15/18: COPY image/installer/ /
---> 1c4de7e6964c
+--> 47fb7e32bfee
 [4/4] STEP 16/18: RUN --mount=type=tmpfs,dst=/tmp     --mount=type=tmpfs,dst=/var/tmp     plymouth-set-default-theme redrob &&     KVER="$(ls /usr/lib/modules | head -n1)" &&     dracut --force --no-hostonly --reproducible --zstd            --add "plymouth ostree"            --kver "$KVER" "/usr/lib/modules/$KVER/initramfs.img"
 dracut[E]: No '/dev/log' or 'logger' included for syslog logging
 dracut-install: ERROR: installing '/root'
-dracut[E]: FAILED: /usr/lib/dracut/dracut-install -D /var/tmp/dracut.dQL6kI3/initramfs -f /root
---> cc0b1239c780
+dracut[E]: FAILED: /usr/lib/dracut/dracut-install -D /var/tmp/dracut.dQJUj9a/initramfs -f /root
+--> 9e44af0adc7b
 [4/4] STEP 17/18: RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro     /ctx/scripts/28-debrand.sh &&     /ctx/scripts/30-cleanup.sh &&     ostree container commit
 28-debrand: login session names + console issue rebranded
 presets: system=redrob-firstboot.service redrob-broker.service redrob-usb-broker.service redrob-agent.service redrob-pairing.timer podman.socket initial-setup.service bootc-fetch-apply-updates.timer greenboot-healthcheck.service greenboot-set-rollback-trigger.service redrob-flathub.service redrob-gaming-apps.service greetd.service cups.socket fwupd-refresh.timer
@@ -107,22 +654,22 @@ Created symlink '/etc/systemd/system/flatpak-add-fedora-repos.service' → '/dev
 Cache directory "/var/cache/libdnf5" does not exist. Nothing to clean.
 cleanup done
 notice: This command is deprecated, use `bootc container lint` instead.
---> d412c67cb43e
+--> 3ec81e0b12e4
 [4/4] STEP 18/18: RUN bootc container lint
 Checks passed: 14
 Checks skipped: 1
 [4/4] COMMIT localhost:5000/redrob-os:kde
---> 55f646cf8fab
+--> e0b12cdbc634
 [Warning] one or more build args were not consumed: [GIT_SHA VERSION]
 Successfully tagged localhost:5000/redrob-os:kde
-55f646cf8fabb2c3c09970180a06e9410701275bc1d3698f2e12b2ef92c28d3f
+e0b12cdbc63448dd6454dcf54509f31547e3c6c1aad3312b0fec97b8c9edf43d
 Getting image source signatures
 Copying blob sha256:0a5a0cad348df0f688c84867dda0776db6643ee864ebc13a022534857366d24e
 Copying blob sha256:e10388ca50ef897c4861a73b539cd3667f4714e1033f4b486e6583dbf46926c4
 Copying blob sha256:aaac51a304d791a1a19bff24507d29db2cbd63d691342420bd260f03664a2f1b
-Copying blob sha256:8e7116d5d82cae85be115ae23f40af34664f718607a51aed5e10ad4481b94653
 Copying blob sha256:c902a9d8b4c7ccf149ada12af2d6cfe23c80091a7a56a1ad0ea301cde582b9e7
 Copying blob sha256:1e88aba82d261e0231b9632f1386021d4ea62833c6df9306961b70ebdff87d87
+Copying blob sha256:8e7116d5d82cae85be115ae23f40af34664f718607a51aed5e10ad4481b94653
 Copying blob sha256:ba3980dee1ba397679fe8e7842fc1b0f7bd5420f83714375dc1396e6b1531dcb
 Copying blob sha256:f458682bbb6f5b88941aa967803d2580f73511644b78fef18f9507e7a6404fc1
 Copying blob sha256:d75f5de7d7f3eb9f8209460a0b77ab8e2f6130965518a43ff796181063cc2c87
@@ -375,18 +922,18 @@ Copying blob sha256:bbae23dd149b27a43a6de215e58aaf3d40228851ec8965ad7dcdd592351c
 Copying blob sha256:7697b2a4ed03edb2f2c7ad82f6061e8b83265350f9d410d4db4841bba390eb20
 Copying blob sha256:12787d84fa137cd5649a9005efe98ec9d05ea46245fdc50aecb7dd007f2035b1
 Copying blob sha256:426646944cffc97428cc4598e688a503050892b014088b320720089759fcdb2c
-Copying blob sha256:3dc571996eff5e21f15eb340d6940747b3257a641b9e38a58eace8dbf051b09b
-Copying blob sha256:58f9663658b9c68227a973415cdeb6be08da548bd178c09a15fa69357c6f648d
-Copying blob sha256:910a22848efb530c9c080759bbb67b03580f20df8be4b7fcd04963a56ed4096e
-Copying blob sha256:c2365e0795f616c1607bbc2a244d9684ebde0bb7969945a23c273bdebbc2222e
-Copying blob sha256:ce4159ec18e08b5e582c274595c3d32c299ddf003ebdb2382f27f37d4bad23ee
-Copying blob sha256:8a3fb1383903ea1bb4cc8ac42a6973cd259fcb1cc62e4abefe7eb49532f73b4a
+Copying blob sha256:68d3dc17c063d9bafd957e75f51e9ddd71fd853aaf4bdc038af9bd077921acea
+Copying blob sha256:ae8b8c1b8f5f4c8dd9c9564b0d838037af1ee059be7312a2d748c1ab6325a05a
+Copying blob sha256:b4146b556878d62c642a668034116bed9cfa0346ba80ac67c54b3b55bbed2f18
+Copying blob sha256:a30a30626efb01ab3332a0decab2dab4de623d1587fe55ae0e008d8b6bd53140
+Copying blob sha256:37bbc3151d5314bd60b5f966974e1d79a0cf2112414dce7dfce1bb5c313bb86f
+Copying blob sha256:acdce36cd530a16b75cfcf80a9a85f91f526580ac8698b60028bd8e6a00849cf
 Copying blob sha256:78546ae7cb8931756166946cae3a6dfe4ee00dc6665f2f41f9898c1e312fc080
 Copying blob sha256:7a1142af05784c2fd4d821815e166e4f73f6208a6095ab487c1267cddafd8aa8
-Copying blob sha256:9b3e4cd3a3f186de2242d8f89401ed892cf1a166dc5a3f4ea9c4bbb2334a4a66
-Copying blob sha256:83b356a6c4ad31c3246c2c823003422c24491e37ebb17faf03ac1bc91bc42e8b
+Copying blob sha256:83c3dddc73c5da89eeba0ee17afc719b3fb94d5a2e58005e613af1d505ab6690
+Copying blob sha256:bc86fe109768eb39b6467efc8edd297e35c195aca750b36fc275a499a4818475
 Copying blob sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef
-Copying config sha256:55f646cf8fabb2c3c09970180a06e9410701275bc1d3698f2e12b2ef92c28d3f
+Copying config sha256:e0b12cdbc63448dd6454dcf54509f31547e3c6c1aad3312b0fec97b8c9edf43d
 Writing manifest to image destination
-build+push kde: 50s
+build+push kde: 476s
 rc=0
