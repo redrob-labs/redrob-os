@@ -21,6 +21,7 @@ smithay::backend::renderer::element::render_elements! {
 }
 
 pub fn elements(state: &mut Smallvil, renderer: &mut GlesRenderer, size: Size<i32, Physical>, cursor: bool) -> Vec<ShellElement> {
+    state.place_im_popups();
     // The menu bar names the app in front, and shows live status.
     let top = state.space.elements().last().cloned();
     state.chrome.app = top.as_ref().map(crate::deco::app_name).unwrap_or_default();

@@ -65,6 +65,8 @@ pub struct Smallvil {
     /// A screenshot to take on the next frame: whole output or a region.
     pub shot: Option<Option<smithay::utils::Rectangle<i32, Logical>>>,
     pub status: crate::status::Shared,
+    /// Input-method popups (candidate windows), placed each frame.
+    pub im_popups: Vec<smithay::wayland::input_method::PopupSurface>,
 }
 
 impl Smallvil {
@@ -157,6 +159,7 @@ impl Smallvil {
             note_tx,
             shot: None,
             status: Default::default(),
+            im_popups: Vec::new(),
         }
     }
 

@@ -89,12 +89,14 @@ impl OutputHandler for Smallvil {}
 
 impl smithay::wayland::input_method::InputMethodHandler for Smallvil {
     fn new_popup(&mut self, surface: smithay::wayland::input_method::PopupSurface) {
+        self.im_popups.push(surface.clone());
         if let Err(e) = self.popups.track_popup(smithay::desktop::PopupKind::from(surface)) {
             tracing::warn!(?e, "input method popup");
         }
     }
     fn popup_repositioned(&mut self, _: smithay::wayland::input_method::PopupSurface) {}
     fn dismiss_popup(&mut self, surface: smithay::wayland::input_method::PopupSurface) {
+        self.im_popups.retain(|p| p != &surface);
         if let Some(parent) = surface.get_parent().map(|p| p.surface.clone()) {
             let _ = smithay::desktop::PopupManager::dismiss_popup(&parent, &smithay::desktop::PopupKind::from(surface));
         }
@@ -108,3 +110,37 @@ impl smithay::wayland::input_method::InputMethodHandler for Smallvil {
 }
 
 smithay::delegate_dispatch2!(Smallvil);
+
+impl Smallvil {
+    /// Put input-method popups (the 한자 candidate window) under the text
+    /// cursor instead of over it, and keep them on screen: above the cursor
+    /// when there is no room below, shifted left at the right edge.
+    pub fn place_im_popups(&mut self) {
+        use smithay::utils::Point;
+        self.im_popups.retain(|p| p.alive());
+        let out = self.out_size();
+        for popup in &self.im_popups {
+            let Some(parent) = popup.get_parent().map(|p| p.surface.clone()) else { continue };
+            let Some(win) = self.space.elements().find(|w| w.toplevel().map(|t| t.wl_surface()) == Some(&parent)).cloned() else { continue };
+            let Some(wloc) = self.space.element_location(&win) else { continue };
+            let size = smithay::desktop::utils::bbox_from_surface_tree(popup.wl_surface(), (0, 0)).size;
+            let r = popup.text_input_rectangle();
+            let gap = 4;
+            let mut loc: Point<i32, smithay::utils::Logical> = (r.loc.x, r.loc.y + r.size.h.max(1) + gap).into();
+            let abs_bottom = wloc.y + loc.y + size.h;
+            if abs_bottom > out.h {
+                loc.y = r.loc.y - size.h - gap;
+            }
+            let abs_right = wloc.x + loc.x + size.w;
+            if abs_right > out.w {
+                loc.x -= abs_right - out.w;
+            }
+            if wloc.x + loc.x < 0 {
+                loc.x = -wloc.x;
+            }
+            if popup.location() != loc {
+                popup.set_location(loc);
+            }
+        }
+    }
+}
