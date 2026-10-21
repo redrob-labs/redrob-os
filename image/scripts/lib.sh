@@ -90,6 +90,21 @@ theme_copy_look() {
   cp -a "${src}/plasma/look-and-feel/." /usr/share/plasma/look-and-feel/
 }
 
+# rebrand_logos DIR...  -- the ONLY change we make to an upstream look: every
+# OS/start logo it ships (start-here*, distributor-logo, Fedora logo, the Plasma
+# theme's start.svg) points at the canonical Redrob OS mark instead.
+rebrand_logos() {
+  local mark=/usr/share/icons/hicolor/scalable/apps/redrob-os.svg d f
+  for d in "$@"; do
+    [ -d "${d}" ] || continue
+    find "${d}" -name start.svg -path '*desktoptheme*' -delete
+    find "${d}" \( -name 'start-here*.svg' -o -name 'start-here*.svgz' -o -name 'start-here*.png' \
+                   -o -name 'distributor-logo.svg' -o -name 'distributor-logo-fedora*' \
+                   -o -name 'fedora-logo*' \) -print0 |
+      while IFS= read -r -d '' f; do rm -f "${f}"; ln -s "${mark}" "${f%.*}.svg"; done
+  done
+}
+
 # install_icon_theme SRC  -- run an icon theme's own install.sh against
 # /usr/share/icons, then refresh caches for the named theme dirs ($@ after SRC).
 install_icon_theme() {
