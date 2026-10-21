@@ -82,3 +82,7 @@ pub const SPACE_3: i32 = 12;
 pub const SPACE_4: i32 = 16;
 /// --control-height-lg: one dock slot.
 pub const SLOT: i32 = 48;
+/// Windows-style taskbar height and its launcher slot.
+pub const TASKBAR_H: i32 = 48;
+pub const TASK_SLOT: i32 = 40;
+pub const SPACE_1: i32 = 4;

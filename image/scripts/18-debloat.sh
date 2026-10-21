@@ -2,7 +2,7 @@
 # 18-debloat.sh -- remove base apps Redrob OS replaces with its own, and the
 # upstream first-run branding the user should never see.
 # * firefox: Redrob Browser is the browser (installed via the Launcher on first
-#   login, set default by browser-firstrun), so the base Firefox is removed.
+#   login, set default by apps-firstrun), so the base Firefox is removed.
 # * plasma-welcome: the KDE Welcome Center auto-launches on first login with
 #   "Welcome to KDE Plasma" / upstream branding -- removed so no KDE/Welcome
 #   screen appears. Redrob's own first-run is the style chooser + welcome.

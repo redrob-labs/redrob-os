@@ -1,6 +1,9 @@
 #![allow(irrefutable_let_patterns)]
 
 mod chrome;
+mod config;
+mod autostart;
+mod shell;
 mod handlers;
 
 mod grabs;
@@ -35,9 +38,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // than the host compositor
     unsafe { std::env::set_var("WAYLAND_DISPLAY", &state.socket_name) };
 
-    // Nested development runs start a test client; the DRM session starts empty
-    // (apps come from the dock).
-    if !drm {
+    // Apps started from here identify this desktop (XDG autostart, portals).
+    unsafe {
+        std::env::set_var("XDG_CURRENT_DESKTOP", "Redrob");
+        std::env::set_var("XDG_SESSION_DESKTOP", "Redrob");
+    }
+
+    // The login session runs the desktop's autostart entries (Redrob Launcher,
+    // first-run app chooser, ...); nested development runs start a test client.
+    if drm {
+        crate::autostart::run();
+    } else {
         spawn_client();
     }
 

@@ -32,8 +32,14 @@ impl XdgShellHandler for Smallvil {
     }
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
-        let window = Window::new_wayland_window(surface);
-        self.space.map_element(window, (0, 0), false);
+        let window = Window::new_wayland_window(surface.clone());
+        // Open inside the work area (clear of the bar / taskbar), cascading,
+        // and take the keyboard like a new window does on Mac and Windows.
+        let at = self.new_window_location();
+        self.space.map_element(window, at, true);
+        let serial = smithay::utils::SERIAL_COUNTER.next_serial();
+        let keyboard = self.seat.get_keyboard().unwrap();
+        keyboard.set_focus(self, Some(surface.wl_surface().clone()), serial);
     }
 
     fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {

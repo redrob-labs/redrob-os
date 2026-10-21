@@ -1,0 +1,98 @@
+#!/usr/bin/bash
+# apps-firstrun -- first login: ask which Redrob apps to download, then have
+# Redrob Launcher install them one by one. Redrob Browser and Redrob Code are
+# ticked by default; Redrob Browser becomes the default browser once it is
+# actually installed (never a default pointing at a missing app).
+#
+# In the Redrob session (XDG_CURRENT_DESKTOP=Redrob) the same first dialog
+# also asks for the desktop style -- Mac-like or Windows-like layout and
+# shortcuts -- and writes it to ~/.config/redrob/desktop.conf, which
+# redrob-comp re-reads live.
+#
+# The choice is asked once. What was chosen but is not installed yet (offline,
+# cancelled, a release without a Linux build) is retried at every login
+# without asking again: the wanted list lives in XDG_STATE.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+set -uo pipefail
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/redrob"
+mkdir -p "${state}"
+wanted="${state}/apps-wanted"
+conf="${XDG_CONFIG_HOME:-$HOME/.config}/redrob/desktop.conf"
+apps_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+
+# id | name shown | ticked by default. The ids are Redrob Launcher's catalog
+# (redrob://install/<id> accepts them).
+CATALOG=(
+  "browser|Redrob Browser — AI 브라우저|on"
+  "code|Redrob Code — 터미널 코딩 에이전트|on"
+  "office|Redrob Office — 문서·시트·슬라이드|off"
+  "cowork|Redrob Cowork — 일을 맡기는 에이전트|off"
+  "design|Redrob Design — 앱·웹 디자인|off"
+  "canvas|Redrob Canvas — 그림·사진 편집|off"
+  "film|Redrob Film — 영상 편집|off"
+  "cad|Redrob CAD — 정밀 설계|off"
+  "shape|Redrob Shape — 3D 모델링|off"
+)
+
+dialog() { command -v kdialog >/dev/null 2>&1 && kdialog --title "Redrob OS" "$@"; }
+
+# ---- 1. Style (Redrob session only, once: when the user has no style yet).
+if [ "${XDG_CURRENT_DESKTOP:-}" = "Redrob" ] && ! grep -qiE '^\s*style\s*=' "${conf}" 2>/dev/null; then
+  pick="$(dialog --radiolist "어떤 화면 구성이 익숙하신가요? 나중에 설정에서 바꿀 수 있습니다." \
+            mac "맥 스타일 — 위 메뉴 바, 아래 도크, ⌘ 단축키" on \
+            windows "윈도우 스타일 — 아래 작업 표시줄, 시작 버튼, Win 단축키" off 2>/dev/null)" || pick=""
+  if [ -n "${pick}" ]; then
+    mkdir -p "$(dirname "${conf}")"
+    { printf 'style = %s\n' "${pick}"; cat "${conf}" 2>/dev/null; } > "${conf}.new" && mv "${conf}.new" "${conf}"
+  fi
+fi
+
+# ---- 2. Which apps (once).
+if [ ! -e "${wanted}" ]; then
+  args=()
+  for row in "${CATALOG[@]}"; do
+    IFS='|' read -r id label on <<<"${row}"
+    args+=("${id}" "${label}" "${on}")
+  done
+  if picked="$(dialog --separate-output --checklist "받을 레드롭 앱을 고르세요. 런처가 차례로 내려받습니다." "${args[@]}" 2>/dev/null)"; then
+    printf '%s\n' ${picked} > "${wanted}"
+  elif ! command -v kdialog >/dev/null 2>&1; then
+    printf 'browser\ncode\n' > "${wanted}"   # no dialog available: the defaults
+  else
+    : > "${wanted}"                          # cancelled: nothing, never ask again
+  fi
+fi
+
+installed() {   # a menu entry, the Launcher's unpacked tree, or (Code) the CLI
+  ls -1 "${apps_dir}"/*[Rr]edrob*"$1"*.desktop "${apps_dir}"/ai.redrob."$1"*.desktop 2>/dev/null | head -1
+  [ -d "${XDG_DATA_HOME:-$HOME/.local/share}/redrob-launcher/apps/redrob-$1" ] && echo tree
+  [ "$1" = code ] && command -v redrob 2>/dev/null
+}
+
+set_default_browser() {
+  local df id
+  df="$(ls -1 "${apps_dir}"/*[Rr]edrob*[Bb]rowser*.desktop 2>/dev/null | head -1)"; [ -n "${df}" ] || return 0
+  id="$(basename "${df}")"
+  [ "$(xdg-settings get default-web-browser 2>/dev/null)" = "${id}" ] && return 0
+  xdg-settings set default-web-browser "${id}" 2>/dev/null || true
+  gio mime x-scheme-handler/https "${id}" >/dev/null 2>&1 || true
+  gio mime x-scheme-handler/http  "${id}" >/dev/null 2>&1 || true
+  gio mime text/html              "${id}" >/dev/null 2>&1 || true
+}
+
+# ---- 3. Install what is wanted and missing, one at a time (the Launcher runs
+# one system installer at a time anyway; a second link while the first app is
+# still being checked could replace it).
+while read -r id; do
+  [ -n "${id}" ] || continue
+  [ -n "$(installed "${id}" | head -1)" ] && continue
+  redrob-launcher "redrob://install/${id}" >/dev/null 2>&1 &
+  for _ in $(seq 1 200); do          # up to ~10 min per app
+    [ -n "$(installed "${id}" | head -1)" ] && break
+    sleep 3
+  done
+done < "${wanted}"
+
+set_default_browser
+exit 0

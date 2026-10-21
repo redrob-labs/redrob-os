@@ -1,6 +1,8 @@
-//! Redrob shell chrome, drawn by the compositor itself (no Plasma, no COSMIC):
-//! a top bar (Redrob mark, name, clock, light/dark switch) and a centred dock of
-//! launchers. Painted on the CPU with tiny-skia (anti-aliased rounded corners),
+//! Redrob shell chrome, drawn by the compositor itself (no Plasma, no COSMIC).
+//! Two layouts from `config::Style`: Mac -- a top bar (Redrob mark, name,
+//! clock, light/dark switch) and a floating centred dock; Windows -- one bottom
+//! taskbar with a start button and centred launchers, clock and switch at the
+//! right. Painted on the CPU with tiny-skia (anti-aliased rounded corners),
 //! text with fontdue (Pretendard), icons are the redrob-ui SVG set via resvg,
 //! then uploaded as two textures. Colours and radii come from `theme.rs`.
 
@@ -22,6 +24,7 @@ use smithay::{
 };
 use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Stroke};
 
+use crate::config::{Act, Combo, Config, Style};
 use crate::theme::{self, Mode, Rgba};
 
 const ICON_TERMINAL: &str = include_str!("../assets/icons/terminal.svg");
@@ -42,6 +45,8 @@ const FONT_PATHS: &[&str] = &[
 pub enum Action {
     Launch(usize),
     ToggleTheme,
+    /// The Windows-style start button.
+    Start,
 }
 
 struct Launcher {
@@ -62,6 +67,7 @@ impl Launcher {
 /// What a frame of chrome depends on; repaint only when it changes.
 #[derive(Clone, PartialEq, Eq)]
 struct Key {
+    style: Style,
     mode: Mode,
     size: (i32, i32),
     clock: String,
@@ -70,6 +76,9 @@ struct Key {
 
 pub struct Chrome {
     pub mode: Mode,
+    pub style: Style,
+    shortcuts: Vec<(Combo, Act)>,
+    stamp: Option<(std::path::PathBuf, std::time::SystemTime)>,
     font: fontdue::Font,
     launchers: Vec<Launcher>,
     key: Option<Key>,
@@ -77,6 +86,7 @@ pub struct Chrome {
     cursor: Option<(Mode, MemoryRenderBuffer)>,
     ground_px: Option<((Mode, i32, i32), MemoryRenderBuffer)>,
     frames: u32,
+    ticks: u32,
     dock: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
     hits: Vec<(Rectangle<i32, Logical>, Action)>,
 }
@@ -91,11 +101,14 @@ impl Chrome {
             .expect("no Pretendard face found (set REDROB_FONT)");
         let font = fontdue::Font::from_bytes(font_bytes, fontdue::FontSettings::default())
             .expect("font parse");
-        let mode = match std::env::var("REDROB_THEME").as_deref() {
-            Ok("light") => Mode::Light,
-            _ => Mode::Dark,
-        };
-        Self { mode, font, launchers: default_launchers(), key: None, bar: None, cursor: None, ground_px: None, frames: 0, dock: None, hits: vec![] }
+        let cfg = Config::load();
+        tracing::info!(style = ?cfg.style, theme = ?cfg.theme, shortcuts = cfg.shortcuts.len(), "desktop settings");
+        Self {
+            mode: cfg.theme,
+            style: cfg.style,
+            shortcuts: cfg.shortcuts,
+            stamp: Config::stamp(),
+            font, launchers: default_launchers(), key: None, bar: None, cursor: None, ground_px: None, frames: 0, ticks: 0, dock: None, hits: vec![] }
     }
 
     /// What the pointer hit, in output-logical coordinates, if anything.
@@ -106,7 +119,8 @@ impl Chrome {
 
     pub fn act(&mut self, action: Action) {
         match action {
-            Action::ToggleTheme => self.mode = self.mode.toggled(),
+            Action::ToggleTheme => self.toggle_theme(),
+            Action::Start => crate::shell::spawn(&["redrob-launcher"]),
             Action::Launch(i) => {
                 let l = &mut self.launchers[i];
                 if l.running() {
@@ -116,6 +130,41 @@ impl Chrome {
                     l.child = Command::new(prog).args(args).spawn().ok();
                 }
             }
+        }
+    }
+
+    pub fn toggle_theme(&mut self) {
+        self.mode = self.mode.toggled();
+        Config::save_theme(self.mode);
+        self.stamp = Config::stamp(); // our own write is not an outside edit
+    }
+
+    pub fn shortcuts(&self) -> &[(Combo, Act)] {
+        &self.shortcuts
+    }
+
+    /// Re-read the settings file when it changed on disk (a settings app or an
+    /// editor wrote it): style, theme and shortcuts apply live.
+    fn reload_if_changed(&mut self) {
+        let now = Config::stamp();
+        if now == self.stamp {
+            return;
+        }
+        self.stamp = now;
+        let cfg = Config::load();
+        tracing::info!(style = ?cfg.style, theme = ?cfg.theme, "desktop settings changed");
+        self.style = cfg.style;
+        self.mode = cfg.theme;
+        self.shortcuts = cfg.shortcuts;
+    }
+
+    /// Logical pixels the chrome keeps for itself at the (top, bottom) of the
+    /// output, so maximized and snapped windows stop short of it. The Mac dock
+    /// floats over windows, like the real one, so it reserves nothing.
+    pub fn reserved(&self) -> (i32, i32) {
+        match self.style {
+            Style::Mac => (theme::BAR_H, 0),
+            Style::Windows => (0, theme::TASKBAR_H),
         }
     }
 
@@ -135,8 +184,12 @@ impl Chrome {
         renderer: &mut GlesRenderer,
         out: Size<i32, Physical>,
     ) -> Vec<MemoryRenderBufferRenderElement<GlesRenderer>> {
+        self.ticks = self.ticks.wrapping_add(1);
+        if self.ticks % 60 == 0 {
+            self.reload_if_changed();
+        }
         let running: Vec<bool> = self.launchers.iter_mut().map(|l| l.running()).collect();
-        let key = Key { mode: self.mode, size: (out.w, out.h), clock: clock_text(), running };
+        let key = Key { style: self.style, mode: self.mode, size: (out.w, out.h), clock: clock_text(), running };
         if self.key.as_ref() != Some(&key) {
             self.repaint(&key);
             self.key = Some(key);
@@ -150,8 +203,12 @@ impl Chrome {
             }
         }
         if let Some(buf) = &self.bar {
+            let y = match self.style {
+                Style::Mac => 0.0,
+                Style::Windows => (out.h - theme::TASKBAR_H) as f64,
+            };
             if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(
-                renderer, (0.0, 0.0), buf, None, None, None, Kind::Unspecified,
+                renderer, (0.0, y), buf, None, None, None, Kind::Unspecified,
             ) {
                 v.push(e);
             }
@@ -217,6 +274,60 @@ impl Chrome {
     }
 
     fn repaint(&mut self, key: &Key) {
+        match key.style {
+            Style::Mac => self.repaint_mac(key),
+            Style::Windows => self.repaint_windows(key),
+        }
+    }
+
+    /// Windows-style: one full-width taskbar at the bottom. Start button and
+    /// launchers centred as a group, clock (time over date) and the light/dark
+    /// switch at the right. Running apps get a short pill under the icon.
+    fn repaint_windows(&mut self, key: &Key) {
+        let t = theme::theme(key.mode);
+        let (w, h) = key.size;
+        self.hits.clear();
+        self.dock = None;
+        let th = theme::TASKBAR_H;
+        let y0 = h - th; // taskbar top, in output coordinates
+        let mut bar = Pixmap::new(w.max(1) as u32, th as u32).unwrap();
+        fill_rect(&mut bar, 0.0, 0.0, w as f32, th as f32, t.surface_material);
+        fill_rect(&mut bar, 0.0, 0.0, w as f32, 1.0, t.border_subtle);
+
+        let slot = theme::TASK_SLOT;
+        let gap = theme::SPACE_1;
+        let n = self.launchers.len() as i32 + 1; // + start
+        let group = n * slot + (n - 1) * gap;
+        let gx = (w - group) / 2;
+        let sy = (th - slot) / 2;
+        // Start button: the Redrob mark.
+        fill_rrect(&mut bar, gx as f32, sy as f32, slot as f32, slot as f32, theme::RADIUS_MD, t.surface_raised);
+        draw_svg(&mut bar, REDROB_MARK, None, gx as f32 + 9.0, sy as f32 + 9.0, 22.0);
+        self.hits.push((Rectangle::new((gx, y0 + sy).into(), (slot, slot).into()), Action::Start));
+        for (i, l) in self.launchers.iter().enumerate() {
+            let sx = gx + (i as i32 + 1) * (slot + gap);
+            draw_svg(&mut bar, l.icon, Some(t.ink_primary), sx as f32 + 9.0, sy as f32 + 9.0, 22.0);
+            if key.running[i] {
+                fill_rrect(&mut bar, sx as f32 + 16.0, th as f32 - 6.0, 8.0, 3.0, 1.5, t.action_primary);
+            }
+            self.hits.push((Rectangle::new((sx, y0 + sy).into(), (slot, slot).into()), Action::Launch(i)));
+        }
+
+        // Right: switch, then the clock to its left (time over date).
+        let switch_x = w - theme::SPACE_3 - 18;
+        let icon = if key.mode == Mode::Dark { ICON_SUN } else { ICON_MOON };
+        draw_svg(&mut bar, icon, Some(t.ink_primary), switch_x as f32, (th - 18) as f32 / 2.0, 18.0);
+        self.hits.push((Rectangle::new((switch_x - 6, y0).into(), (30, th).into()), Action::ToggleTheme));
+        let (time, date) = key.clock.split_once(' ').unwrap_or((&key.clock, ""));
+        let right = switch_x as f32 - theme::SPACE_4 as f32;
+        let tw = text_width(&self.font, time, 12.0);
+        let dw = text_width(&self.font, date, 12.0);
+        draw_text(&mut bar, &self.font, time, right - tw, 21.0, 12.0, t.ink_primary);
+        draw_text(&mut bar, &self.font, date, right - dw, 38.0, 12.0, t.ink_primary);
+        self.bar = Some(upload(bar));
+    }
+
+    fn repaint_mac(&mut self, key: &Key) {
         let t = theme::theme(key.mode);
         let (w, h) = key.size;
         self.hits.clear();
@@ -232,8 +343,9 @@ impl Chrome {
         let icon = if key.mode == Mode::Dark { ICON_SUN } else { ICON_MOON };
         draw_svg(&mut bar, icon, Some(t.ink_primary), switch_x as f32, 7.0, 18.0);
         self.hits.push((Rectangle::new((switch_x - 6, 0).into(), (30, theme::BAR_H).into()), Action::ToggleTheme));
-        let cw = text_width(&self.font, &key.clock, 13.0);
-        draw_text(&mut bar, &self.font, &key.clock, switch_x as f32 - theme::SPACE_4 as f32 - cw, 21.0, 13.0, t.ink_primary);
+        let clock = key.clock.split_once(' ').map(|(time, _)| time).unwrap_or(&key.clock);
+        let cw = text_width(&self.font, clock, 13.0);
+        draw_text(&mut bar, &self.font, clock, switch_x as f32 - theme::SPACE_4 as f32 - cw, 21.0, 13.0, t.ink_primary);
         self.bar = Some(upload(bar));
 
         // ---- Dock: floating rounded material, launchers in rounded slots.
@@ -269,9 +381,11 @@ fn default_launchers() -> Vec<Launcher> {
     let mut map: Vec<(&'static str, Vec<String>)> = vec![
         (ICON_TERMINAL, vec!["konsole".into()]),
         (ICON_FOLDER, vec!["dolphin".into()]),
-        (ICON_BROWSER, vec!["xdg-open".into(), "https://redrob.ai".into()]),
+        // Redrob Browser when the Launcher has installed it, else the default browser.
+        (ICON_BROWSER, sh("command -v redrob-browser >/dev/null && exec redrob-browser || exec xdg-open https://redrob.ai")),
         (ICON_SETTINGS, vec!["systemsettings".into()]),
-        (ICON_CODE, vec!["kwrite".into()]),
+        // Redrob Code (a terminal app) when installed, else a text editor.
+        (ICON_CODE, sh("command -v redrob >/dev/null && exec konsole -e redrob || exec kwrite")),
     ];
     if let Ok(spec) = std::env::var("REDROB_DOCK") {
         for part in spec.split(';') {
@@ -290,8 +404,13 @@ fn default_launchers() -> Vec<Launcher> {
     map.into_iter().map(|(icon, command)| Launcher { icon, command, child: None }).collect()
 }
 
+fn sh(script: &str) -> Vec<String> {
+    vec!["sh".into(), "-c".into(), script.into()]
+}
+
+/// "HH:MM YYYY-MM-DD": the Mac bar shows the time, the taskbar both.
 fn clock_text() -> String {
-    chrono::Local::now().format("%H:%M").to_string()
+    chrono::Local::now().format("%H:%M %Y-%m-%d").to_string()
 }
 
 fn upload(p: Pixmap) -> MemoryRenderBuffer {

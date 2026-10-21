@@ -1,10 +1,10 @@
 use smithay::{
     backend::input::{
         AbsolutePositionEvent, Axis, AxisSource, ButtonState, Event, InputBackend, InputEvent,
-        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent,
+        KeyState, KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent,
     },
     input::{
-        keyboard::FilterResult,
+        keyboard::{FilterResult, KeysymHandle, ModifiersState, xkb},
         pointer::{AxisFrame, ButtonEvent, MotionEvent},
     },
     reexports::wayland_server::protocol::wl_surface::WlSurface,
@@ -20,14 +20,19 @@ impl Smallvil {
                 let serial = SERIAL_COUNTER.next_serial();
                 let time = Event::time(&event);
 
-                self.seat.get_keyboard().unwrap().input::<(), _>(
+                let code = event.key_code();
+                let pressed = event.state() == KeyState::Pressed;
+                let act = self.seat.get_keyboard().unwrap().input::<Option<crate::config::Act>, _>(
                     self,
-                    event.key_code(),
+                    code,
                     event.state(),
                     serial,
                     time,
-                    |_, _, _| FilterResult::Forward,
+                    |state, mods, key| state.match_shortcut(code.raw(), pressed, mods, &key),
                 );
+                if let Some(Some(act)) = act {
+                    self.run_act(act);
+                }
             }
             InputEvent::PointerMotion { event, .. } => {
                 // Relative mouse (real hardware): move and clamp to the output.
@@ -164,6 +169,70 @@ impl Smallvil {
             }
             InputEvent::DeviceAdded { device } => tracing::info!(name = smithay::backend::input::Device::name(&device), "input device"),
             _ => {}
+        }
+    }
+}
+
+impl Smallvil {
+    /// Shortcut matching for one key event. A press that matches a binding is
+    /// taken from the client (and so is its release); everything else passes
+    /// through. A bare-modifier binding (`Super` on the Windows layout) fires
+    /// when that key is released without any other key in between.
+    fn match_shortcut(
+        &mut self,
+        code: u32,
+        pressed: bool,
+        mods: &ModifiersState,
+        key: &KeysymHandle<'_>,
+    ) -> FilterResult<Option<crate::config::Act>> {
+        use crate::config::{ALT, CTRL, SHIFT, SUPER};
+        let name = key
+            .raw_syms()
+            .first()
+            .map(|s| xkb::keysym_get_name(*s).to_ascii_lowercase())
+            .unwrap_or_default();
+        let is_super = name == "super_l" || name == "super_r";
+
+        if !pressed {
+            if let Some(i) = self.eaten.iter().position(|c| *c == code) {
+                self.eaten.remove(i);
+                return FilterResult::Intercept(None);
+            }
+            if is_super && self.tap {
+                self.tap = false;
+                let bare = self.chrome.shortcuts().iter().find(|(c, _)| c.mods == SUPER && c.key.is_empty());
+                if let Some((_, act)) = bare {
+                    return FilterResult::Intercept(Some(*act));
+                }
+            }
+            return FilterResult::Forward;
+        }
+
+        if is_super {
+            self.tap = !mods.ctrl && !mods.alt && !mods.shift;
+            return FilterResult::Forward;
+        }
+        self.tap = false;
+        let mut bits = 0;
+        if mods.logo {
+            bits |= SUPER;
+        }
+        if mods.ctrl {
+            bits |= CTRL;
+        }
+        if mods.alt {
+            bits |= ALT;
+        }
+        if mods.shift {
+            bits |= SHIFT;
+        }
+        let hit = self.chrome.shortcuts().iter().find(|(c, _)| c.mods == bits && c.key == name).map(|(_, a)| *a);
+        match hit {
+            Some(act) => {
+                self.eaten.push(code);
+                FilterResult::Intercept(Some(act))
+            }
+            None => FilterResult::Forward,
         }
     }
 }

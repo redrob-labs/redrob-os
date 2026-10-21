@@ -43,6 +43,16 @@ pub struct Smallvil {
 
     /// Redrob bar + dock, drawn by the compositor.
     pub chrome: crate::chrome::Chrome,
+
+    /// Windows put away by "show desktop", with where they were.
+    pub hidden: Vec<(Window, Point<i32, Logical>)>,
+    /// Geometry before maximize / snap, for restore.
+    pub saved: Vec<(Window, smithay::utils::Rectangle<i32, Logical>)>,
+    /// Key codes whose press a shortcut took, so their release is kept from
+    /// the client too.
+    pub eaten: Vec<u32>,
+    /// A modifier went down alone: a bare "Super" tap fires on its release.
+    pub tap: bool,
 }
 
 impl Smallvil {
@@ -108,6 +118,10 @@ impl Smallvil {
             popups,
             seat,
             chrome: crate::chrome::Chrome::new(),
+            hidden: Vec::new(),
+            saved: Vec::new(),
+            eaten: Vec::new(),
+            tap: false,
         }
     }
 
