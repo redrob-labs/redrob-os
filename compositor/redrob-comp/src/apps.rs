@@ -184,7 +184,7 @@ pub fn for_app_id<'a>(apps: &'a [App], app_id: &str) -> Option<&'a App> {
         .or_else(|| apps.iter().find(|a| a.exec.first().is_some_and(|e| e.rsplit('/').next() == Some(&low))))
 }
 
-/// An icon name or path rendered to `px` square, from the hicolor and Breeze
+/// An icon name or path rendered to `px` square, from the hicolor and Adwaita
 /// themes or /usr/share/pixmaps. None when nothing usable is found.
 pub fn icon(name: &str, px: u32) -> Option<Pixmap> {
     let path = if name.starts_with('/') { Some(PathBuf::from(name)) } else { find_icon(name, px) }?;
@@ -221,7 +221,7 @@ fn find_icon(name: &str, px: u32) -> Option<PathBuf> {
     }
     for dir in data_dirs() {
         let base = dir.join("icons");
-        for theme in ["hicolor", "breeze"] {
+        for theme in ["hicolor", "Adwaita"] {
             for size in &sizes {
                 for ext in ["svg", "png"] {
                     let p = base.join(theme).join(size).join("apps").join(format!("{name}.{ext}"));

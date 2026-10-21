@@ -1,0 +1,8 @@
+# Redrob OS login: greetd runs redrob-comp's login screen (greeter mode),
+# which starts /usr/bin/redrob-session for the user who logs in.
+[terminal]
+vt = 1
+
+[default_session]
+command = "sh -c '[ -w /var/lib/greetd ] && exec /usr/bin/redrob-comp --greeter > /var/lib/greetd/greeter.log 2>&1; exec /usr/bin/redrob-comp --greeter'"
+user = "greetd"

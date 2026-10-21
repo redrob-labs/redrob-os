@@ -1,6 +1,8 @@
 #![allow(irrefutable_let_patterns)]
 
 mod apps;
+mod xwayland;
+mod greeter;
 mod display;
 mod hangul;
 mod settings;
@@ -39,11 +41,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // `--drm` (the login session): own the GPU and input devices directly.
     // Otherwise run nested in a window of the current desktop (development).
-    let drm = std::env::args().any(|a| a == "--drm");
+    // `--greeter`: the login screen greetd runs (see greeter.rs).
+    let greeter = std::env::args().any(|a| a == "--greeter");
+    let drm = greeter || std::env::args().any(|a| a == "--drm");
     if drm {
         crate::udev::init_udev(&mut event_loop, &mut state)?;
     } else {
         unsafe { std::env::set_var("REDROB_NESTED", "1") };
+        // Development: try a scale in a window (REDROB_SCALE=1.5).
+        if let Some(s) = std::env::var("REDROB_SCALE").ok().and_then(|v| v.parse().ok()) {
+            crate::display::set_scale(s);
+        }
         crate::winit::init_winit(&mut event_loop, &mut state)?;
     }
 
@@ -55,19 +63,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     unsafe {
         std::env::set_var("XDG_CURRENT_DESKTOP", "Redrob");
         std::env::set_var("XDG_SESSION_DESKTOP", "Redrob");
-        // Qt/KDE apps: the KDE platform theme reads kdeglobals (Breeze widgets,
-        // the Redrob colour scheme, fonts, icons). Without it Qt falls back to
-        // its bare built-in palette. They also ask us for server-side frames.
-        if std::env::var_os("QT_QPA_PLATFORMTHEME").is_none() {
-            std::env::set_var("QT_QPA_PLATFORMTHEME", "kde");
-        }
+        // Qt apps ask us for server-side frames.
         std::env::set_var("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-        // Breeze draws with the colour scheme, so a theme switch repaints open
-        // apps. (A Kvantum theme picked for the Plasma session paints its own
-        // fixed colours; the Redrob session overrides it, Plasma keeps it.)
-        if std::env::var_os("QT_STYLE_OVERRIDE").is_none() {
-            std::env::set_var("QT_STYLE_OVERRIDE", "Breeze");
-        }
         // GTK apps on Wayland.
         std::env::set_var("GDK_BACKEND", "wayland,x11");
         // Korean input through Fcitx 5. Qt and GTK speak text-input-v3 to the
@@ -83,22 +80,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The login session runs the desktop's autostart entries (Redrob Launcher,
     // first-run app chooser, ...); nested development runs start a test client.
     state.status = crate::status::start();
-    if drm {
+    if greeter {
+        crate::greeter::start();
+        state.lock();
+    } else if drm {
         state.chrome.apply_app_theme();
         // Our own session bus services and status polling.
         crate::notify::serve(state.note_tx.clone());
         // D-Bus- and systemd-activated services (portals, Nautilus) need this
         // session's environment; then bring up graphical-session.target.
-        crate::shell::spawn(&[
-            "sh",
-            "-c",
-            "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP \
-             QT_QPA_PLATFORMTHEME QT_STYLE_OVERRIDE QT_WAYLAND_DISABLE_WINDOWDECORATION QT_IM_MODULE XMODIFIERS \
-             SDL_IM_MODULE GDK_BACKEND; systemctl --user start redrob-session.target",
-        ]);
-        crate::shell::spawn(&["sh", "-c", "command -v fcitx5 >/dev/null && exec fcitx5 -d --replace"]);
-        crate::shell::spawn(&["sh", "-c", "[ -x /usr/libexec/redrob/ptyxis-setup ] && exec /usr/libexec/redrob/ptyxis-setup"]);
-        crate::autostart::run();
+        // X11 apps get Xwayland; the session's services and apps start once
+        // its DISPLAY is known (or it failed), so they all see it.
+        state.start_xwayland(|_| {
+            crate::shell::spawn(&[
+                "sh",
+                "-c",
+                "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP \
+                 QT_WAYLAND_DISABLE_WINDOWDECORATION QT_IM_MODULE XMODIFIERS \
+                 SDL_IM_MODULE GDK_BACKEND; systemctl --user start redrob-session.target",
+            ]);
+            crate::shell::spawn(&["sh", "-c", "command -v fcitx5 >/dev/null && exec fcitx5 -d --replace"]);
+            crate::shell::spawn(&["sh", "-c", "[ -x /usr/libexec/redrob/ptyxis-setup ] && exec /usr/libexec/redrob/ptyxis-setup"]);
+            crate::autostart::run();
+        });
+    } else if std::env::var_os("REDROB_XWAYLAND").is_some() {
+        // Development: Xwayland in a nested run too (needs Xwayland on PATH).
+        state.start_xwayland(|_| spawn_client());
     } else {
         spawn_client();
     }

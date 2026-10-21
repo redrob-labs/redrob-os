@@ -1,0 +1,2 @@
+# Build outputs never belong in the image build context (they are cache mounts).
+**/target

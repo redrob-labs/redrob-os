@@ -35,4 +35,6 @@ features = [
     "backend_libinput",
     "backend_session_libseat",
     "renderer_gl",
+    # X11 apps (Steam, game launchers)
+    "xwayland",
 ]

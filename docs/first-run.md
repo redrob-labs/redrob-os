@@ -81,26 +81,24 @@ desktop (tray icon) and also lives in *Start menu → Redrob*.
 > **Redrob Launcher**에서 Redrob Browser·Office·Canvas·Code를 설치합니다. 홈 폴더에
 > 설치되므로 비밀번호를 묻지 않고, 설치된 앱은 시작 메뉴에 나옵니다. 업데이트는 자동입니다.
 
-## Everything else: Discover
+## Everything else: Software
 
 For all other software — browsers, games, office suites, media players — open
-**Discover** (*Start menu → Discover*, the shopping-bag icon). It installs
-Flatpak apps from Flathub; search, press *Install*, done. Those apps update in
-the background too.
+**Software** from the app finder. It installs Flatpak apps from Flathub; search,
+press *Install*, done. Those apps update in the background too.
 
-System updates do not appear in Discover: they are automatic. If you want to
-see them, *Start menu → System Settings → About this System* shows the current
-version, and a terminal `bootc status` shows the staged one.
+System updates do not appear in Software: they are automatic. A terminal
+`bootc status` shows the current and the staged version.
 
-> 그 밖의 프로그램은 **Discover**(시작 메뉴 → Discover)에서 설치합니다. Flathub의
-> Flatpak 앱을 검색 → *설치*로 받고, 역시 뒤에서 자동 업데이트됩니다. 시스템 업데이트는
-> Discover에 안 나옵니다 — 자동이고, 터미널에서 `bootc status`로 볼 수 있습니다.
+> 그 밖의 프로그램은 앱 찾기에서 **소프트웨어**를 열어 설치합니다. Flathub의 Flatpak 앱을
+> 검색 → *설치*로 받고, 역시 뒤에서 자동 업데이트됩니다. 시스템 업데이트는 소프트웨어에
+> 안 나옵니다 — 자동이고, 터미널에서 `bootc status`로 볼 수 있습니다.
 
 ## Korean input
 
 Korean (Hangul) input is ready on every account, whatever language you picked in
-the installer: press **Hangul** (`한/영`), `Shift+Space` or `Super+Space` to switch
+the installer: press **Hangul** (`한/영`, right Alt), `Shift+Space` or `Ctrl+Space` to switch
 between English and Korean. Nothing to install or enable.
 
-> 설치 언어와 상관없이 모든 계정에서 바로 `한/영`(또는 `Shift+Space`, `Super+Space`)으로
+> 설치 언어와 상관없이 모든 계정에서 바로 `한/영`(오른쪽 Alt, 또는 `Shift+Space`, `Ctrl+Space`)으로
 > 한글을 칩니다. 따로 켤 것이 없습니다.

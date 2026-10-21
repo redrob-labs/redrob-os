@@ -4,10 +4,10 @@
 #
 # * RPM Fusion free + nonfree repositories (same source Bazzite/Universal Blue use).
 # * Full ffmpeg + VA-API/VDPAU freeworld drivers: H.264/HEVC/AAC playback and
-#   hardware video decode in Plasma, browsers and mpv.
+#   hardware video decode in browsers and mpv.
 # * NVIDIA proprietary userspace (x86_64 only); the kernel module comes from the
 #   `akmods` stage in image/Containerfile and is installed by 16-nvidia-kmod.sh.
-# * Fingerprint login (fprintd + PAM), KDE Connect (phone <-> desktop).
+# * Fingerprint login (fprintd + PAM).
 #
 # Runs after the base dnf transaction and before our overlays.
 
@@ -35,7 +35,7 @@ rpmfusion_release() {
 rpmfusion_release free
 rpmfusion_release nonfree
 
-# Codecs. Fedora's ffmpeg-free stays (Plasma links against it; a `swap` to the full
+# Codecs. Fedora's ffmpeg-free stays (apps link against it; a `swap` to the full
 # ffmpeg with --allowerasing tore out the whole desktop in CI). libavcodec-freeworld
 # adds the patented decoders (H.264/HEVC/AAC...) on top of ffmpeg-free, which is the
 # path Fedora itself documents. mesa-va-drivers-freeworld is NOT swapped in: it is
@@ -53,7 +53,6 @@ dnf5 -y install --setopt=install_weak_deps=False \
 # Fingerprint login, phone integration.
 dnf5 -y install --setopt=install_weak_deps=False \
   fprintd fprintd-pam \
-  kde-connect
 
 # NVIDIA (x86_64 only -- RPM Fusion ships no aarch64 build). The kernel module rpm
 # built by the `akmods` stage is bind-mounted at /akmods; install it in the SAME

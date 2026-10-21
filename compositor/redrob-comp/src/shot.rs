@@ -21,7 +21,7 @@ pub fn capture(renderer: &mut GlesRenderer, elements: &[ShellElement], size: Siz
     let buf_size = Size::from((size.w, size.h));
     let mut tex: GlesTexture = renderer.create_buffer(Fourcc::Abgr8888, buf_size).ok()?;
     let mut fb = renderer.bind(&mut tex).ok()?;
-    let mut tracker = OutputDamageTracker::new(size, 1.0, Transform::Normal);
+    let mut tracker = OutputDamageTracker::new(size, crate::display::scale(), Transform::Normal);
     tracker.render_output(renderer, &mut fb, 0, elements, clear).ok()?;
     let region = Rectangle::from_size(buf_size);
     let mapping = renderer.copy_framebuffer(&fb, region, Fourcc::Abgr8888).ok()?;
@@ -61,13 +61,24 @@ pub fn save(img: Pixmap, region: Option<Rectangle<i32, Logical>>) -> Option<std:
     let p = path.clone();
     std::thread::spawn(move || {
         let _ = std::fs::create_dir_all(&dir);
-        match img.save_png(&p) {
-            Ok(()) => tracing::info!(path = %p.display(), "screenshot saved"),
-            Err(e) => tracing::warn!(?e, "screenshot save failed"),
+        match img.encode_png() {
+            Ok(png) => {
+                match std::fs::write(&p, &png) {
+                    Ok(()) => tracing::info!(path = %p.display(), "screenshot saved"),
+                    Err(e) => tracing::warn!(?e, "screenshot save failed"),
+                }
+                if let Ok(mut c) = CLIPBOARD.lock() {
+                    *c = Some(png);
+                }
+            }
+            Err(e) => tracing::warn!(?e, "screenshot encode failed"),
         }
     });
     Some(path)
 }
+
+/// The last screenshot's PNG, waiting to become the clipboard selection.
+pub static CLIPBOARD: std::sync::Mutex<Option<Vec<u8>>> = std::sync::Mutex::new(None);
 
 /// XDG_PICTURES_DIR from user-dirs.dirs, else ~/Pictures.
 fn pictures_dir() -> std::path::PathBuf {

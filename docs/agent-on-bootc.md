@@ -24,7 +24,7 @@ redrob-firstboot.service    once per device (ConditionPathExists=!/var/lib/redro
         redrob-agent.service            /usr/bin/redrob-agent daemon  (user redrob-agent)
                 │                       gateway :42617, channels (Slack/Discord/Google), relay
                 ├── redrob-pairing.timer → redrob-pairing.service   console banner + pairing.json, every 30 s
-                │       └── (desktop) /etc/xdg/autostart/redrob-pairing-notify.desktop → KDE notification
+                │       └── (desktop) /etc/xdg/autostart/redrob-pairing-notify.desktop → desktop notification
                 └── greenboot required.d/50-redrob-agent.sh   boot is GREEN only if /health answers
 ```
 
@@ -136,7 +136,7 @@ Unchanged binaries and sockets; only paths moved (table above).
   controllers, approvals over `/run/redrob/usb.sock`, read-only mounts under
   `/run/media/redrob`. New: `usr/lib/udev/rules.d/70-redrob-usb-broker.rules` arms
   hot-added host controllers at udev time and sets `UDISKS_AUTO=0` on removable
-  USB block devices so Plasma does not auto-mount read-write over the broker's
+  USB block devices so the desktop does not auto-mount read-write over the broker's
   read-only mount (the device stays visible; manual mount still works).
 
 ## Local inference
@@ -161,19 +161,21 @@ pairing token, so an unpaired host on the LAN gets nothing.
    - **Console / serial / SSH login prompt:** the banner with the QR
      (`/run/issue.d/50-redrob-pairing.issue`, refreshed every 30 s by
      `redrob-pairing.timer`; also `journalctl -u redrob-pairing`).
-   - **Desktop (KDE):** a notification "Redrob OS -- pair this device" with the
+   - **Desktop (Redrob session):** a notification "Redrob OS -- pair this device" with the
      code, the address and the `redrob://pair?...` link appears after login and
      stays current while the device is unpaired
      (`/etc/xdg/autostart/redrob-pairing-notify.desktop` → `redrob-pairing --notify`,
      which reads `/run/redrob-pairing/pairing.json`). It disappears on its own
      once paired. Needs `libnotify` (`notify-send`) in the image.
 3. Scan the QR or enter the code in the Redrob app. It encodes
-   `redrob://pair?device=<id>&host=<device-ip>:42617&code=<code>`.
-4. The phone pairs and opens the dashboard at the device's LAN address.
+   `redrob://pair?device=<id>&host=<device-ip>:42617&code=<code>&fp=<sha256>`.
+4. The phone pairs and opens the dashboard at `https://<device-ip>:42617`,
+   pinning the certificate fingerprint `fp`.
 
-This listener is plain HTTP: fine on a trusted home/office LAN, not on one you do
-not trust. From anywhere else use the relay (`docs/remote-access.md`, "Relay");
-the relay path is unchanged by the bootc move.
+This listener serves HTTPS with a self-provisioned certificate (see
+`docs/remote-access.md`, "LAN-direct"); loopback callers such as the greenboot
+health check may still use plain HTTP. From anywhere else use the relay
+(`docs/remote-access.md`, "Relay"); the relay path is unchanged by the bootc move.
 
 ## Turning the agent off (and back on)
 
@@ -213,6 +215,6 @@ This overlay was written against the Buildroot units, the agent source and the
 greenboot/quadlet documentation; **no image was built and nothing was booted**.
 Specifically unverified: quadlet key acceptance by the Fedora 44 podman
 generator, `notify-send --print-id`/`--replace-id` on the shipped libnotify, the
-`UDISKS_AUTO` rule's effect on Plasma, SELinux interactions beyond
+`UDISKS_AUTO` rule's effect on the desktop, SELinux interactions beyond
 `label = false`, and that `CONTAINERS_CONF_OVERRIDE` is honoured by the podman
 version in the base image. The one build is the PR's CI run.

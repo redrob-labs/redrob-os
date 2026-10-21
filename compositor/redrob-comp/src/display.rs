@@ -18,7 +18,10 @@ pub fn set_scale(s: f64) {
 pub const SCALES: [f64; 5] = [1.0, 1.25, 1.5, 1.75, 2.0];
 
 pub enum Request {
+    /// Switch the main screen to mode i (asks to keep it).
     Mode(usize),
+    /// Go back to mode i (not kept, or the prompt timed out).
+    Revert(usize),
     Scale(f64),
 }
 
@@ -30,4 +33,6 @@ pub struct Display {
     pub modes: Vec<(i32, i32, i32)>,
     pub current: usize,
     pub request: Option<Request>,
+    /// Every connected screen, main first ("Virtual-1 1920×1080").
+    pub screens: Vec<String>,
 }

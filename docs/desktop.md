@@ -1,50 +1,64 @@
 # The desktop
 
-A tour of what you see after installing Redrob OS. If you have used Windows, nothing
-here needs learning; the differences are called out where they exist.
+A tour of what you see after installing Redrob OS. The desktop is **redrob-comp**,
+Redrob's own Wayland compositor and shell. It can look and behave like a Mac or like
+Windows; pick one at first login or in Redrob Settings.
 
-## Taskbar
+## Login
 
-Along the bottom of the screen:
+The login screen shows the clock and your account. Type the password and press Enter.
+With more than one account, **Tab** (or the arrow keys) picks the next one.
 
-- **Start button** (left) opens the start menu.
-- **Pinned apps** next to it; running apps show up here too. Right-click an icon to pin
-  or unpin it.
-- **System tray** (right): network (Wi‑Fi), sound, battery, Bluetooth, the input-method
-  indicator (`한`/`A`), notifications, and the **Redrob** icon for the agent and pairing.
-- **Clock** at the far right; click it for the calendar.
+## Mac layout
 
-## Start menu
+- **Menu bar** (top): the Redrob menu, the app in front, status icons (network,
+  sound, battery) and the clock.
+- **Dock** (bottom, floating): pinned and running apps, the app finder and Settings.
+- Window buttons are the coloured dots on the left of the title bar.
 
-Click the start button or press the Windows (Meta) key. Type to search apps, files and
-settings; the categories on the left list all installed apps. Pin a favourite by
-right-clicking it. Power options (sleep, restart, shut down, log out) are at the bottom.
+## Windows layout
 
-## Settings
+- **Taskbar** (bottom): Start button, search box, pinned and running apps, status
+  icons and the clock.
+- Window buttons (`─ □ ✕`) are on the right of the title bar.
 
-Start menu → **System Settings**. The parts you are most likely to need:
+## Shortcuts
 
-| Section | What it does |
+| | Mac layout | Windows layout |
+|---|---|---|
+| Find an app | ⌘ Space | Win, Win+S |
+| Switch windows | ⌘ Tab | Alt+Tab |
+| All windows | Ctrl+↑, F3 | Win+Tab |
+| Close / minimise | ⌘Q, ⌘W / ⌘M | Alt+F4 / Win+M |
+| Maximise, snap | Ctrl+⌘F, Ctrl+⌘←/→ | Win+↑, Win+←/→ |
+| Lock | Ctrl+⌘Q | Win+L |
+| Screenshot: screen / area / window | ⌘⇧3 / ⌘⇧4 / ⌘⇧4 then Space | Print / Win+Shift+S / Alt+Print |
+| Settings | ⌘, | Win+I |
+| Terminal | Ctrl+Alt+T | Ctrl+Alt+T |
+
+Every shortcut can be changed in Settings → 단축키 (press the new keys).
+Screenshots are saved to `Pictures/Screenshots` and copied to the clipboard.
+
+## Redrob Settings
+
+| Page | What it does |
 |---|---|
-| Wi‑Fi & Networking | join networks, VPN |
-| Display & Monitor | resolution, scaling (for high-DPI screens), second monitor layout |
-| Sound | output device, volume per app |
-| Keyboard → Virtual Keyboard / Input Method | Korean input (see below) |
-| Appearance | light/dark theme, wallpaper, fonts |
-| Users | add or change accounts |
-| Updates | shows the staged OS update and the last rollback, if any |
+| 화면 구성 | Mac or Windows layout |
+| 테마 | dark or light (apps follow) |
+| 단축키 | change or reset shortcuts |
+| 입력 | Korean input settings |
+| 소리 | output and input volume, mute, which device |
+| 디스플레이 | resolution (asks to keep it, reverts after 15 s), scale 100–200%; every connected screen is used, side by side |
 
-## Discover (app store)
+## Apps
 
-Start menu → **Discover**. Search and install apps from the Flathub catalogue (browsers,
-office, media, games, developer tools). Installed apps update themselves in the
-background; the **Updates** page in Discover shows what changed. Removing an app is the
-**Remove** button on its page. Apps are sandboxed per app; the first launch may ask
-permission for your camera or files.
+Ptyxis (terminal), Files, Text Editor, Image Viewer, Document Viewer and Calculator are
+installed. **Software** installs anything else from Flathub (browsers, office, media,
+games, developer tools); installed apps update themselves in the background.
 
 ## Redrob Launcher
 
-Starts at login (the Redrob icon in the tray). It installs and updates the Redrob apps —
+Starts at login. It installs and updates the Redrob apps —
 **Redrob Browser**, **Redrob Office**, **Redrob Canvas**, **Redrob Code** — in your home
 directory and puts them in the start menu. The Launcher is also where you open the
 **pairing QR** for your phone and see whether the agent is running. Closing the Launcher
@@ -52,30 +66,30 @@ window leaves it in the tray; the agent keeps running regardless.
 
 ## Korean input
 
-Korean (Hangul) input is always on: KWin starts IBus at login
-(`/etc/xdg/kwinrc` `[Wayland] InputMethod=`) and the English + Hangul engines are
-preloaded for every user (`/etc/dconf/db/local.d/10-redrob-ibus`). No setup step,
-whatever language was chosen at install time.
+Korean (Hangul) input is Fcitx 5, started with the session, for every account. No
+setup step, whatever language was chosen at install time.
 
-- Toggle Korean/English: **Shift+Space**, or the **한/영** key on a Korean keyboard.
-- The tray indicator shows `한` when Korean is active and `A` for English.
-- Hanja conversion: **F9** (or the 한자 key) while a Korean syllable is selected.
+- Toggle Korean/English: **right Alt** (한/영), **Shift+Space** or **Ctrl+Space**.
+- Hanja: **right Ctrl** (한자) after a syllable; the candidates show under the cursor.
+
+## Redrob Agent sidebar
+
+Find **Redrob Agent** in the app finder: the agent's dashboard docks on the right edge
+of the screen (Redrob Browser in app mode). Open it again to close it.
 
 ## Hardware, codecs, phone
 
 Things a PC user expects that stock Fedora leaves out are in the image:
 
 - Video: the patented codecs (libavcodec-freeworld), so H.264/HEVC/AAC
-  play in Plasma, browsers and mpv; hardware decode on Intel and NVIDIA (AMD decodes
+  play in browsers and mpv; hardware decode on Intel and NVIDIA (AMD decodes
   patented formats in software for now).
 - NVIDIA: the proprietary driver is built in (x86-64). Nothing to install. With
   Secure Boot ON the module is not signed and the card falls back to the open
   driver; turn Secure Boot off in firmware or accept the fallback.
-- Fingerprint login: Settings -> Users -> Configure fingerprint; works at the
-  login screen, lock screen and for password prompts.
-- Phone: KDE Connect is installed. Install the KDE Connect app on your phone, pair
-  on the same Wi-Fi, and you get notifications, file transfer, clipboard and
-  remote input.
+- Fingerprint: `fprintd` is installed (enrol with `fprintd-enroll`).
+- Phone: pair it with the agent; the pairing code shows as a notification after
+  login until the device is paired.
 
 ## Updates and rollback
 

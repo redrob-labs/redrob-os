@@ -8074,9 +8074,15 @@ pub struct GatewayTlsConfig {
     /// Enable TLS for the gateway (default: false).
     #[serde(default)]
     pub enabled: bool,
-    /// Path to the PEM-encoded server certificate file.
+    /// Path to the PEM-encoded server certificate file. Leave both
+    /// `cert_path` and `key_path` empty to have the gateway self-provision a
+    /// certificate under `<data_dir>/gateway-tls/` on first start and reuse it
+    /// afterwards; clients pin its SHA-256 fingerprint (reported by
+    /// `GET /admin/paircode` as `tls_fingerprint`).
+    #[serde(default)]
     pub cert_path: String,
-    /// Path to the PEM-encoded server private key file.
+    /// Path to the PEM-encoded server private key file (see `cert_path`).
+    #[serde(default)]
     pub key_path: String,
     /// Client certificate authentication (mutual TLS) settings.
     #[serde(default)]

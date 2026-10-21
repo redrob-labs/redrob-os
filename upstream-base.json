@@ -11,13 +11,13 @@
     }
   },
   "base_image": {
-    "name": "Fedora Kinoite",
+    "name": "Fedora Atomic base",
     "registry": "quay.io",
-    "image": "quay.io/fedora-ostree-desktops/kinoite",
+    "image": "quay.io/fedora-ostree-desktops/base-atomic",
     "tag": "44",
     "pinned_in": "image/base.env",
     "bumped_by": "renovate (regex manager on image/base.env BASE_TAG; same PR updates this file)",
-    "project": "https://fedoraproject.org/atomic-desktops/kinoite/"
+    "project": "https://fedoraproject.org/atomic-desktops/"
   },
   "removed": {
     "os": {

@@ -67,7 +67,7 @@ Two upstreams, pinned in one place each and recorded in [UPSTREAM.md](./UPSTREAM
 | What | How it is tracked |
 |---|---|
 | `agent/` | `git subtree` with full history from [zeroclaw-labs/zeroclaw](https://github.com/zeroclaw-labs/zeroclaw); synced tag by tag |
-| Base OS image | An OCI image reference in `image/base.env`: [Fedora Kinoite](https://fedoraproject.org/atomic-desktops/kinoite/) (`quay.io/fedora-ostree-desktops/kinoite`), which supplies the kernel, the KDE Plasma desktop and bootc; the tag is bumped by Renovate pull requests |
+| Base OS image | An OCI image reference in `image/base.env`: [Fedora Atomic](https://fedoraproject.org/atomic-desktops/) `base-atomic` (`quay.io/fedora-ostree-desktops/base-atomic`), which supplies the kernel, systemd and bootc (no desktop: that is redrob-comp); the tag is bumped by Renovate pull requests |
 
 Everything else the image contains comes from the base distribution's own package
 repositories and is listed in `NOTICE`.
