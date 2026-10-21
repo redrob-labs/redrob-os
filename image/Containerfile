@@ -35,18 +35,22 @@ COPY image/scripts/ /scripts/
 # same version the agent's upstream CI uses; bump together with agent/.
 FROM docker.io/library/rust:1.98.0-bookworm AS redrob-build
 RUN apt-get update && \
-    apt-get install -y -q --no-install-recommends libudev-dev pkg-config libssl-dev && \
+    apt-get install -y -q --no-install-recommends libudev-dev pkg-config libssl-dev \
+        libseat-dev libinput-dev libgbm-dev libxkbcommon-dev && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /src
 COPY agent/ /src/agent/
 COPY modules/credential-broker/ /src/modules/credential-broker/
 COPY modules/usb-broker/ /src/modules/usb-broker/
 COPY tools/redrob-pairing/ /src/tools/redrob-pairing/
+# Experiment: Redrob's own compositor + shell (Smithay), offered as the "Redrob" session.
+COPY compositor/redrob-comp/ /src/compositor/redrob-comp/
 RUN --mount=type=cache,dst=/usr/local/cargo/registry \
     --mount=type=cache,dst=/src/agent/target \
     --mount=type=cache,dst=/src/modules/credential-broker/broker/target \
     --mount=type=cache,dst=/src/modules/usb-broker/broker/target \
     --mount=type=cache,dst=/src/tools/redrob-pairing/target \
+    --mount=type=cache,dst=/src/compositor/redrob-comp/target \
     set -eu && mkdir -p /out && \
     # the gateway embeds web/dist at compile time; the OS serves no web dashboard
     mkdir -p agent/web/dist && touch agent/web/dist/.gitkeep && \
@@ -57,7 +61,9 @@ RUN --mount=type=cache,dst=/usr/local/cargo/registry \
     (cd modules/usb-broker/broker && cargo build --release --locked) && \
     install -m 0755 modules/usb-broker/broker/target/release/redrob-usb-broker /out/ && \
     (cd tools/redrob-pairing && cargo build --release --locked) && \
-    install -m 0755 tools/redrob-pairing/target/release/redrob-pairing /out/
+    install -m 0755 tools/redrob-pairing/target/release/redrob-pairing /out/ && \
+    (cd compositor/redrob-comp && cargo build --release --locked) && \
+    install -m 0755 compositor/redrob-comp/target/release/redrob-comp /out/
 
 # NVIDIA kernel module, built against the exact kernel the base image ships (the
 # akmods pattern Universal Blue uses; a bootc image cannot build modules on the
@@ -150,6 +156,7 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         bluez \
         pipewire \
         kvantum \
+        libseat \
         zstd \
         unzip \
         tar

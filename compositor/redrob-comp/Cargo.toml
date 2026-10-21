@@ -11,6 +11,7 @@ bitflags = "2.2.1"
 resvg = { version = "=0.48.1", default-features = false }
 fontdue = "=0.9.5"
 chrono = { version = "=0.4.45", default-features = false, features = ["clock"] }
+tracing = "=0.1.44"
 
 # Smithay pinned to a commit (no release since 0.7.0 carries the API smallvil uses).
 [dependencies.smithay]
@@ -21,4 +22,12 @@ features = [
     "backend_winit",
     "wayland_frontend",
     "desktop",
+    # real hardware (`--drm`)
+    "backend_drm",
+    "backend_gbm",
+    "backend_egl",
+    "backend_udev",
+    "backend_libinput",
+    "backend_session_libseat",
+    "renderer_gl",
 ]

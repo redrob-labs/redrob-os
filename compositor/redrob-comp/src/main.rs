@@ -7,6 +7,7 @@ mod grabs;
 mod input;
 mod state;
 mod theme;
+mod udev;
 mod winit;
 
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};
@@ -21,15 +22,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut state = Smallvil::new(&mut event_loop, display);
 
-    // Open a Wayland/X11 window for our nested compositor
-    crate::winit::init_winit(&mut event_loop, &mut state)?;
+    // `--drm` (the login session): own the GPU and input devices directly.
+    // Otherwise run nested in a window of the current desktop (development).
+    let drm = std::env::args().any(|a| a == "--drm");
+    if drm {
+        crate::udev::init_udev(&mut event_loop, &mut state)?;
+    } else {
+        crate::winit::init_winit(&mut event_loop, &mut state)?;
+    }
 
     // Set WAYLAND_DISPLAY to our socket name, so child processes connect to Smallvil rather
     // than the host compositor
     unsafe { std::env::set_var("WAYLAND_DISPLAY", &state.socket_name) };
 
-    // Spawn a test client, that will run under Smallvil
-    spawn_client();
+    // Nested development runs start a test client; the DRM session starts empty
+    // (apps come from the dock).
+    if !drm {
+        spawn_client();
+    }
 
     event_loop.run(None, &mut state, move |_| {
         // Smallvil is running

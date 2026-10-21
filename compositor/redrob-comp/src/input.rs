@@ -29,7 +29,20 @@ impl Smallvil {
                     |_, _, _| FilterResult::Forward,
                 );
             }
-            InputEvent::PointerMotion { .. } => {}
+            InputEvent::PointerMotion { event, .. } => {
+                // Relative mouse (real hardware): move and clamp to the output.
+                use smithay::backend::input::PointerMotionEvent;
+                let output = self.space.outputs().next().unwrap();
+                let geo = self.space.output_geometry(output).unwrap().to_f64();
+                let pointer = self.seat.get_pointer().unwrap();
+                let mut pos = pointer.current_location() + event.delta();
+                pos.x = pos.x.clamp(geo.loc.x, geo.loc.x + geo.size.w - 1.0);
+                pos.y = pos.y.clamp(geo.loc.y, geo.loc.y + geo.size.h - 1.0);
+                let under = self.surface_under(pos);
+                let serial = SERIAL_COUNTER.next_serial();
+                pointer.motion(self, under, &MotionEvent { location: pos, serial, time: event.time() });
+                pointer.frame(self);
+            }
             InputEvent::PointerMotionAbsolute { event, .. } => {
                 let output = self.space.outputs().next().unwrap();
 

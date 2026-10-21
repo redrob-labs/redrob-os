@@ -22,7 +22,7 @@ use smithay::{
 };
 use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Stroke};
 
-use crate::theme::{self, Mode, Rgba, Theme};
+use crate::theme::{self, Mode, Rgba};
 
 const ICON_TERMINAL: &str = include_str!("../assets/icons/terminal.svg");
 const ICON_FOLDER: &str = include_str!("../assets/icons/folder.svg");
@@ -74,6 +74,7 @@ pub struct Chrome {
     launchers: Vec<Launcher>,
     key: Option<Key>,
     bar: Option<MemoryRenderBuffer>,
+    cursor: Option<(Mode, MemoryRenderBuffer)>,
     dock: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
     hits: Vec<(Rectangle<i32, Logical>, Action)>,
 }
@@ -92,7 +93,7 @@ impl Chrome {
             Ok("light") => Mode::Light,
             _ => Mode::Dark,
         };
-        Self { mode, font, launchers: default_launchers(), key: None, bar: None, dock: None, hits: vec![] }
+        Self { mode, font, launchers: default_launchers(), key: None, bar: None, cursor: None, dock: None, hits: vec![] }
     }
 
     /// What the pointer hit, in output-logical coordinates, if anything.
@@ -150,6 +151,36 @@ impl Chrome {
         v
     }
 
+    /// The pointer arrow (DRM backend only; nested runs use the host cursor):
+    /// ink-primary fill with a surface-base outline so it reads on both grounds.
+    pub fn cursor_element(
+        &mut self,
+        renderer: &mut GlesRenderer,
+        at: Point<f64, Logical>,
+    ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
+        if self.cursor.as_ref().map(|(m, _)| *m) != Some(self.mode) {
+            let t = theme::theme(self.mode);
+            let mut p = Pixmap::new(24, 24).unwrap();
+            let mut pb = PathBuilder::new();
+            pb.move_to(2.0, 2.0);
+            pb.line_to(2.0, 19.0);
+            pb.line_to(6.5, 15.0);
+            pb.line_to(10.0, 22.0);
+            pb.line_to(13.0, 20.5);
+            pb.line_to(9.5, 14.0);
+            pb.line_to(16.0, 14.0);
+            pb.close();
+            if let Some(path) = pb.finish() {
+                p.fill_path(&path, &paint(t.ink_primary), FillRule::Winding, tiny_skia::Transform::identity(), None);
+                let s = Stroke { width: 1.5, ..Default::default() };
+                p.stroke_path(&path, &paint(t.surface_base), &s, tiny_skia::Transform::identity(), None);
+            }
+            self.cursor = Some((self.mode, upload(p)));
+        }
+        let (_, buf) = self.cursor.as_ref()?;
+        MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_physical(1.0), buf, None, None, None, Kind::Cursor).ok()
+    }
+
     fn repaint(&mut self, key: &Key) {
         let t = theme::theme(key.mode);
         let (w, h) = key.size;
@@ -196,9 +227,6 @@ impl Chrome {
         self.dock = Some((upload(dock), (dx, dy).into()));
     }
 
-    pub fn theme(&self) -> Theme {
-        theme::theme(self.mode)
-    }
 }
 
 /// Dock launchers. Override with REDROB_DOCK="terminal=cmd args;folder=cmd;...".
