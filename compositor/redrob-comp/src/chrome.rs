@@ -76,6 +76,7 @@ pub struct Chrome {
     bar: Option<MemoryRenderBuffer>,
     cursor: Option<(Mode, MemoryRenderBuffer)>,
     ground_px: Option<((Mode, i32, i32), MemoryRenderBuffer)>,
+    frames: u32,
     dock: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
     hits: Vec<(Rectangle<i32, Logical>, Action)>,
 }
@@ -94,7 +95,7 @@ impl Chrome {
             Ok("light") => Mode::Light,
             _ => Mode::Dark,
         };
-        Self { mode, font, launchers: default_launchers(), key: None, bar: None, cursor: None, ground_px: None, dock: None, hits: vec![] }
+        Self { mode, font, launchers: default_launchers(), key: None, bar: None, cursor: None, ground_px: None, frames: 0, dock: None, hits: vec![] }
     }
 
     /// What the pointer hit, in output-logical coordinates, if anything.
@@ -116,6 +117,12 @@ impl Chrome {
                 }
             }
         }
+    }
+
+    /// True about once every 4 s (one frame in 240), for a light frame trace.
+    pub fn frame_log_due(&mut self) -> bool {
+        self.frames = self.frames.wrapping_add(1);
+        self.frames % 240 == 1
     }
 
     pub fn ground(&self) -> [f32; 4] {
@@ -171,7 +178,9 @@ impl Chrome {
         }
         let (_, buf) = self.ground_px.as_ref()?;
         let size: Size<i32, Logical> = (out.w, out.h).into();
-        MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, Some(size), Kind::Unspecified).ok()
+        MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, Some(size), Kind::Unspecified)
+            .map_err(|e| tracing::warn!(?e, "ground texture"))
+            .ok()
     }
 
     /// The pointer arrow (DRM backend only; nested runs use the host cursor):

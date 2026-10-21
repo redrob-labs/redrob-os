@@ -214,6 +214,9 @@ fn render(d: &Rc<RefCell<Drm>>, state: &mut Smallvil) {
         elements.push(ShellElement::Memory(g));
     }
 
+    if state.chrome.frame_log_due() {
+        tracing::info!(n = elements.len(), ground = ?state.chrome.ground(), "frame");
+    }
     match compositor.render_frame(renderer, &elements, state.chrome.ground(), FrameFlags::DEFAULT) {
         Ok(r) if !r.is_empty => match compositor.queue_frame(()) {
             Ok(()) => *pending = true,
