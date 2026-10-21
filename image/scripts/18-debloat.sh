@@ -5,7 +5,7 @@
 #   login, set default by apps-firstrun), so the base Firefox is removed.
 # * plasma-welcome: the KDE Welcome Center auto-launches on first login with
 #   "Welcome to KDE Plasma" / upstream branding -- removed so no KDE/Welcome
-#   screen appears. Redrob's own first-run is the style chooser + welcome.
+#   screen appears. Redrob's own first-run is apps-firstrun.
 # Each removal is a no-op when the base image does not ship the package.
 # Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 

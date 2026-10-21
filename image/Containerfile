@@ -155,7 +155,6 @@ RUN --mount=type=cache,dst=/var/cache/libdnf5 \
         tuned-ppd \
         bluez \
         pipewire \
-        kvantum \
         libseat \
         zstd \
         unzip \
@@ -166,9 +165,7 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/scripts/10-pins.sh && \
     /ctx/scripts/20-launcher.sh && \
-    /ctx/scripts/25-fonts.sh && \
-    /ctx/scripts/26-mac-theme.sh && \
-    /ctx/scripts/27-win-theme.sh
+    /ctx/scripts/25-fonts.sh
 
 # 2b. Hardware layer: RPM Fusion codecs, NVIDIA (userspace + the kernel module built
 #     in the `akmods` stage, one transaction), fingerprint, KDE Connect.
@@ -184,7 +181,7 @@ RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro \
 #     light/dark and accent through the portal and the Redrob GTK stylesheet),
 #     and Fcitx 5 with Hangul for Korean input in the Redrob session (it speaks
 #     the Wayland input-method protocol redrob-comp implements; ibus does not).
-#     Plasma keeps its own apps; nothing here replaces them.
+#     These are the desktop's apps; the Plasma session is not offered.
 RUN --mount=type=cache,dst=/var/cache/libdnf5 \
     --mount=type=tmpfs,dst=/tmp \
     dnf5 -y install --setopt=install_weak_deps=False \

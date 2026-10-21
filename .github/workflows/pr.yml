@@ -1,13 +1,7 @@
-# Pull request checks -- the only CI that runs on a pull request.
-#
-# Three jobs, each answering one question:
-#   agent    does the Rust in agent/ still format and lint?   (skipped when no Rust changed)
-#   image    does image/Containerfile still build and pass `bootc container lint`?  (never pushed)
-#   scripts  do the shell and Python helpers still parse?
-#
-# The pull request policy (open-PR cap, self-review gate) is a separate workflow, pr-policy.yml,
-# because it needs pull_request_target. Nothing here runs on push: a push to main is the merge of
-# a pull request that already passed, and build-image.yml publishes it.
+# Pull request check -- one job: the helpers parse, and the image builds and
+# passes `bootc container lint` (never pushed). Promotion PRs to main skip the
+# build: develop already built the same commits. Publishing is release.yml only.
+# The pull request policy is pr-policy.yml (it needs pull_request_target).
 #
 # Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 
@@ -21,131 +15,37 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: pr-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: "0"
-
 jobs:
-  changes:
-    name: what changed
-    runs-on: ubuntu-24.04
-    outputs:
-      rust: ${{ steps.filter.outputs.rust }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        id: filter
-        with:
-          filters: |
-            rust:
-              - 'agent/**'
-              - '.github/workflows/pr.yml'
-
-  agent:
-    name: agent (fmt + clippy)
-    needs: changes
-    # Skip on promotion PRs to main: develop already ran this on the same commits.
-    if: needs.changes.outputs.rust == 'true' && github.base_ref != 'main'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    defaults:
-      run:
-        working-directory: agent
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master 2026-10-16
-        with:
-          # Same toolchain the upstream agent CI uses; bump together with agent/.
-          toolchain: 1.98.0
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: agent
-          cache-on-failure: true
-      - name: System libraries the agent links against
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends libudev-dev pkg-config
-      - name: Web bundle placeholder (the gateway embeds web/dist at compile time)
-        run: mkdir -p web/dist && touch web/dist/.gitkeep
-      - name: cargo fmt
-        run: cargo fmt --all -- --check
-      - name: cargo clippy
-        # Same scope as upstream's lint job: whole workspace minus the desktop app (needs GTK),
-        # with the ci-all feature set, under our `ci` profile (thin LTO, defined in agent/Cargo.toml).
-        run: |
-          cargo clippy --locked --workspace --exclude zeroclaw-desktop --all-targets \
-            --features ci-all --profile ci -- -D warnings
-
-  image:
-    name: image (podman build + bootc lint)
-    if: github.base_ref != 'main' # promotion PRs to main are already built on develop
+  check:
+    name: check
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Free disk space (the base image is several GB; hosted runners have ~14 GB)
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          df -h /
-      - name: Build args from image/base.env
-        id: args
+      - name: shellcheck + py_compile
         run: |
           set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends shellcheck
+          sh=$( (find image -type f -name '*.sh'; grep -rlE '^#!/(usr/)?bin/(env )?(ba)?sh' image || true) | sort -u)
+          # shellcheck disable=SC2086
+          shellcheck -S warning $sh
+          py=$(find tools -type f -name '*.py')
+          # shellcheck disable=SC2086
+          [ -z "$py" ] || python3 -m py_compile $py
+      - name: Image build + bootc lint
+        if: github.base_ref != 'main'
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           args=""
           while IFS= read -r line; do
             case "$line" in ''|'#'*) continue ;; esac
             args="$args --build-arg ${line}"
           done < image/base.env
-          echo "args=$args" >> "$GITHUB_OUTPUT"
-          echo "build args:$args"
-      - name: podman build
-        # Context is the repository root so the Containerfile can COPY agent/ (compiled in its own
-        # `FROM rust AS redrob-build` stage) and image/* overlays. See docs/ci.md, "Contract with
-        # the Containerfile".
-        run: |
-          set -euo pipefail
           # shellcheck disable=SC2086
-          podman build \
-            ${{ steps.args.outputs.args }} \
-            --build-arg GIT_SHA="${GITHUB_SHA}" \
-            -f image/Containerfile \
-            -t localhost/redrob-os:pr \
-            .
-      - name: bootc container lint
-        run: podman run --rm localhost/redrob-os:pr bootc container lint
-      - name: podman build (task sandbox image)
-        run: |
-          set -euo pipefail
-          podman build --build-arg TARGETARCH=amd64 -f image/sandbox/Containerfile -t localhost/redrob-sandbox:pr .
-          podman run --rm localhost/redrob-sandbox:pr sh -c 'git --version && python3 --version && node --version && test -x /usr/local/bin/redrob-code'
-
-  scripts:
-    name: scripts (shellcheck + py_compile)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: shellcheck image/scripts
-        run: |
-          set -euo pipefail
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends shellcheck
-          shellcheck --version
-          files=$(find image -type f \( -name '*.sh' -o -name '*.bash' \) 2>/dev/null; \
-                  grep -rlE '^#!/(usr/)?bin/(env )?(ba)?sh' image 2>/dev/null || true)
-          files=$(printf '%s\n' $files | sort -u)
-          if [ -z "$files" ]; then echo "no shell scripts under image/"; exit 0; fi
-          echo "$files"
-          # shellcheck disable=SC2086
-          shellcheck -S warning $files
-      - name: python -m py_compile tools
-        run: |
-          set -euo pipefail
-          files=$(find tools scripts -type f -name '*.py' 2>/dev/null || true)
-          if [ -z "$files" ]; then echo "no python files"; exit 0; fi
-          # shellcheck disable=SC2086
-          python3 -m py_compile $files
-          echo "compiled: $(echo "$files" | wc -l) files"
+          podman build $args --build-arg GIT_SHA="${GITHUB_SHA}" -f image/Containerfile -t localhost/redrob-os:pr .
+          podman run --rm localhost/redrob-os:pr bootc container lint
