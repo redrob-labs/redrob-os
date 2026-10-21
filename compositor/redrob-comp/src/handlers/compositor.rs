@@ -1,4 +1,5 @@
 use crate::{Smallvil, grabs::resize_grab, state::ClientState};
+use smithay::wayland::seat::WaylandFocus;
 use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
     reexports::wayland_server::{
@@ -35,7 +36,7 @@ impl CompositorHandler for Smallvil {
             if let Some(window) = self
                 .space
                 .elements()
-                .find(|w| w.toplevel().unwrap().wl_surface() == &root)
+                .find(|w| w.wl_surface().is_some_and(|s| *s == root))
             {
                 window.on_commit();
             }

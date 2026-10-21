@@ -44,24 +44,57 @@ impl PointerConstraintsHandler for Smallvil {}
 // Wl Data Device
 //
 
+/// A clipboard the compositor holds for someone: a screenshot PNG, or what
+/// an X11 app copied (Xwayland serves it).
+#[derive(Clone)]
+pub enum Selection {
+    Bytes(std::sync::Arc<Vec<u8>>),
+    X11,
+}
+
 impl SelectionHandler for Smallvil {
-    /// Bytes the compositor itself offers (a screenshot PNG).
-    type SelectionUserData = std::sync::Arc<Vec<u8>>;
+    type SelectionUserData = Selection;
 
     fn send_selection(
         &mut self,
-        _ty: smithay::wayland::selection::SelectionTarget,
-        _mime_type: String,
+        ty: smithay::wayland::selection::SelectionTarget,
+        mime_type: String,
         fd: std::os::fd::OwnedFd,
         _seat: Seat<Self>,
         data: &Self::SelectionUserData,
     ) {
-        let data = data.clone();
-        std::thread::spawn(move || {
-            use std::io::Write;
-            let mut f = std::fs::File::from(fd);
-            let _ = f.write_all(&data);
-        });
+        match data {
+            Selection::Bytes(b) => {
+                let b = b.clone();
+                std::thread::spawn(move || {
+                    use std::io::Write;
+                    let mut f = std::fs::File::from(fd);
+                    let _ = f.write_all(&b);
+                });
+            }
+            Selection::X11 => {
+                if let Some(xwm) = self.xwm.as_mut() {
+                    if let Err(e) = xwm.send_selection(ty, mime_type, fd) {
+                        tracing::debug!(?e, "xwayland: clipboard to Wayland");
+                    }
+                }
+            }
+        }
+    }
+
+    fn new_selection(
+        &mut self,
+        ty: smithay::wayland::selection::SelectionTarget,
+        source: Option<smithay::wayland::selection::SelectionSource>,
+        _seat: Seat<Self>,
+    ) {
+        // A Wayland app copied: X11 apps see it too.
+        if let Some(xwm) = self.xwm.as_mut() {
+            let types = source.map(|s| s.mime_types()).unwrap_or_default();
+            if let Err(e) = xwm.new_selection(ty, Some(types)) {
+                tracing::debug!(?e, "xwayland: clipboard to X11");
+            }
+        }
     }
 }
 

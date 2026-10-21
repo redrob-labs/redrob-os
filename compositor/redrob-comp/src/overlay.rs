@@ -606,7 +606,7 @@ impl Smallvil {
                 &self.display_handle,
                 &self.seat,
                 vec!["image/png".into()],
-                std::sync::Arc::new(png),
+                crate::handlers::Selection::Bytes(std::sync::Arc::new(png)),
             );
         }
         while let Ok(m) = self.note_rx.try_recv() {

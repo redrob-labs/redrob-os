@@ -68,10 +68,13 @@ pub struct Smallvil {
     /// Input-method popups (candidate windows), placed each frame.
     pub im_popups: Vec<smithay::wayland::input_method::PopupSurface>,
     pub display: crate::display::Display,
+    pub loop_handle: smithay::reexports::calloop::LoopHandle<'static, Self>,
+    pub xwm: Option<smithay::xwayland::X11Wm>,
+    pub xwayland_shell_state: smithay::wayland::xwayland_shell::XWaylandShellState,
 }
 
 impl Smallvil {
-    pub fn new(event_loop: &mut EventLoop<Self>, display: Display<Self>) -> Self {
+    pub fn new(event_loop: &mut EventLoop<'static, Self>, display: Display<Self>) -> Self {
         let start_time = std::time::Instant::now();
 
         let dh = display.handle();
@@ -130,6 +133,7 @@ impl Smallvil {
 
         // Get the loop signal, used to stop the event loop
         let loop_signal = event_loop.get_signal();
+        let xwayland_shell_state = smithay::wayland::xwayland_shell::XWaylandShellState::new::<Self>(&dh);
 
         Self {
             start_time,
@@ -162,6 +166,9 @@ impl Smallvil {
             status: Default::default(),
             im_popups: Vec::new(),
             display: Default::default(),
+            loop_handle: event_loop.handle(),
+            xwm: None,
+            xwayland_shell_state,
         }
     }
 

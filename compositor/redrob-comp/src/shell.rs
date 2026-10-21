@@ -1,6 +1,7 @@
 //! Window and session actions behind the shortcuts and the shell chrome:
 //! close, switch, show desktop, maximize / restore / snap, and app launches.
 
+use smithay::wayland::seat::WaylandFocus;
 use std::process::Command;
 
 use smithay::{
@@ -71,12 +72,15 @@ impl Smallvil {
         self.space.elements().last().cloned()
     }
 
-    fn focus(&mut self, window: Option<Window>) {
+    pub fn focus(&mut self, window: Option<Window>) {
         let serial = SERIAL_COUNTER.next_serial();
         if let Some(w) = &window {
             self.space.raise_element(w, true);
         }
-        let surface = window.and_then(|w| w.toplevel().map(|t| t.wl_surface().clone()));
+        if let Some(x) = window.as_ref().and_then(|w| w.x11_surface()) {
+            let _ = x.set_activated(true);
+        }
+        let surface = window.and_then(|w| w.wl_surface().map(|s| s.into_owned()));
         let keyboard = self.seat.get_keyboard().unwrap();
         keyboard.set_focus(self, surface, serial);
     }
@@ -143,7 +147,7 @@ impl Smallvil {
     /// Dock the Redrob Agent sidebar (agent-sidebar opens it) on the main
     /// screen's right edge, full height under the bar.
     pub fn pin_sidebar(&mut self, surface: &smithay::reexports::wayland_server::protocol::wl_surface::WlSurface) {
-        let Some(w) = self.space.elements().find(|w| w.toplevel().is_some_and(|t| t.wl_surface() == surface)).cloned() else { return };
+        let Some(w) = self.space.elements().find(|w| w.wl_surface().is_some_and(|s| *s == *surface)).cloned() else { return };
         if !is_sidebar(&w) {
             return;
         }
@@ -156,6 +160,15 @@ impl Smallvil {
         let (top, bottom) = self.chrome.reserved();
         let size = (SIDEBAR_W, (out.size.h - top - bottom).max(1));
         let at = Point::<i32, Logical>::from((out.loc.x + out.size.w - SIDEBAR_W, out.loc.y + top));
+        if let Some(x) = w.x11_surface() {
+            // An X11 browser (no Wayland flags): place it with a configure.
+            let want = Rectangle::new(at, size.into());
+            if x.geometry() != want {
+                let _ = x.configure(want);
+                self.space.map_element(w, at, false);
+            }
+            return;
+        }
         let Some(t) = w.toplevel() else { return };
         let geo = w.geometry();
         let changed = t.with_pending_state(|s| {
@@ -246,6 +259,9 @@ pub const SIDEBAR_W: i32 = 420;
 /// instead report an app id built from the URL).
 pub fn is_sidebar(w: &smithay::desktop::Window) -> bool {
     use smithay::wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData};
+    if let Some(x) = w.x11_surface() {
+        return x.class() == "redrob-agent-sidebar" || x.instance() == "redrob-agent-sidebar";
+    }
     let Some(t) = w.toplevel() else { return false };
     let id = with_states(t.wl_surface(), |s| {
         s.data_map.get::<XdgToplevelSurfaceData>().and_then(|d| d.lock().ok().and_then(|a| a.app_id.clone()))

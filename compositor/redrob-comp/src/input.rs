@@ -11,6 +11,7 @@ use smithay::{
     utils::SERIAL_COUNTER,
 };
 
+use smithay::wayland::seat::WaylandFocus;
 use crate::state::Smallvil;
 
 impl Smallvil {
@@ -128,18 +129,21 @@ impl Smallvil {
                         .map(|(w, l)| (w.clone(), l))
                     {
                         self.space.raise_element(&window, true);
-                        keyboard.set_focus(
-                            self,
-                            Some(window.toplevel().unwrap().wl_surface().clone()),
-                            serial,
-                        );
+                        if let Some(x) = window.x11_surface() {
+                            let _ = x.set_activated(true);
+                        }
+                        keyboard.set_focus(self, window.wl_surface().map(|s| s.into_owned()), serial);
                         self.space.elements().for_each(|window| {
-                            window.toplevel().unwrap().send_pending_configure();
+                            if let Some(t) = window.toplevel() {
+                                t.send_pending_configure();
+                            }
                         });
                     } else {
                         self.space.elements().for_each(|window| {
                             window.set_activated(false);
-                            window.toplevel().unwrap().send_pending_configure();
+                            if let Some(t) = window.toplevel() {
+                                t.send_pending_configure();
+                            }
                         });
                         keyboard.set_focus(self, Option::<WlSurface>::None, serial);
                     }
@@ -219,6 +223,8 @@ impl Smallvil {
             .first()
             .map(|s| xkb::keysym_get_name(*s).to_ascii_lowercase())
             .unwrap_or_default();
+        // Alt+Print arrives as Sys_Req.
+        let name = if name == "sys_req" { "print".to_string() } else { name };
         let is_super = name == "super_l" || name == "super_r";
 
         // An overlay takes the keyboard (a release a shortcut already took

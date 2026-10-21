@@ -34,5 +34,5 @@ if [ -z "${bro}" ]; then
   exit 0
 fi
 
-"${bro}" --app="${url}" --class=redrob-agent-sidebar --user-data-dir="${run}/agent-sidebar-profile" >/dev/null 2>&1 &
+"${bro}" --ozone-platform-hint=auto --app="${url}" --class=redrob-agent-sidebar --user-data-dir="${run}/agent-sidebar-profile" >/dev/null 2>&1 &
 echo $! > "${pidf}"

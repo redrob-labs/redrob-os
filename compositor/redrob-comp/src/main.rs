@@ -1,6 +1,7 @@
 #![allow(irrefutable_let_patterns)]
 
 mod apps;
+mod xwayland;
 mod greeter;
 mod display;
 mod hangul;
@@ -88,16 +89,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         crate::notify::serve(state.note_tx.clone());
         // D-Bus- and systemd-activated services (portals, Nautilus) need this
         // session's environment; then bring up graphical-session.target.
-        crate::shell::spawn(&[
-            "sh",
-            "-c",
-            "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP \
-             QT_WAYLAND_DISABLE_WINDOWDECORATION QT_IM_MODULE XMODIFIERS \
-             SDL_IM_MODULE GDK_BACKEND; systemctl --user start redrob-session.target",
-        ]);
-        crate::shell::spawn(&["sh", "-c", "command -v fcitx5 >/dev/null && exec fcitx5 -d --replace"]);
-        crate::shell::spawn(&["sh", "-c", "[ -x /usr/libexec/redrob/ptyxis-setup ] && exec /usr/libexec/redrob/ptyxis-setup"]);
-        crate::autostart::run();
+        // X11 apps get Xwayland; the session's services and apps start once
+        // its DISPLAY is known (or it failed), so they all see it.
+        state.start_xwayland(|_| {
+            crate::shell::spawn(&[
+                "sh",
+                "-c",
+                "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP \
+                 QT_WAYLAND_DISABLE_WINDOWDECORATION QT_IM_MODULE XMODIFIERS \
+                 SDL_IM_MODULE GDK_BACKEND; systemctl --user start redrob-session.target",
+            ]);
+            crate::shell::spawn(&["sh", "-c", "command -v fcitx5 >/dev/null && exec fcitx5 -d --replace"]);
+            crate::shell::spawn(&["sh", "-c", "[ -x /usr/libexec/redrob/ptyxis-setup ] && exec /usr/libexec/redrob/ptyxis-setup"]);
+            crate::autostart::run();
+        });
     } else {
         spawn_client();
     }
