@@ -63,6 +63,7 @@ pub fn init_winit(
 
                 {
                     let ground = state.chrome.ground();
+                    crate::scene::take_shot(state, backend.renderer(), size);
                     let (renderer, mut framebuffer) = backend.bind().unwrap();
                     let elements = crate::scene::elements(state, renderer, size, false);
                     damage_tracker.render_output(renderer, &mut framebuffer, 0, &elements, ground).unwrap();

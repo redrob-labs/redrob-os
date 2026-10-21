@@ -85,12 +85,23 @@ impl Smallvil {
 
                 let button_state = event.state();
 
+                // Overlays (finder, switcher, expose, lock, region, toasts) first.
+                if self.layers.overlay.is_some() || !self.layers.toasts.is_empty() {
+                    let at = pointer.current_location();
+                    if self.overlay_button(button_state == ButtonState::Pressed, at) {
+                        return;
+                    }
+                }
                 // The Redrob bar/dock sit above every window: a press on them is ours.
                 if ButtonState::Pressed == button_state {
                     let hit = self.chrome.hit(pointer.current_location());
                     tracing::info!(loc = ?pointer.current_location(), ?hit, button, "press");
                     if let Some(action) = hit {
-                        self.chrome.act(action);
+                        if action == crate::chrome::Action::Start {
+                            self.open_finder();
+                        } else {
+                            self.chrome.act(action);
+                        }
                         return;
                     }
                     if button == 0x110 {
@@ -201,6 +212,22 @@ impl Smallvil {
             .unwrap_or_default();
         let is_super = name == "super_l" || name == "super_r";
 
+        // An overlay takes the keyboard (a release a shortcut already took
+        // stays eaten). The switcher still needs Tab with the modifier held.
+        if self.layers.overlay.is_some() {
+            if !pressed {
+                if let Some(i) = self.eaten.iter().position(|c| *c == code) {
+                    self.eaten.remove(i);
+                    if !matches!(self.layers.overlay, Some(crate::overlay::Overlay::Switcher { .. })) {
+                        return FilterResult::Intercept(None);
+                    }
+                }
+            }
+            self.tap = false;
+            self.overlay_key(pressed, mods, key);
+            return FilterResult::Intercept(None);
+        }
+
         if !pressed {
             if let Some(i) = self.eaten.iter().position(|c| *c == code) {
                 self.eaten.remove(i);
@@ -247,6 +274,9 @@ impl Smallvil {
 
 impl Smallvil {
     fn track_hover(&mut self, pos: smithay::utils::Point<f64, smithay::utils::Logical>) {
+        if self.layers.overlay.is_some() {
+            self.overlay_motion(pos);
+        }
         self.chrome.pointer(pos);
         self.deco.hover = self.deco_hit(pos);
     }

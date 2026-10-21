@@ -114,6 +114,7 @@ pub const BAR_H: i32 = 32;
 pub const RADIUS_SM: f32 = 6.0;
 pub const RADIUS_MD: f32 = 8.0;
 pub const RADIUS_LG: f32 = 12.0;
+pub const RADIUS_XL_F: f32 = 16.0;
 /// --radius-2xl: the dock material (a large floating surface).
 pub const RADIUS_2XL: f32 = 24.0;
 /// --radius-full: pills (running indicator).

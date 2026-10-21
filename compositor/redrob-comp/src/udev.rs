@@ -194,6 +194,7 @@ fn render(d: &Rc<RefCell<Drm>>, state: &mut Smallvil) {
     let Drm { renderer, compositor, output, pending, .. } = &mut *drm;
     let size = output.current_mode().unwrap().size;
 
+    crate::scene::take_shot(state, renderer, size);
     let elements = crate::scene::elements(state, renderer, size, true);
 
     if state.chrome.frame_log_due() {

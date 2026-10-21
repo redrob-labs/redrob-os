@@ -58,6 +58,13 @@ pub struct Smallvil {
     pub xdg_decoration_state: smithay::wayland::shell::xdg::decoration::XdgDecorationState,
     /// Minimized windows, most recent last, with where they were.
     pub minimized: Vec<(Window, Point<i32, Logical>)>,
+    /// Finder, switcher, expose, lock, region select, toasts.
+    pub layers: crate::overlay::Layers,
+    pub note_rx: std::sync::mpsc::Receiver<crate::notify::Msg>,
+    pub note_tx: std::sync::mpsc::Sender<crate::notify::Msg>,
+    /// A screenshot to take on the next frame: whole output or a region.
+    pub shot: Option<Option<smithay::utils::Rectangle<i32, Logical>>>,
+    pub status: crate::status::Shared,
 }
 
 impl Smallvil {
@@ -102,6 +109,7 @@ impl Smallvil {
         // Windows get a position and stacking order through mapping.
         // Outputs become views of a part of the Space and can be rendered via Space::render_output.
         let space = Space::default();
+        let (note_tx, note_rx) = std::sync::mpsc::channel();
 
         // Setup a wayland socket that will be used to accept clients
         let socket_name = Self::init_wayland_listener(display, event_loop);
@@ -133,6 +141,11 @@ impl Smallvil {
             deco: Default::default(),
             xdg_decoration_state,
             minimized: Vec::new(),
+            layers: Default::default(),
+            note_rx,
+            note_tx,
+            shot: None,
+            status: Default::default(),
         }
     }
 

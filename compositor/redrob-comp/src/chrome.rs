@@ -39,6 +39,8 @@ const ICON_MOON: &str = include_str!("../assets/icons/moon.svg");
 const ICON_SEARCH: &str = include_str!("../assets/icons/search.svg");
 const ICON_WIFI: &str = include_str!("../assets/icons/wifi.svg");
 const ICON_VOLUME: &str = include_str!("../assets/icons/volume.svg");
+const ICON_WIFI_OFF: &str = include_str!("../assets/icons/wifi-off.svg");
+const ICON_VOLUME_OFF: &str = include_str!("../assets/icons/volume-off.svg");
 
 /// Redrob app icons, (light, dark) "icon-web" masters from redrob-ui.
 const APP_REDROB: (&str, &str) =
@@ -66,8 +68,12 @@ const WALLPAPERS: &[&str] = &[
 pub enum Action {
     Launch(usize),
     ToggleTheme,
-    /// Start button / search: Redrob Launcher.
+    /// Start button / search / Command-Space: the app finder.
     Start,
+    /// The volume glyph: mute / unmute.
+    Volume,
+    /// The network glyph: network settings.
+    Network,
 }
 
 #[derive(Clone, Copy)]
@@ -106,6 +112,7 @@ struct Key {
     running: Vec<bool>,
     hover: Option<Action>,
     app: String,
+    status: crate::status::Status,
 }
 
 pub struct Chrome {
@@ -128,6 +135,7 @@ pub struct Chrome {
     hover: Option<Action>,
     /// Name of the focused app, for the Mac menu bar.
     pub app: String,
+    pub status: crate::status::Status,
 }
 
 fn load_font(env: &str, paths: &[&str]) -> fontdue::Font {
@@ -145,7 +153,6 @@ impl Chrome {
         let fonts = Fonts { semibold: load_font("REDROB_FONT", FONT_SEMIBOLD), medium: load_font("REDROB_FONT_MEDIUM", FONT_MEDIUM) };
         let cfg = Config::load();
         tracing::info!(style = ?cfg.style, theme = ?cfg.theme, shortcuts = cfg.shortcuts.len(), "desktop settings");
-        apply_qt_colors(cfg.theme);
         Self {
             mode: cfg.theme,
             style: cfg.style,
@@ -165,6 +172,7 @@ impl Chrome {
             hits: vec![],
             hover: None,
             app: String::new(),
+            status: Default::default(),
         }
     }
 
@@ -182,7 +190,9 @@ impl Chrome {
     pub fn act(&mut self, action: Action) {
         match action {
             Action::ToggleTheme => self.toggle_theme(),
-            Action::Start => crate::shell::spawn(&["redrob-launcher"]),
+            Action::Start => {} // the compositor opens the finder (input.rs)
+            Action::Volume => crate::status::toggle_mute(),
+            Action::Network => crate::shell::spawn(&["systemsettings", "kcm_networkmanagement"]),
             Action::Launch(i) => {
                 let l = &mut self.launchers[i];
                 if l.running() {
@@ -263,6 +273,7 @@ impl Chrome {
             running,
             hover: self.hover,
             app: self.app.clone(),
+            status: self.status.clone(),
         };
         if self.key.as_ref() != Some(&key) {
             self.repaint(&key);
@@ -312,6 +323,11 @@ impl Chrome {
         MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, None, Kind::Unspecified)
             .map_err(|e| tracing::warn!(?e, "ground texture"))
             .ok()
+    }
+
+    /// A copy of the wallpaper for other layers (the lock screen).
+    pub fn wallpaper_pixmap(&mut self, w: i32, h: i32) -> Option<Pixmap> {
+        self.wallpaper(w, h).cloned()
     }
 
     /// The smallest packaged wallpaper that covers the output (or
@@ -425,11 +441,19 @@ impl Chrome {
         let cw = draw::text_width(&self.fonts.medium, &clock, 13.0);
         x -= cw;
         draw::draw_text(&mut bar, &self.fonts.medium, &clock, x, mid + 4.5, 13.0, t.ink_primary);
+        if let Some((pct, charging)) = key.status.battery {
+            x -= 14.0 + 26.0;
+            battery(&mut bar, x, mid - 6.0, pct, charging, &t);
+            let label = format!("{pct}%");
+            let lw = draw::text_width(&self.fonts.medium, &label, 12.0);
+            x -= 6.0 + lw;
+            draw::draw_text(&mut bar, &self.fonts.medium, &label, x, mid + 4.0, 12.0, t.ink_primary);
+        }
         let g = 16.0;
         let glyphs: [(&'static str, Option<Action>); 4] = [
             (if key.mode == Mode::Dark { ICON_SUN } else { ICON_MOON }, Some(Action::ToggleTheme)),
-            (ICON_VOLUME, None),
-            (ICON_WIFI, None),
+            (vol_glyph(&key.status), Some(Action::Volume)),
+            (net_glyph(&key.status), Some(Action::Network)),
             (ICON_SEARCH, Some(Action::Start)),
         ];
         for (glyph, action) in glyphs {
@@ -580,8 +604,8 @@ impl Chrome {
         let mut gx = right - block - 14.0;
         let g = 16.0;
         let tray: [(&'static str, Option<Action>); 3] = [
-            (ICON_VOLUME, None),
-            (ICON_WIFI, None),
+            (vol_glyph(&key.status), Some(Action::Volume)),
+            (net_glyph(&key.status), Some(Action::Network)),
             (if key.mode == Mode::Dark { ICON_SUN } else { ICON_MOON }, Some(Action::ToggleTheme)),
         ];
         for (glyph, action) in tray {
@@ -604,10 +628,25 @@ fn symbol_dark_ink() -> &'static str {
     S.get_or_init(|| REDROB_SYMBOL.replace("fill=\"#FFFFFF\" mask=", "fill=\"#0a0b0c\" mask="))
 }
 
-/// Match Qt/KDE apps to the shell theme: the image's Redrob colour schemes.
-fn apply_qt_colors(mode: Mode) {
-    let scheme = if mode == Mode::Dark { "RedrobDark" } else { "Redrob" };
-    crate::shell::spawn(&["plasma-apply-colorscheme", scheme]);
+/// Match apps to the shell theme, live, open windows included:
+/// - Qt/KDE: the image's Redrob colour schemes into kdeglobals; running apps
+///   repaint on the change notification (they use Breeze, see main.rs).
+///   `offscreen` because the tool is a Qt app that needs no window.
+/// - GTK / portals: org.gnome.desktop.interface color-scheme.
+pub fn apply_qt_colors(mode: Mode) {
+    if std::env::var_os("REDROB_NESTED").is_some() {
+        return; // a development run must not retheme the host desktop
+    }
+    let (scheme, gtk) = if mode == Mode::Dark { ("RedrobDark", "prefer-dark") } else { ("Redrob", "default") };
+    crate::shell::spawn_env(&["plasma-apply-colorscheme", scheme], &[("QT_QPA_PLATFORM", "offscreen")]);
+    crate::shell::spawn(&["gsettings", "set", "org.gnome.desktop.interface", "color-scheme", gtk]);
+}
+
+impl Chrome {
+    /// Bring apps in line with the current theme (session start).
+    pub fn apply_app_theme(&self) {
+        apply_qt_colors(self.mode);
+    }
 }
 
 fn sh(script: &str) -> Vec<String> {
@@ -668,4 +707,21 @@ fn clock_text() -> (String, String) {
     };
     let wd = ["월", "화", "수", "목", "금", "토", "일"][now.weekday().num_days_from_monday() as usize];
     (format!("{ampm} {h12}:{m:02}"), format!("{}월 {}일 ({wd})", now.month(), now.day()))
+}
+
+fn vol_glyph(s: &crate::status::Status) -> &'static str {
+    if s.muted || s.volume == Some(0) { ICON_VOLUME_OFF } else { ICON_VOLUME }
+}
+
+fn net_glyph(s: &crate::status::Status) -> &'static str {
+    if s.online { ICON_WIFI } else { ICON_WIFI_OFF }
+}
+
+/// A battery glyph 24x12: outline, nub, fill to the level (danger under 20%).
+fn battery(p: &mut Pixmap, x: f32, y: f32, pct: u32, charging: bool, t: &theme::Theme) {
+    stroke_rrect(p, x + 0.5, y + 0.5, 22.0, 11.0, 3.0, with_alpha(t.ink_primary, 160));
+    fill_rrect(p, x + 23.0, y + 4.0, 2.0, 4.0, 1.0, with_alpha(t.ink_primary, 160));
+    let c = if pct < 20 && !charging { t.danger } else if charging { t.success } else { t.ink_primary };
+    let fw = 19.0 * (pct.min(100) as f32 / 100.0);
+    fill_rrect(p, x + 2.0, y + 2.0, fw.max(1.0), 8.0, 1.5, c);
 }

@@ -1,6 +1,12 @@
 #![allow(irrefutable_let_patterns)]
 
+mod apps;
 mod chrome;
+mod notify;
+mod overlay;
+mod pam;
+mod shot;
+mod status;
 mod deco;
 mod draw;
 mod scene;
@@ -34,6 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if drm {
         crate::udev::init_udev(&mut event_loop, &mut state)?;
     } else {
+        unsafe { std::env::set_var("REDROB_NESTED", "1") };
         crate::winit::init_winit(&mut event_loop, &mut state)?;
     }
 
@@ -52,13 +59,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::env::set_var("QT_QPA_PLATFORMTHEME", "kde");
         }
         std::env::set_var("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
+        // Breeze draws with the colour scheme, so a theme switch repaints open
+        // apps. (A Kvantum theme picked for the Plasma session paints its own
+        // fixed colours; the Redrob session overrides it, Plasma keeps it.)
+        if std::env::var_os("QT_STYLE_OVERRIDE").is_none() {
+            std::env::set_var("QT_STYLE_OVERRIDE", "Breeze");
+        }
         // GTK apps on Wayland.
         std::env::set_var("GDK_BACKEND", "wayland,x11");
     }
 
     // The login session runs the desktop's autostart entries (Redrob Launcher,
     // first-run app chooser, ...); nested development runs start a test client.
+    state.status = crate::status::start();
     if drm {
+        state.chrome.apply_app_theme();
+        // Our own session bus services and status polling.
+        crate::notify::serve(state.note_tx.clone());
         crate::autostart::run();
     } else {
         spawn_client();

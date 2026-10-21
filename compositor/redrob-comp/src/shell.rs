@@ -13,9 +13,14 @@ use crate::{config::Act, state::Smallvil};
 
 /// Start a program detached from the compositor, in the user's home.
 pub fn spawn(cmd: &[&str]) {
+    spawn_env(cmd, &[]);
+}
+
+pub fn spawn_env(cmd: &[&str], env: &[(&str, &str)]) {
     let Some((prog, args)) = cmd.split_first() else { return };
     let mut c = Command::new(prog);
     c.args(args);
+    c.envs(env.iter().copied());
     if let Some(home) = std::env::var_os("HOME") {
         c.current_dir(home);
     }
@@ -37,14 +42,18 @@ impl Smallvil {
                     t.send_close();
                 }
             }
-            Act::Cycle => self.cycle(),
+            Act::Cycle => self.open_switcher(),
             Act::Minimize => self.minimize_top(),
             Act::ShowDesktop => self.show_desktop(),
             Act::Maximize => self.place_top(Place::Max),
             Act::Restore => self.place_top(Place::Restore),
             Act::SnapLeft => self.place_top(Place::Left),
             Act::SnapRight => self.place_top(Place::Right),
-            Act::Launcher => spawn(&["redrob-launcher"]),
+            Act::Launcher => self.open_finder(),
+            Act::Expose => self.open_expose(),
+            Act::Lock => self.lock(),
+            Act::Screenshot => self.shot = Some(None),
+            Act::ScreenshotRegion => self.open_region(),
             Act::Terminal => spawn(&["konsole"]),
             Act::Files => spawn(&["dolphin"]),
             Act::Browser => spawn(&["xdg-open", "https://redrob.ai"]),
@@ -66,21 +75,6 @@ impl Smallvil {
         let surface = window.and_then(|w| w.toplevel().map(|t| t.wl_surface().clone()));
         let keyboard = self.seat.get_keyboard().unwrap();
         keyboard.set_focus(self, surface, serial);
-    }
-
-    /// Alt+Tab / Command+Tab: bring the bottom-most window to the top, so
-    /// repeated presses walk through every window.
-    fn cycle(&mut self) {
-        // Minimized windows come back first, most recent first.
-        if let Some((w, loc)) = self.minimized.pop() {
-            self.space.map_element(w.clone(), loc, true);
-            self.focus(Some(w));
-            return;
-        }
-        let bottom = self.space.elements().next().cloned();
-        if self.space.elements().len() > 1 {
-            self.focus(bottom);
-        }
     }
 
     pub fn minimize(&mut self, w: &Window) {
