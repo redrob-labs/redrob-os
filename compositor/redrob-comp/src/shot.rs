@@ -31,15 +31,11 @@ pub fn capture(renderer: &mut GlesRenderer, elements: &[ShellElement], size: Siz
     if data.len() < w * h * 4 {
         return None;
     }
-    // GL reads bottom-up: flip, and force alpha opaque (the frame is opaque).
-    let mut out = vec![0u8; w * h * 4];
-    for y in 0..h {
-        let src = &data[(h - 1 - y) * w * 4..(h - y) * w * 4];
-        let dst = &mut out[y * w * 4..(y + 1) * w * 4];
-        dst.copy_from_slice(src);
-        for px in dst.chunks_exact_mut(4) {
-            px[3] = 255;
-        }
+    // The offscreen render already comes back top row first (measured: the
+    // menu bar lands at the top). Force alpha opaque: the frame is opaque.
+    let mut out = data[..w * h * 4].to_vec();
+    for px in out.chunks_exact_mut(4) {
+        px[3] = 255;
     }
     Pixmap::from_vec(out, tiny_skia::IntSize::from_wh(w as u32, h as u32)?)
 }
