@@ -4,5 +4,5 @@
 vt = 1
 
 [default_session]
-command = "/usr/bin/redrob-comp --greeter"
+command = "sh -c '[ -w /var/lib/greetd ] && exec /usr/bin/redrob-comp --greeter > /var/lib/greetd/greeter.log 2>&1; exec /usr/bin/redrob-comp --greeter'"
 user = "greetd"
