@@ -1,26 +1,20 @@
 #!/usr/bin/bash
-# style-chooser -- first login: ask macOS-style or Windows-style, then apply the
-# WHOLE matching global theme and make it stick.
+# style-chooser -- first login: ask macOS-style or Windows-style, then apply that
+# upstream global theme STOCK (light variant, its own wallpaper, colours, Plasma
+# style, Kvantum widgets, Aurorae decoration, button order, panel layout).
 #
-# Why the whole theme, not a few keys: a KDE global theme bundles ~11 parts
-# (colour scheme, Plasma style, application/widget style = Kvantum, window
-# decoration = Aurorae, icons, cursor, splash, layout...). Poking kwinrc +
-# kdeglobals by hand left the WIDGET style on Breeze (so window interiors stayed
-# Linux-looking) and let the default global theme clobber the decoration back to
-# Breeze on the next login. So here we:
-#   1. apply the complete upstream package (WhiteSur-dark / Win11OS-dark) in one
-#      shot -- this is the ONLY thing that sets the Kvantum widget style, Plasma
-#      style and colour scheme together;
-#   2. set it as the DEFAULT LookAndFeelPackage so a later login re-applies the
-#      full look instead of the Breeze fallback;
-#   3. pick the Kvantum theme the engine actually renders;
-#   4. force Redrob branding OVER the upstream theme (accent, splash, wallpaper,
-#      logo/app icons) and the window-button side for the style;
-#   5. lay out the panels with Redrob launchers (top bar + floating dock for mac,
-#      bottom taskbar for Windows).
-# macOS = traffic-light buttons on the LEFT; Windows = buttons on the RIGHT.
-# Runs once (marker in XDG_STATE); a cancelled/unavailable dialog keeps the safe
-# Windows default.
+# The only Redrob change is the logo: the start button shows the Redrob OS mark
+# and the boot splash stays Redrob. (Build time already points every OS/start
+# logo inside these themes at the Redrob OS mark -- see lib.sh rebrand_logos.)
+#
+# Why every LnF default is written with kwriteconfig6 (not only
+# `plasma-apply-lookandfeel`): on this Kinoite base apply-lookandfeel does NOT
+# reliably write the colour scheme, Plasma style, widget style or decoration
+# (verified on v0.5.4). It runs first for the panel layout, then we write the
+# package's own `contents/defaults` key by key, so the result is exactly upstream.
+#
+# D-Bus tool: this base ships `qdbus-qt6` (not `qdbus6`/`qdbus`).
+# Runs once (marker in XDG_STATE); a cancelled/unavailable dialog keeps Windows.
 # Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 set -euo pipefail
 
@@ -29,51 +23,62 @@ mkdir -p "${state}"
 marker="${state}/desktop-style"
 [ -e "${marker}" ] && exit 0
 
-lay=/usr/share/redrob/layouts
-qd="$(command -v qdbus6 || command -v qdbus || true)"
-REDROB_ACCENT="43,82,255"            # Redrob Blue #2B52FF
+qd="$(command -v qdbus6 || command -v qdbus || command -v qdbus-qt6 || true)"
 REDROB_SPLASH="ai.redrob.desktop"    # our KSplash (Redrob lockup)
+STOCK_FONT="Noto Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
 
 kw() { kwriteconfig6 --file "$1" --group "$2" --key "$3" "$4" 2>/dev/null || true; }
 
-# apply_style  LNF_PACKAGE  KVANTUM_THEME  BTN_LEFT  BTN_RIGHT  LAYOUT
+# Start button -> Redrob OS mark, on whatever launcher the upstream layout uses.
+LOGO_JS='var ps = panels();
+for (var i = 0; i < ps.length; i++) {
+  var ws = ps[i].widgets();
+  for (var j = 0; j < ws.length; j++) {
+    var t = ws[j].type;
+    if (t == "org.kde.plasma.kickoff" || t == "org.kde.plasma.kicker" ||
+        t == "org.kde.plasma.kickerdash") {
+      ws[j].currentConfigGroup = ["General"];
+      ws[j].writeConfig("icon", "redrob-os");
+    }
+  }
+}'
+
+# apply_style LNF KVANTUM WALLPAPER
 apply_style() {
-  local pkg="$1" kvantum="$2" left="$3" right="$4" layout="$5"
+  local lnf="$1" kvantum="$2" wallpaper="$3"
+  local defaults="/usr/share/plasma/look-and-feel/${lnf}/contents/defaults"
 
-  # 1. Apply the COMPLETE upstream global theme: colour scheme + Plasma style +
-  #    window decoration (Aurorae) + icons + cursor + widgetStyle=kvantum, all at
-  #    once. This is ASYNC; give it time before our overrides land on top.
+  # 1. Whole theme incl. its panel layout (best effort; pinned below).
   command -v plasma-apply-lookandfeel >/dev/null 2>&1 \
-    && plasma-apply-lookandfeel -a "${pkg}" >/dev/null 2>&1 || true
-  sleep 5
+    && plasma-apply-lookandfeel --resetLayout -a "${lnf}" >/dev/null 2>&1 || true
+  sleep 4
 
-  # 2. Make the whole look STICK across logins -- the chosen package becomes the
-  #    system default, so if the default global theme is ever re-applied it is THIS
-  #    one (full mac/win look), never the Breeze-pinned pre-chooser default.
-  kw kdeglobals KDE LookAndFeelPackage "${pkg}"
+  # 2. The package's own defaults, verbatim ([file][group] key=value).
+  local line file="" grp=""
+  while IFS= read -r line; do
+    case "${line}" in
+      \[*\]\[*\]) file="${line#[}"; file="${file%%]*}"; grp="${line#*][}"; grp="${grp%]}" ;;
+      *=*) kw "${file}" "${grp}" "${line%%=*}" "${line#*=}" ;;
+    esac
+  done < "${defaults}"
+  kw kdeglobals KDE LookAndFeelPackage "${lnf}"     # sticks across logins
+  kw kdeglobals General font "${STOCK_FONT}"
 
-  # 3. Kvantum is the widget/application style the upstream theme selects; point
-  #    the engine at the theme it must render (without this it draws nothing).
+  # 3. Kvantum engine theme (it reads its own config, not kdeglobals).
   mkdir -p "${HOME}/.config/Kvantum"
   printf '[General]\ntheme=%s\n' "${kvantum}" > "${HOME}/.config/Kvantum/kvantum.kvconfig"
 
-  # 4. Redrob branding FORCED over the upstream theme.
-  kw kdeglobals General AccentColor "${REDROB_ACCENT}"
+  # 4. Upstream wallpaper.
+  command -v plasma-apply-wallpaperimage >/dev/null 2>&1 \
+    && plasma-apply-wallpaperimage "${wallpaper}" >/dev/null 2>&1 || true
+
+  # 5. Logo: Redrob splash + Redrob OS mark on the start button.
   kw ksplashrc KSplash Theme "${REDROB_SPLASH}"
   kw ksplashrc KSplash Engine KSplashQML
-
-  # 5. Window-button side for this style (mac = traffic lights left, win = right).
-  #    Written after the LnF so it is not clobbered back.
-  kw kwinrc org.kde.kdecoration2 ButtonsOnLeft "${left}"
-  kw kwinrc org.kde.kdecoration2 ButtonsOnRight "${right}"
-
-  # 6. Panels + Redrob wallpaper via our layout (carries the Redrob launchers:
-  #    agent sidebar, launcher, browser). Run AFTER the LnF so our dock/taskbar
-  #    wins over any panel layout the theme carries.
   [ -n "${qd}" ] && "${qd}" org.kde.plasmashell /PlasmaShell \
-    org.kde.PlasmaShell.evaluateScript "$(cat "${lay}/${layout}.js")" >/dev/null 2>&1 || true
+    org.kde.PlasmaShell.evaluateScript "${LOGO_JS}" >/dev/null 2>&1 || true
 
-  # 7. Re-decorate the already-open windows with the Aurorae theme + button sides.
+  # 6. Re-decorate open windows (a full re-login is what makes Aurorae certain).
   [ -n "${qd}" ] && "${qd}" org.kde.KWin /KWin org.kde.KWin.reconfigure >/dev/null 2>&1 || true
 }
 
@@ -81,15 +86,17 @@ choice="windows"
 if command -v kdialog >/dev/null 2>&1; then
   choice="$(kdialog --title "Redrob OS" \
     --menu "데스크톱 스타일을 고르세요 · Choose your desktop style" \
-    mac "macOS 스타일 — 상단 메뉴 막대 + 하단 도크 + 신호등 창 버튼" \
-    windows "Windows 스타일 — 하단 작업 표시줄 + 시작 메뉴" 2>/dev/null)" || choice="windows"
+    mac "macOS 스타일" \
+    windows "Windows 스타일" 2>/dev/null)" || choice="windows"
 fi
 
 case "${choice}" in
   mac)
-    apply_style com.github.vinceliuice.WhiteSur-dark WhiteSurDark XIA "" mac
+    apply_style com.github.vinceliuice.WhiteSur WhiteSur \
+      /usr/share/wallpapers/WhiteSur/contents/images/3840x2160.jpg
     echo "mac" > "${marker}" ;;
   *)
-    apply_style com.github.yeyushengfan258.Win11OS-dark Win11OS-dark "" IAX windows
+    apply_style com.github.yeyushengfan258.Win11OS-light Win11OS-light \
+      /usr/share/wallpapers/Win11OS-light/contents/images/3840x2400.jpg
     echo "windows" > "${marker}" ;;
 esac
