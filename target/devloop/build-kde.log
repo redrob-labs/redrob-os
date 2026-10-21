@@ -25,15 +25,10 @@
 --> Using cache 0c365fe26c5b78a70b7396f2f90af27dcdd74288b47b877c8f694e68b7d69cb7
 --> 0c365fe26c5b
 [2/4] STEP 8/9: COPY compositor/redrob-comp/ /src/compositor/redrob-comp/
+--> Using cache f65ae458aaec4b692612cbfdea8905bbb23121bba111909c2bb91793b5e84750
 --> f65ae458aaec
 [2/4] STEP 9/9: RUN --mount=type=cache,dst=/usr/local/cargo/registry     --mount=type=cache,dst=/src/agent/target     --mount=type=cache,dst=/src/modules/credential-broker/broker/target     --mount=type=cache,dst=/src/modules/usb-broker/broker/target     --mount=type=cache,dst=/src/tools/redrob-pairing/target     --mount=type=cache,dst=/src/compositor/redrob-comp/target     set -eu && mkdir -p /out &&     mkdir -p agent/web/dist && touch agent/web/dist/.gitkeep &&     (cd agent && cargo build --release --locked --bin zeroclaw) &&     install -m 0755 agent/target/release/zeroclaw /out/redrob-agent &&     (cd modules/credential-broker/broker && cargo build --release --locked) &&     install -m 0755 modules/credential-broker/broker/target/release/redrob-broker /out/ &&     (cd modules/usb-broker/broker && cargo build --release --locked) &&     install -m 0755 modules/usb-broker/broker/target/release/redrob-usb-broker /out/ &&     (cd tools/redrob-pairing && cargo build --release --locked) &&     install -m 0755 tools/redrob-pairing/target/release/redrob-pairing /out/ &&     (cd compositor/redrob-comp && cargo build --release --locked) &&     install -m 0755 compositor/redrob-comp/target/release/redrob-comp /out/
-    Finished `release` profile [optimized] target(s) in 0.36s
-    Finished `release` profile [optimized] target(s) in 0.08s
-    Finished `release` profile [optimized] target(s) in 0.03s
-    Finished `release` profile [optimized] target(s) in 0.00s
-    Updating git repository `https://github.com/Smithay/smithay`
-   Compiling redrob-comp v0.0.1 (/src/compositor/redrob-comp)
-    Finished `release` profile [optimized] target(s) in 9.24s
+--> Using cache 5536ee08a04debfbc555fd1b1386a1a53829eb82b477360ad9fffdb0ebca25ca
 --> 5536ee08a04d
 [3/4] STEP 1/3: FROM quay.io/fedora-ostree-desktops/base-atomic:44 AS akmods
 [3/4] STEP 2/3: ARG TARGETARCH
@@ -71,20 +66,21 @@
 --> Using cache 5fb56a3465d4fe1e9b96c0b837b6da8f0f2a90476f86413a0c533cc19394e6ee
 --> 5fb56a3465d4
 [4/4] STEP 11/18: COPY --from=redrob-build /out/ /usr/bin/
+--> Using cache 067b39f3af769fc15024b13a8aea5d121bf7f7ff00795d560141c5db519744bc
 --> 067b39f3af76
 [4/4] STEP 12/18: COPY image/files/ /
---> 1337dee5a29f
+--> 874cc95a37c4
 [4/4] STEP 13/18: COPY image/branding/ /
---> 4caeaca4b285
+--> 5ed719ec5891
 [4/4] STEP 14/18: COPY image/agent/ /
---> 739cd3019ea2
+--> 47e736a3f4bd
 [4/4] STEP 15/18: COPY image/installer/ /
---> a172e57abae2
+--> 1c4de7e6964c
 [4/4] STEP 16/18: RUN --mount=type=tmpfs,dst=/tmp     --mount=type=tmpfs,dst=/var/tmp     plymouth-set-default-theme redrob &&     KVER="$(ls /usr/lib/modules | head -n1)" &&     dracut --force --no-hostonly --reproducible --zstd            --add "plymouth ostree"            --kver "$KVER" "/usr/lib/modules/$KVER/initramfs.img"
 dracut[E]: No '/dev/log' or 'logger' included for syslog logging
 dracut-install: ERROR: installing '/root'
-dracut[E]: FAILED: /usr/lib/dracut/dracut-install -D /var/tmp/dracut.dWzE71L/initramfs -f /root
---> 68633d909a3a
+dracut[E]: FAILED: /usr/lib/dracut/dracut-install -D /var/tmp/dracut.dQL6kI3/initramfs -f /root
+--> cc0b1239c780
 [4/4] STEP 17/18: RUN --mount=type=bind,from=ctx,src=/,dst=/ctx,ro     /ctx/scripts/28-debrand.sh &&     /ctx/scripts/30-cleanup.sh &&     ostree container commit
 28-debrand: login session names + console issue rebranded
 presets: system=redrob-firstboot.service redrob-broker.service redrob-usb-broker.service redrob-agent.service redrob-pairing.timer podman.socket initial-setup.service bootc-fetch-apply-updates.timer greenboot-healthcheck.service greenboot-set-rollback-trigger.service redrob-flathub.service redrob-gaming-apps.service greetd.service cups.socket fwupd-refresh.timer
@@ -111,15 +107,15 @@ Created symlink '/etc/systemd/system/flatpak-add-fedora-repos.service' → '/dev
 Cache directory "/var/cache/libdnf5" does not exist. Nothing to clean.
 cleanup done
 notice: This command is deprecated, use `bootc container lint` instead.
---> cf0b7dd89a19
+--> d412c67cb43e
 [4/4] STEP 18/18: RUN bootc container lint
 Checks passed: 14
 Checks skipped: 1
 [4/4] COMMIT localhost:5000/redrob-os:kde
---> 09e0bd82f9bd
+--> 55f646cf8fab
 [Warning] one or more build args were not consumed: [GIT_SHA VERSION]
 Successfully tagged localhost:5000/redrob-os:kde
-09e0bd82f9bd0b00b5a4a22d35a56853557df3ebb53ea45602c218ceb3e561de
+55f646cf8fabb2c3c09970180a06e9410701275bc1d3698f2e12b2ef92c28d3f
 Getting image source signatures
 Copying blob sha256:0a5a0cad348df0f688c84867dda0776db6643ee864ebc13a022534857366d24e
 Copying blob sha256:e10388ca50ef897c4861a73b539cd3667f4714e1033f4b486e6583dbf46926c4
@@ -383,14 +379,14 @@ Copying blob sha256:3dc571996eff5e21f15eb340d6940747b3257a641b9e38a58eace8dbf051
 Copying blob sha256:58f9663658b9c68227a973415cdeb6be08da548bd178c09a15fa69357c6f648d
 Copying blob sha256:910a22848efb530c9c080759bbb67b03580f20df8be4b7fcd04963a56ed4096e
 Copying blob sha256:c2365e0795f616c1607bbc2a244d9684ebde0bb7969945a23c273bdebbc2222e
-Copying blob sha256:217439c4b517d12a77d9f93ed745407106cf5384cf20d557d5a99dd707777f2e
-Copying blob sha256:2f53a70e28a354512d97d70e4829d0250e0ded31ababd32fb9f959cc02c31901
+Copying blob sha256:ce4159ec18e08b5e582c274595c3d32c299ddf003ebdb2382f27f37d4bad23ee
+Copying blob sha256:8a3fb1383903ea1bb4cc8ac42a6973cd259fcb1cc62e4abefe7eb49532f73b4a
 Copying blob sha256:78546ae7cb8931756166946cae3a6dfe4ee00dc6665f2f41f9898c1e312fc080
 Copying blob sha256:7a1142af05784c2fd4d821815e166e4f73f6208a6095ab487c1267cddafd8aa8
-Copying blob sha256:47c1af0b972e2327f4a122ff2a7026e956a9dead20d849ffdb817e30771c4904
-Copying blob sha256:f3015be9de7265575a3566a96c9724aa0d659c199c743dc7becd3e7dfe70c8d0
+Copying blob sha256:9b3e4cd3a3f186de2242d8f89401ed892cf1a166dc5a3f4ea9c4bbb2334a4a66
+Copying blob sha256:83b356a6c4ad31c3246c2c823003422c24491e37ebb17faf03ac1bc91bc42e8b
 Copying blob sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef
-Copying config sha256:09e0bd82f9bd0b00b5a4a22d35a56853557df3ebb53ea45602c218ceb3e561de
+Copying config sha256:55f646cf8fabb2c3c09970180a06e9410701275bc1d3698f2e12b2ef92c28d3f
 Writing manifest to image destination
-build+push kde: 63s
+build+push kde: 50s
 rc=0
