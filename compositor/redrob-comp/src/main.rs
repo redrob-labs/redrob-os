@@ -69,9 +69,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         // GTK apps on Wayland.
         std::env::set_var("GDK_BACKEND", "wayland,x11");
-        // Korean input through Fcitx 5: Qt and X11 apps use its modules, GTK 4
-        // speaks text-input-v3 to the compositor, which Fcitx serves.
-        std::env::set_var("QT_IM_MODULE", "fcitx");
+        // Korean input through Fcitx 5. Qt and GTK speak text-input-v3 to the
+        // compositor, which Fcitx serves over input-method-v2, so the 한자
+        // candidate window shows as an input-method popup. (Qt's own fcitx
+        // module types fine but has nowhere to put that window here.) X11 apps
+        // use XIM.
+        std::env::set_var("QT_IM_MODULE", "wayland");
         std::env::set_var("XMODIFIERS", "@im=fcitx");
         std::env::set_var("SDL_IM_MODULE", "fcitx");
     }
