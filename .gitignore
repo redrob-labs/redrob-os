@@ -19,3 +19,6 @@
 /scripts/ota-harness/*.vars.fd
 /scripts/ota-harness/*.sock
 __pycache__/
+
+# local dev-loop logs (tools/devloop-build.sh)
+/target/
