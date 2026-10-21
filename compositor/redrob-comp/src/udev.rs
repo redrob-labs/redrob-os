@@ -154,11 +154,26 @@ pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> 
         })?;
 
     // VT switch: pause/resume libinput with the session.
+    let mut li = libinput.clone();
     event_loop.handle().insert_source(notifier, move |event, _, _| match event {
-        SessionEvent::PauseSession => libinput.suspend(),
-        SessionEvent::ActivateSession => {
-            let _ = libinput.resume();
+        SessionEvent::PauseSession => {
+            tracing::info!("session paused");
+            li.suspend()
         }
+        SessionEvent::ActivateSession => {
+            tracing::info!("session activated");
+            let _ = li.resume();
+        }
+    })?;
+    // The autologin session can still be activating when we open the input
+    // devices, which leaves them paused. Re-open them once we are settled.
+    tracing::info!(active = session.is_active(), "session at start");
+    let mut li = libinput.clone();
+    event_loop.handle().insert_source(Timer::from_duration(Duration::from_millis(1500)), move |_, _, _| {
+        li.suspend();
+        let r = li.resume();
+        tracing::info!(ok = r.is_ok(), "input devices re-opened");
+        TimeoutAction::Drop
     })?;
 
     // Keep the DRM device alive for the whole session.
