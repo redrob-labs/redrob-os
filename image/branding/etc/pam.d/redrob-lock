@@ -1,0 +1,4 @@
+#%PAM-1.0
+# Redrob lock screen (redrob-comp): check the user's own password.
+auth       include      system-auth
+account    include      system-auth

@@ -1,0 +1,38 @@
+[package]
+name = "redrob-comp"
+version = "0.0.1"
+edition = "2024"
+description = "Redrob OS compositor and shell (experiment), built on Smithay"
+license = "MIT"
+
+[dependencies]
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+bitflags = "2.2.1"
+resvg = { version = "=0.48.1", default-features = false }
+# Same tiny-skia as resvg, plus PNG decoding for the wallpaper.
+tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd", "png-format"] }
+fontdue = "=0.9.5"
+libc = "=0.2.191"
+# The notification server (org.freedesktop.Notifications) on the session bus.
+zbus = { version = "=5.19.0", default-features = false, features = ["blocking-api", "async-io"] }
+chrono = { version = "=0.4.45", default-features = false, features = ["clock"] }
+tracing = "=0.1.44"
+
+# Smithay pinned to a commit (no release since 0.7.0 carries the API smallvil uses).
+[dependencies.smithay]
+git = "https://github.com/Smithay/smithay"
+rev = "24647fc"
+default-features = false
+features = [
+    "backend_winit",
+    "wayland_frontend",
+    "desktop",
+    # real hardware (`--drm`)
+    "backend_drm",
+    "backend_gbm",
+    "backend_egl",
+    "backend_udev",
+    "backend_libinput",
+    "backend_session_libseat",
+    "renderer_gl",
+]

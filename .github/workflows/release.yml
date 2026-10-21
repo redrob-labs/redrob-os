@@ -1,15 +1,17 @@
-# Release -- tag `vX.Y.Z` on main -> versioned image -> installer media -> GitHub Release.
+# Release -- the ONLY workflow that builds the image. Tag `vX.Y.Z` on main:
 #
-#   version   -> build amd64 / arm64 -> manifest + sign (ghcr.io/redrob-labs/redrob-os:X.Y.Z)
-#             -> iso (amd64, anaconda-iso) / raw (arm64, raw disk) via bootc-image-builder
-#             -> publish (whole files to cdn.redrob.ai/os/, then SHA256SUMS + split assets on the release)
+#   build amd64 / arm64 (OS image + task sandbox, bootc lint)
+#     -> manifest + sign (X.Y.Z, stable, <BASE_TAG>, sha-<short>; sandbox, sandbox-sha-<short>)
+#     -> iso (amd64, anaconda-iso) / raw (arm64, raw disk) via bootc-image-builder
+#     -> publish (whole files to cdn.redrob.ai/os/, then SHA256SUMS + split assets on the release)
 #
 # Assets:  redrob-os-<ver>-linux-x86_64.iso        Anaconda installer (disk install, dual boot, LUKS)
 #          redrob-os-<ver>-linux-aarch64.img.xz    raw disk image for aarch64 boards (EXPERIMENTAL,
 #                                                  the release is published without it if it fails)
 #          SHA256SUMS
 #
-# `workflow_dispatch` with a version is a DRY RUN: it builds everything and publishes nothing.
+# `workflow_dispatch` with a version is a DRY RUN: it pushes only the X.Y.Z image, moves no
+# device tag (stable, sandbox) and creates no release.
 # Secrets: org REDROB_CDN_ACCESS_KEY_ID / REDROB_CDN_SECRET_ACCESS_KEY + org var REDROB_CDN_BUCKET
 # (CDN upload; skipped when absent). GITHUB_TOKEN pushes the image (packages: write) and creates
 # the release (contents: write); id-token: write is granted only to the signing job.
@@ -37,40 +39,15 @@ concurrency:
 
 env:
   IMAGE: ghcr.io/redrob-labs/redrob-os
+  # Tag push: vX.Y.Z -> X.Y.Z, published. Dispatch: the input, dry run.
+  REF_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+  PUBLISH: ${{ github.ref_type == 'tag' }}
   # renovate: datasource=docker depName=quay.io/centos-bootc/bootc-image-builder
   BIB: quay.io/centos-bootc/bootc-image-builder@sha256:30e7eac70b6e4448da57aaff66d6a89dbd1526572e8b77be31da129e692eb3e9 # latest, 2026-10-18
 
 jobs:
-  version:
-    name: Resolve the version
-    runs-on: ubuntu-24.04
-    outputs:
-      version: ${{ steps.v.outputs.version }}
-      publish: ${{ steps.v.outputs.publish }}
-    steps:
-      - id: v
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          if [ "${GITHUB_REF_TYPE:-}" = tag ]; then
-            v="${GITHUB_REF_NAME#v}"; publish=true
-          elif [ -n "$INPUT_VERSION" ]; then
-            v="${INPUT_VERSION#v}"; publish=false
-          else
-            echo "::error::not a tag push and no version input"; exit 1
-          fi
-          case "$v" in
-            [0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "::error::'$v' is not X.Y.Z[-suffix]"; exit 1 ;;
-          esac
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "publish=$publish" >> "$GITHUB_OUTPUT"
-          echo "version $v (publish=$publish)"
-
   build:
     name: build ${{ matrix.arch }}
-    needs: version
     strategy:
       fail-fast: false
       matrix:
@@ -85,9 +62,13 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      VER: ${{ needs.version.outputs.version }}
     steps:
+      - name: Version
+        run: |
+          set -euo pipefail
+          v="${REF_VERSION#v}"
+          case "$v" in [0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::'$v' is not X.Y.Z[-suffix]"; exit 1 ;; esac
+          echo "VER=$v" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Free disk space
         run: |
@@ -124,25 +105,45 @@ jobs:
         run: podman run --rm "${IMAGE}:${VER}-${{ matrix.arch }}" bootc container lint
       - name: Push the per-arch image
         run: podman push "${IMAGE}:${VER}-${{ matrix.arch }}"
+      - name: Task sandbox (the OS image binds ${{ env.IMAGE }}:sandbox)
+        run: |
+          set -euo pipefail
+          t="${IMAGE}:sandbox-sha-${GITHUB_SHA::7}-${{ matrix.arch }}"
+          podman build --build-arg TARGETARCH="${{ matrix.arch }}" \
+            --label org.opencontainers.image.source="https://github.com/${{ github.repository }}" \
+            --label org.opencontainers.image.revision="${GITHUB_SHA}" \
+            -f image/sandbox/Containerfile -t "$t" .
+          podman run --rm "$t" sh -c 'git --version && python3 --version && node --version && test -x /usr/local/bin/redrob-code'
+          podman push "$t"
 
   manifest:
     name: manifest + sign
-    needs: [version, build]
-    if: always() && !cancelled() && needs.version.result == 'success'
+    needs: build
+    # Publish as long as amd64 built; arm64 is experimental and may be missing.
+    if: always() && !cancelled()
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
       id-token: write # cosign keyless
-    env:
-      VER: ${{ needs.version.outputs.version }}
     steps:
+      - name: Version
+        run: |
+          set -euo pipefail
+          v="${REF_VERSION#v}"
+          case "$v" in [0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::'$v' is not X.Y.Z[-suffix]"; exit 1 ;; esac
+          echo "VER=$v" >> "$GITHUB_ENV"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: image/base.env
+          sparse-checkout-cone-mode: false
+      - run: cp image/base.env base.env
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
       - name: cosign login (cosign does not read podman's auth file)
         run: echo "${{ github.token }}" | cosign login ghcr.io -u "${{ github.actor }}" --password-stdin
       - name: Log in to GHCR
         run: echo "${{ github.token }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-      - name: Assemble ${{ needs.version.outputs.version }} from the per-arch images that exist
+      - name: Assemble ${{ env.VER }} from the per-arch images that exist
         run: |
           set -euo pipefail
           podman manifest create redrob-os
@@ -156,7 +157,15 @@ jobs:
               echo "::warning::${IMAGE}:${VER}-${arch} not found -- experimental ${arch} did not build; releasing without it"
             fi
           done
-          podman manifest push --all --digestfile digest.txt redrob-os "docker://${IMAGE}:${VER}"
+          tags="${VER}"
+          if [ "${PUBLISH}" = true ]; then
+            base_tag="$(sed -n 's/^BASE_TAG=//p' base.env)"
+            tags="${tags} stable ${base_tag} sha-${GITHUB_SHA::7}"
+          fi
+          for tag in ${tags}; do
+            podman manifest push --all --digestfile digest.txt redrob-os "docker://${IMAGE}:${tag}"
+            echo "pushed ${IMAGE}:${tag}"
+          done
           echo "DIGEST=$(cat digest.txt)" >> "$GITHUB_ENV"
       - name: cosign sign (key for devices + keyless)
         env:
@@ -173,18 +182,44 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "${IMAGE}@${DIGEST}" >/dev/null
           echo "signed ${IMAGE}:${VER} @ ${DIGEST}"
+      - name: Sandbox manifest + sign (sandbox, sandbox-sha-<short>)
+        if: env.PUBLISH == 'true'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ""
+        run: |
+          set -euo pipefail
+          short="${GITHUB_SHA::7}"
+          podman manifest create redrob-sandbox
+          for arch in amd64 arm64; do
+            if skopeo inspect --raw "docker://${IMAGE}:sandbox-sha-${short}-${arch}" >/dev/null 2>&1; then
+              podman manifest add redrob-sandbox "docker://${IMAGE}:sandbox-sha-${short}-${arch}"
+            elif [ "$arch" = amd64 ]; then
+              echo "::error::sandbox amd64 not found"; exit 1
+            fi
+          done
+          for tag in sandbox "sandbox-sha-${short}"; do
+            podman manifest push --all --digestfile digest.txt redrob-sandbox "docker://${IMAGE}:${tag}"
+          done
+          d="$(cat digest.txt)"
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${IMAGE}@${d}"
+          cosign sign --yes "${IMAGE}@${d}"
 
   iso:
     name: installer ISO (x86_64)
-    needs: [version, manifest]
+    needs: manifest
     runs-on: redrob-linux-16
     timeout-minutes: 120
     permissions:
       contents: read
       packages: read
-    env:
-      VER: ${{ needs.version.outputs.version }}
     steps:
+      - name: Version
+        run: |
+          set -euo pipefail
+          v="${REF_VERSION#v}"
+          case "$v" in [0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::'$v' is not X.Y.Z[-suffix]"; exit 1 ;; esac
+          echo "VER=$v" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Free disk space
         run: |
@@ -231,22 +266,26 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-iso-x86_64
-          path: redrob-os-${{ needs.version.outputs.version }}-linux-x86_64.iso
+          path: redrob-os-${{ env.VER }}-linux-x86_64.iso
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
 
   raw:
     name: raw disk image (aarch64, experimental)
-    needs: [version, manifest]
+    needs: manifest
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     permissions:
       contents: read
       packages: read
-    env:
-      VER: ${{ needs.version.outputs.version }}
     steps:
+      - name: Version
+        run: |
+          set -euo pipefail
+          v="${REF_VERSION#v}"
+          case "$v" in [0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::'$v' is not X.Y.Z[-suffix]"; exit 1 ;; esac
+          echo "VER=$v" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Free disk space
         run: |
@@ -276,26 +315,30 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-raw-aarch64
-          path: redrob-os-${{ needs.version.outputs.version }}-linux-aarch64.img.xz
+          path: redrob-os-${{ env.VER }}-linux-aarch64.img.xz
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
 
   publish:
     name: GitHub Release
-    needs: [version, manifest, iso, raw]
+    needs: [manifest, iso, raw]
     # Publish on a tag when the ISO exists; the aarch64 raw image is optional (experimental).
     if: >-
       always() && !cancelled()
-      && needs.version.outputs.publish == 'true'
+      && github.ref_type == 'tag'
       && needs.manifest.result == 'success'
       && needs.iso.result == 'success'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-    env:
-      VER: ${{ needs.version.outputs.version }}
     steps:
+      - name: Version
+        run: |
+          set -euo pipefail
+          v="${REF_VERSION#v}"
+          case "$v" in [0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::'$v' is not X.Y.Z[-suffix]"; exit 1 ;; esac
+          echo "VER=$v" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: .github/scripts
@@ -325,7 +368,7 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1
           CDN_PUBLIC_HOST: cdn.redrob.ai
           CDN_PREFIX: os
-          APP_VERSION: ${{ needs.version.outputs.version }}
+          APP_VERSION: ${{ env.VER }}
         run: |
           set -euo pipefail
           mkdir -p ../cdn
@@ -386,9 +429,9 @@ jobs:
           } > notes.md
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          name: Redrob OS v${{ needs.version.outputs.version }}
+          name: Redrob OS v${{ env.VER }}
           body_path: notes.md
           files: dist/*
           fail_on_unmatched_files: true
-          prerelease: ${{ contains(needs.version.outputs.version, '-') }}
-          make_latest: ${{ !contains(needs.version.outputs.version, '-') }}
+          prerelease: ${{ contains(env.VER, '-') }}
+          make_latest: ${{ !contains(env.VER, '-') }}

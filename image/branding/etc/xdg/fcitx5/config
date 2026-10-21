@@ -1,0 +1,13 @@
+# Redrob: 한/영 키 (right Alt on keyboards without one), Shift+Space, or
+# Ctrl+Space toggle between English and Korean.
+[Hotkey]
+EnumerateWithTriggerKeys=True
+
+[Hotkey/TriggerKeys]
+0=Hangul
+1=Shift+space
+2=Control+space
+
+[Behavior]
+ShareInputState=All
+ShowInputMethodInformation=True

@@ -9,17 +9,17 @@
 # Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 set -euo pipefail
 
-# 1. Login session picker. Plasma Login Manager lists each session by its Name=
-#    from /usr/share/{wayland-sessions,xsessions}/*.desktop ("Plasma (Wayland)"
-#    etc.). Rewrite the human strings only (Name/GenericName/Comment, including
-#    localized Name[xx]=) -- never Exec/TryExec/DesktopNames.
+# 1. Login session picker: the Redrob session (redrob-comp) is the desktop.
+#    The base's Plasma sessions are taken off the list. Their packages stay,
+#    because the login manager and the Qt apps are built on them.
 shopt -s nullglob
 for d in /usr/share/wayland-sessions /usr/share/xsessions; do
   [ -d "$d" ] || continue
-  for f in "$d"/plasma*.desktop; do
-    sed -i -E '/^(Name|GenericName|Comment)(\[[^]]*\])?=/{ s/\bPlasma\b/Redrob/g; s/\bKDE\b/Redrob/g }' "$f"
+  for f in "$d"/*.desktop; do
+    [ "$(basename "$f")" = redrob.desktop ] || rm -f "$f"
   done
 done
+[ -e /usr/share/wayland-sessions/redrob.desktop ] || { echo "error: redrob session missing" >&2; exit 1; }
 
 # 2. Console login banner: agetty prints /etc/issue on each VT; the stock file
 #    expands \S to the system-release ("Fedora ..."). Ship a plain Redrob banner.

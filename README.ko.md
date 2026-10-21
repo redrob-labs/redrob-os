@@ -17,10 +17,13 @@ USB에 쓰고 부팅한 뒤 안내에 따라 설치합니다(디스크 선택, W
 
 ## 데스크톱
 
-익숙한 데스크톱입니다. 작업 표시줄, 시작 메뉴, 시스템 트레이, 설정 앱. 앱은
-**Discover** 스토어(Flathub)에서 설치하고 스스로 업데이트됩니다. **Redrob Launcher**가
-로그인 때 시작되어 Redrob 앱(Browser, Office, Canvas, Code)을 홈 디렉터리에 설치합니다.
-한국어 입력이 기본 내장되어 있습니다(Shift+Space 또는 한/영 키).
+데스크톱은 레드롭이 직접 만든 Wayland 컴포지터 겸 셸 **redrob-comp**입니다(Smithay,
+`compositor/redrob-comp/`). 레드롭 디자인 시스템으로 그립니다. **레드롭 설정**(`⌘,` / `Win+I`)에서
+맥 배치(메뉴 바 + 도크)나 윈도우 배치(작업 표시줄 + 시작 버튼), 다크·라이트를 고릅니다. 단축키, 입력,
+소리, 디스플레이(해상도, 배율)도 여기서 바꿉니다. 앱 찾기, 창 전환, 모든 창 보기, 잠금, 스크린샷,
+알림이 들어 있습니다. 앱은 최신 GTK4 앱(Ptyxis, 파일, 텍스트 편집기 등)이고, **Redrob Launcher**가
+첫 로그인 때 레드롭 앱(Browser, Office, Canvas, Code)을 설치합니다. 한글 입력은 Fcitx 5입니다
+(오른쪽 Alt, Shift+Space, Ctrl+Space, 한자는 오른쪽 Ctrl).
 둘러보기: [docs/desktop.md](./docs/desktop.md).
 
 ## 업데이트와 롤백

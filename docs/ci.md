@@ -1,18 +1,16 @@
 # CI and releases
 
 Redrob OS is a bootc image. CI builds the image from `image/Containerfile`, signs it and publishes
-it to `ghcr.io/redrob-labs/redrob-os`; installed devices pull it from there. Four workflows under
-`.github/workflows/`, no secrets beyond the `GITHUB_TOKEN` GitHub issues to every run.
+it to `ghcr.io/redrob-labs/redrob-os`; installed devices pull it from there. Three workflows under
+`.github/workflows/`, kept thin on purpose: one check on a pull request, one build per release.
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `pr.yml` | pull request | `agent` fmt + clippy (skipped when no Rust changed), `image` podman build + `bootc container lint` (never pushed), `scripts` shellcheck + `py_compile` |
+| `pr.yml` | pull request | one job `check`: shellcheck + `py_compile`, then podman build + `bootc container lint` (never pushed; skipped on promotion PRs to `main`) |
 | `pr-policy.yml` | pull request (target) | org rules from `redrob-labs/.github`: open-PR cap, self-review before requesting a maintainer |
-| `build-image.yml` | push to `main`, manual | build amd64 (+ experimental arm64), manifest list tagged `stable`, `44`, `sha-<short>`, push to GHCR, cosign sign |
-| `release.yml` | tag `v*`, manual dry run | image tagged `<version>` + installer ISO (x86_64) + raw image (aarch64) on a GitHub Release |
+| `release.yml` | tag `v*`, manual dry run | the only image build: amd64 (+ experimental arm64) and the task sandbox, tagged `<version>`, `stable`, `44`, `sha-<short>`, `sandbox`, cosign-signed; installer ISO (x86_64) + raw image (aarch64) on a GitHub Release |
 
-Nothing runs on an ordinary push: a push to `main` is the merge of a pull request that already
-passed `pr.yml`, and `build-image.yml` publishes it.
+Nothing runs on a push to `main`: devices move to a new image when a `v*` tag is released.
 
 ## Contract with the Containerfile
 
@@ -48,33 +46,8 @@ no root filesystem, the image needs `/usr/lib/bootc/install/20-redrob.toml` with
 
 ## pr.yml
 
-- `agent`: toolchain 1.98.0 (matches upstream zeroclaw CI), `cargo fmt --all -- --check`, then
-  `cargo clippy --locked --workspace --exclude zeroclaw-desktop --all-targets --features ci-all --profile ci -- -D warnings`.
-  Skipped unless `agent/**` or `pr.yml` changed (`dorny/paths-filter`).
-- `image`: the same `podman build` the publishing workflows run, plus `bootc container lint`. No
-  push, no login. Hosted runners have ~14 GB of disk; the job deletes the unused .NET/Android/GHC
-  toolchains first. Budget 120 min: the agent compile dominates.
-- `scripts`: `shellcheck -S warning` on every shell script under `image/` (by extension or shebang),
-  `python3 -m py_compile` on `tools/**/*.py` and `scripts/**/*.py`.
-
-## build-image.yml
-
-Runs on push to `main` and on `workflow_dispatch`. There is no scheduled rebuild (Janghoon
-declined one on 2026-10-18): base-image security refreshes reach devices when a Renovate PR
-bumps the base pin or when a release/hotfix lands on `main`; run the workflow by hand for an
-out-of-band rebuild.
-
-1. `build` matrix: `amd64` on `ubuntu-24.04`, `arm64` on `ubuntu-24.04-arm` (native, no qemu --
-   compiling the agent under emulation would take hours). Each pushes `sha-<short>-<arch>`.
-   `arm64` is experimental: when it fails the run is red, but publishing continues without it.
-2. `manifest`: creates a manifest list from whichever per-arch images exist (amd64 mandatory),
-   pushes it as `stable`, `<BASE_TAG>` and `sha-<short>`, then `cosign sign --yes` on the manifest
-   digest (keyless, GitHub OIDC; this is the only job with `id-token: write`) and verifies the
-   signature it just made. Devices verify with the identity regexp
-   `^https://github.com/redrob-labs/redrob-os/` and issuer `https://token.actions.githubusercontent.com`
-   in `/etc/containers/policy.json`.
-
-Concurrency: a newer run on the same ref cancels an older one.
+One job, `check`. The image step is the real test: the Rust (agent, compositor) compiles inside
+the Containerfile, so there is no separate cargo job.
 
 ## release.yml
 
@@ -115,7 +88,7 @@ job. Pushing to GHCR with `GITHUB_TOKEN` needs the `redrob-os` package to allow 
 (automatic on first push from this repository; check Package settings -> Manage Actions access if
 a push returns 403).
 
-The first run of `build-image.yml` creates the GHCR package; make it **public** in the package
+The first run of `release.yml` creates the GHCR package; make it **public** in the package
 settings so devices can pull without credentials.
 
 ## Renovate (`renovate.json` at the repository root)
@@ -145,7 +118,7 @@ Weekly (Monday morning KST), never automerged; merge after `pr.yml` is green.
 
 - No per-module cargo tests (`modules/*`), no branch-name or back-merge procedure checks (removed
   with the Buildroot workflows). CI gates are code: build, lint, image.
-- No rechunking of the image (`rpm-ostree compose build-chunked-oci`); add it in `build-image.yml`
+- No rechunking of the image (`rpm-ostree compose build-chunked-oci`); add it in `release.yml`
   if update download sizes become a problem.
 - No qemu cross-builds: arm64 uses GitHub's native arm runners (`ubuntu-24.04-arm`, free for public
   repositories).

@@ -1,9 +1,0 @@
-# Copyright 2026 Janghoon Lee (Redrob) and contributors
-# SPDX-License-Identifier: Apache-2.0
-# Redrob OS: login splash. The look-and-feel package's `defaults` file is
-# only read by lookandfeeltool / System Settings, so first logins need the
-# system default here.
-
-[KSplash]
-Engine=KSplashQML
-Theme=ai.redrob.desktop
