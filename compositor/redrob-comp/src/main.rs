@@ -1,6 +1,9 @@
 #![allow(irrefutable_let_patterns)]
 
 mod chrome;
+mod deco;
+mod draw;
+mod scene;
 mod config;
 mod autostart;
 mod shell;

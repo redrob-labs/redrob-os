@@ -21,10 +21,6 @@ use smithay::{
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
             ImportDma,
-            element::{
-                AsRenderElements, memory::MemoryRenderBufferRenderElement,
-                surface::WaylandSurfaceRenderElement,
-            },
             gles::GlesRenderer,
         },
         session::{Event as SessionEvent, Session, libseat::LibSeatSession},
@@ -40,16 +36,11 @@ use smithay::{
         input::Libinput,
         rustix::fs::OFlags,
     },
-    utils::{DeviceFd, Scale, Transform},
+    utils::{DeviceFd, Transform},
 };
 
 use crate::Smallvil;
 
-smithay::backend::renderer::element::render_elements! {
-    pub ShellElement<=GlesRenderer>;
-    Window=WaylandSurfaceRenderElement<GlesRenderer>,
-    Memory=MemoryRenderBufferRenderElement<GlesRenderer>,
-}
 
 type Compositor =
     DrmCompositor<GbmAllocator<DrmDeviceFd>, GbmFramebufferExporter<DrmDeviceFd>, (), DrmDeviceFd>;
@@ -203,22 +194,7 @@ fn render(d: &Rc<RefCell<Drm>>, state: &mut Smallvil) {
     let Drm { renderer, compositor, output, pending, .. } = &mut *drm;
     let size = output.current_mode().unwrap().size;
 
-    // Front to back: cursor, bar + dock, then windows top-most first.
-    let mut elements: Vec<ShellElement> = Vec::new();
-    let pointer = state.seat.get_pointer().unwrap().current_location();
-    if let Some(c) = state.chrome.cursor_element(renderer, pointer) {
-        elements.push(ShellElement::Memory(c));
-    }
-    elements.extend(state.chrome.elements(renderer, size).into_iter().map(ShellElement::Memory));
-    for window in state.space.elements().rev() {
-        let Some(loc) = state.space.element_location(window) else { continue };
-        let w: Vec<WaylandSurfaceRenderElement<GlesRenderer>> =
-            window.render_elements(renderer, loc.to_physical(1), Scale::from(1.0), 1.0);
-        elements.extend(w.into_iter().map(ShellElement::Window));
-    }
-    if let Some(g) = state.chrome.ground_element(renderer, size) {
-        elements.push(ShellElement::Memory(g));
-    }
+    let elements = crate::scene::elements(state, renderer, size, true);
 
     if state.chrome.frame_log_due() {
         tracing::info!(n = elements.len(), ground = ?state.chrome.ground(), "frame");

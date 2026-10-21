@@ -1407,6 +1407,7 @@ dependencies = [
  "fontdue",
  "resvg",
  "smithay",
+ "tiny-skia",
  "tracing",
  "tracing-subscriber",
 ]

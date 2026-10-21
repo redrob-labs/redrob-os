@@ -3,7 +3,7 @@ use std::time::Duration;
 use smithay::{
     backend::{
         renderer::{
-            damage::OutputDamageTracker, element::memory::MemoryRenderBufferRenderElement, gles::GlesRenderer,
+            damage::OutputDamageTracker, gles::GlesRenderer,
         },
         winit::{self, WinitEvent},
     },
@@ -64,24 +64,8 @@ pub fn init_winit(
                 {
                     let ground = state.chrome.ground();
                     let (renderer, mut framebuffer) = backend.bind().unwrap();
-                    let chrome_elements = state.chrome.elements(renderer, size);
-                    smithay::desktop::space::render_output::<
-                        _,
-                        MemoryRenderBufferRenderElement<GlesRenderer>,
-                        _,
-                        _,
-                    >(
-                        &output,
-                        renderer,
-                        &mut framebuffer,
-                        1.0,
-                        0,
-                        [&state.space],
-                        &chrome_elements,
-                        &mut damage_tracker,
-                        ground,
-                    )
-                    .unwrap();
+                    let elements = crate::scene::elements(state, renderer, size, false);
+                    damage_tracker.render_output(renderer, &mut framebuffer, 0, &elements, ground).unwrap();
                 }
                 backend.submit(Some(&[damage])).unwrap();
 

@@ -24,6 +24,10 @@ impl Mode {
 #[derive(Clone, Copy, Debug)]
 pub struct Rgba(pub u8, pub u8, pub u8, pub u8);
 
+pub const fn hexa(v: u32) -> Rgba {
+    hex(v)
+}
+
 const fn hex(v: u32) -> Rgba {
     Rgba((v >> 16) as u8, (v >> 8) as u8, v as u8, 0xFF)
 }
@@ -40,8 +44,22 @@ pub struct Theme {
     /// --ink-primary / --ink-secondary: text and icon strokes.
     pub ink_primary: Rgba,
     pub ink_secondary: Rgba,
-    /// --action-primary: Redrob Blue; the running-app indicator and focus.
+    pub ink_muted: Rgba,
+    pub surface_sunken: Rgba,
+    pub border_strong: Rgba,
+    /// --action-primary: Redrob Blue.
     pub action_primary: Rgba,
+    /// Drop shadow colour of shadow-md / shadow-lg (alpha is the token's).
+    pub shadow_md: Rgba,
+    pub shadow_lg: Rgba,
+    /// Hover wash on chrome controls (ink at low alpha).
+    pub hover: Rgba,
+    /// status-danger / -warning / -success base colours (window dots).
+    pub danger: Rgba,
+    pub warning: Rgba,
+    pub success: Rgba,
+    /// The desktop ground gradient for this theme (130deg stops).
+    pub ground: &'static [(f32, u32)],
 }
 
 pub fn theme(mode: Mode) -> Theme {
@@ -53,7 +71,18 @@ pub fn theme(mode: Mode) -> Theme {
             border_subtle: hex(0xdfe2e8),
             ink_primary: hex(0x0a0b0c),
             ink_secondary: hex(0x576071),
+            ink_muted: hex(0x686e78),
+            surface_sunken: hex(0xeff1f4),
+            border_strong: hex(0x7c8390),
             action_primary: hex(0x2b52ff),
+            shadow_md: Rgba(10, 11, 12, 26),
+            shadow_lg: Rgba(10, 11, 12, 36),
+            hover: Rgba(10, 11, 12, 15),
+            danger: hex(0xff4b4b),
+            warning: hex(0xff9c1b),
+            success: hex(0x29e474),
+            // --gradient-light: brand blue cooling into tint.
+            ground: &[(0.0, 0x8aafff), (0.55, 0xd9e6ff), (1.0, 0xeef4ff)],
         },
         Mode::Dark => Theme {
             surface_base: hex(0x0a0b0c),
@@ -62,7 +91,18 @@ pub fn theme(mode: Mode) -> Theme {
             border_subtle: hex(0x292e37),
             ink_primary: hex(0xf8f9fb),
             ink_secondary: hex(0xaab0bb),
+            ink_muted: hex(0x838a97),
+            surface_sunken: hex(0x1c1f26),
+            border_strong: hex(0x7c8390),
             action_primary: hex(0x2b52ff),
+            shadow_md: Rgba(0, 0, 0, 178),
+            shadow_lg: Rgba(0, 0, 0, 204),
+            hover: Rgba(248, 249, 251, 20),
+            danger: hex(0xff4b4b),
+            warning: hex(0xff9c1b),
+            success: hex(0x29e474),
+            // Fallback when the Redrob wallpaper is missing: the deep ground.
+            ground: &[(0.0, 0x0a0b0c), (0.7, 0x0a0b0c), (1.0, 0x061460)],
         },
     }
 }
@@ -71,18 +111,17 @@ pub fn theme(mode: Mode) -> Theme {
 /// --control-height-sm: the top bar is one small control tall.
 pub const BAR_H: i32 = 32;
 /// --radius-md: dock slots (a control).
+pub const RADIUS_SM: f32 = 6.0;
 pub const RADIUS_MD: f32 = 8.0;
+pub const RADIUS_LG: f32 = 12.0;
 /// --radius-2xl: the dock material (a large floating surface).
 pub const RADIUS_2XL: f32 = 24.0;
 /// --radius-full: pills (running indicator).
 pub const RADIUS_FULL: f32 = 9999.0;
 /// --space-2 / --space-3 / --space-4.
-pub const SPACE_2: i32 = 8;
-pub const SPACE_3: i32 = 12;
-pub const SPACE_4: i32 = 16;
 /// --control-height-lg: one dock slot.
-pub const SLOT: i32 = 48;
+/// Server-side title bar height.
+pub const TITLE_H: i32 = 36;
 /// Windows-style taskbar height and its launcher slot.
 pub const TASKBAR_H: i32 = 48;
 pub const TASK_SLOT: i32 = 40;
-pub const SPACE_1: i32 = 4;

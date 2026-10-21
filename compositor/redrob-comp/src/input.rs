@@ -47,6 +47,7 @@ impl Smallvil {
                 let serial = SERIAL_COUNTER.next_serial();
                 pointer.motion(self, under, &MotionEvent { location: pos, serial, time: event.time() });
                 pointer.frame(self);
+                self.track_hover(pos);
             }
             InputEvent::PointerMotionAbsolute { event, .. } => {
                 let output = self.space.outputs().next().unwrap();
@@ -72,6 +73,7 @@ impl Smallvil {
                     },
                 );
                 pointer.frame(self);
+                self.track_hover(pos);
             }
             InputEvent::PointerButton { event, .. } => {
                 let pointer = self.seat.get_pointer().unwrap();
@@ -90,6 +92,12 @@ impl Smallvil {
                     if let Some(action) = hit {
                         self.chrome.act(action);
                         return;
+                    }
+                    if button == 0x110 {
+                        if let Some((window, part)) = self.deco_hit(pointer.current_location()) {
+                            self.frame_press(window, part, serial);
+                            return;
+                        }
                     }
                 }
 
@@ -233,6 +241,44 @@ impl Smallvil {
                 FilterResult::Intercept(Some(act))
             }
             None => FilterResult::Forward,
+        }
+    }
+}
+
+impl Smallvil {
+    fn track_hover(&mut self, pos: smithay::utils::Point<f64, smithay::utils::Logical>) {
+        self.chrome.pointer(pos);
+        self.deco.hover = self.deco_hit(pos);
+    }
+
+    /// A left press on a window frame: the dots / buttons act, the title bar
+    /// raises the window and starts a move.
+    fn frame_press(&mut self, window: smithay::desktop::Window, part: crate::deco::DecoHit, serial: smithay::utils::Serial) {
+        use crate::deco::DecoHit;
+        let keyboard = self.seat.get_keyboard().unwrap();
+        self.space.raise_element(&window, true);
+        if let Some(t) = window.toplevel() {
+            keyboard.set_focus(self, Some(t.wl_surface().clone()), serial);
+        }
+        match part {
+            DecoHit::Close => {
+                if let Some(t) = window.toplevel() {
+                    t.send_close();
+                }
+            }
+            DecoHit::Minimize => self.minimize(&window),
+            DecoHit::Maximize => self.toggle_maximize(&window),
+            DecoHit::Title => {
+                let pointer = self.seat.get_pointer().unwrap();
+                let Some(initial_window_location) = self.space.element_location(&window) else { return };
+                let start_data = smithay::input::pointer::GrabStartData {
+                    focus: None,
+                    button: 0x110,
+                    location: pointer.current_location(),
+                };
+                let grab = crate::grabs::MoveSurfaceGrab { start_data, window, initial_window_location };
+                pointer.set_grab(self, grab, serial, smithay::input::pointer::Focus::Clear);
+            }
         }
     }
 }

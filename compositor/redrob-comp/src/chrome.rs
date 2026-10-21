@@ -1,58 +1,90 @@
-//! Redrob shell chrome, drawn by the compositor itself (no Plasma, no COSMIC).
-//! Two layouts from `config::Style`: Mac -- a top bar (Redrob mark, name,
-//! clock, light/dark switch) and a floating centred dock; Windows -- one bottom
-//! taskbar with a start button and centred launchers, clock and switch at the
-//! right. Painted on the CPU with tiny-skia (anti-aliased rounded corners),
-//! text with fontdue (Pretendard), icons are the redrob-ui SVG set via resvg,
-//! then uploaded as two textures. Colours and radii come from `theme.rs`.
+//! Redrob shell chrome, drawn by the compositor itself (no Plasma, no COSMIC),
+//! from the redrob-ui design system: its colour tokens, radii and shadows, its
+//! glyph set, and the Redrob app icons (the masked superellipse tiles).
+//!
+//! Two layouts from `config::Style`:
+//! - Mac: a translucent menu bar on top (Redrob symbol, the active app's name;
+//!   search, Wi-Fi, volume, the light/dark switch and the Korean date-time at
+//!   the right) and a floating dock of app tiles with a name tip on hover.
+//! - Windows: one taskbar at the bottom with the start button, a search pill
+//!   and app icons centred as a group; tray glyphs and time over date at the
+//!   right.
+//!
+//! Painted on the CPU with tiny-skia, uploaded as textures. Colours come from
+//! `theme.rs`.
 
 use std::process::{Child, Command};
 
-use resvg::{tiny_skia, usvg};
 use smithay::{
-    backend::{
-        allocator::Fourcc,
-        renderer::{
-            element::{
-                Kind,
-                memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
-            },
-            gles::GlesRenderer,
+    backend::renderer::{
+        element::{
+            Kind,
+            memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
         },
+        gles::GlesRenderer,
     },
     utils::{Logical, Physical, Point, Rectangle, Size, Transform},
 };
-use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Stroke};
+use tiny_skia::{FillRule, PathBuilder, Pixmap, Stroke};
 
 use crate::config::{Act, Combo, Config, Style};
-use crate::theme::{self, Mode, Rgba};
+use crate::draw::{self, Fonts, IconCache, fill_circle, fill_rect, fill_rrect, stroke_rrect, upload, with_alpha};
+use crate::theme::{self, Mode};
 
-const ICON_TERMINAL: &str = include_str!("../assets/icons/terminal.svg");
-const ICON_FOLDER: &str = include_str!("../assets/icons/folder.svg");
-const ICON_BROWSER: &str = include_str!("../assets/icons/browser.svg");
-const ICON_SETTINGS: &str = include_str!("../assets/icons/settings.svg");
-const ICON_CODE: &str = include_str!("../assets/icons/code.svg");
+pub const ICON_TERMINAL: &str = include_str!("../assets/icons/terminal.svg");
+pub const ICON_FOLDER: &str = include_str!("../assets/icons/folder.svg");
+pub const ICON_SETTINGS: &str = include_str!("../assets/icons/settings.svg");
 const ICON_SUN: &str = include_str!("../assets/icons/sun.svg");
 const ICON_MOON: &str = include_str!("../assets/icons/moon.svg");
-const REDROB_MARK: &str = include_str!("../assets/redrob-os.svg");
+const ICON_SEARCH: &str = include_str!("../assets/icons/search.svg");
+const ICON_WIFI: &str = include_str!("../assets/icons/wifi.svg");
+const ICON_VOLUME: &str = include_str!("../assets/icons/volume.svg");
 
-const FONT_PATHS: &[&str] = &[
-    "/usr/share/fonts/redrob/pretendard/Pretendard-SemiBold.otf",
+/// Redrob app icons, (light, dark) "icon-web" masters from redrob-ui.
+const APP_REDROB: (&str, &str) =
+    (include_str!("../assets/app-icons/redrob-icon-web.svg"), include_str!("../assets/app-icons/redrob-icon-web-dark.svg"));
+const APP_BROWSER: (&str, &str) =
+    (include_str!("../assets/app-icons/browser-icon-web.svg"), include_str!("../assets/app-icons/browser-icon-web-dark.svg"));
+const APP_CODE: (&str, &str) =
+    (include_str!("../assets/app-icons/code-icon-web.svg"), include_str!("../assets/app-icons/code-icon-web-dark.svg"));
+const APP_OFFICE: (&str, &str) =
+    (include_str!("../assets/app-icons/office-icon-web.svg"), include_str!("../assets/app-icons/office-icon-web-dark.svg"));
+const REDROB_SYMBOL: &str = include_str!("../assets/app-icons/redrob-symbol.svg");
+
+const FONT_SEMIBOLD: &[&str] = &["/usr/share/fonts/redrob/pretendard/Pretendard-SemiBold.otf"];
+const FONT_MEDIUM: &[&str] = &[
     "/usr/share/fonts/redrob/pretendard/Pretendard-Medium.otf",
+    "/usr/share/fonts/redrob/pretendard/Pretendard-SemiBold.otf",
+];
+const WALLPAPERS: &[&str] = &[
+    "/usr/share/wallpapers/Redrob/contents/images/1920x1080.png",
+    "/usr/share/wallpapers/Redrob/contents/images/2560x1440.png",
+    "/usr/share/wallpapers/Redrob/contents/images/3840x2160.png",
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     Launch(usize),
     ToggleTheme,
-    /// The Windows-style start button.
+    /// Start button / search: Redrob Launcher.
     Start,
 }
 
+#[derive(Clone, Copy)]
+enum Tile {
+    /// A Redrob product: its own icon tile.
+    App((&'static str, &'static str)),
+    /// A system app: a neutral tile with a redrob-ui glyph.
+    System(&'static str),
+}
+
 struct Launcher {
-    icon: &'static str,
+    name: &'static str,
+    tile: Tile,
     command: Vec<String>,
     child: Option<Child>,
+    /// Starts a separator before it in the dock.
+    group: bool,
 }
 
 impl Launcher {
@@ -70,8 +102,10 @@ struct Key {
     style: Style,
     mode: Mode,
     size: (i32, i32),
-    clock: String,
+    clock: (String, String),
     running: Vec<bool>,
+    hover: Option<Action>,
+    app: String,
 }
 
 pub struct Chrome {
@@ -79,42 +113,70 @@ pub struct Chrome {
     pub style: Style,
     shortcuts: Vec<(Combo, Act)>,
     stamp: Option<(std::path::PathBuf, std::time::SystemTime)>,
-    font: fontdue::Font,
+    pub fonts: Fonts,
+    pub icons: IconCache,
     launchers: Vec<Launcher>,
     key: Option<Key>,
-    bar: Option<MemoryRenderBuffer>,
+    bar: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
+    dock: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
     cursor: Option<(Mode, MemoryRenderBuffer)>,
     ground_px: Option<((Mode, i32, i32), MemoryRenderBuffer)>,
+    wallpaper: Option<Option<Pixmap>>,
     frames: u32,
     ticks: u32,
-    dock: Option<(MemoryRenderBuffer, Point<i32, Logical>)>,
     hits: Vec<(Rectangle<i32, Logical>, Action)>,
+    hover: Option<Action>,
+    /// Name of the focused app, for the Mac menu bar.
+    pub app: String,
+}
+
+fn load_font(env: &str, paths: &[&str]) -> fontdue::Font {
+    let bytes = std::env::var(env)
+        .ok()
+        .into_iter()
+        .chain(paths.iter().map(|s| s.to_string()))
+        .find_map(|p| std::fs::read(p).ok())
+        .expect("no Pretendard face found (set REDROB_FONT)");
+    fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()).expect("font parse")
 }
 
 impl Chrome {
     pub fn new() -> Self {
-        let font_bytes = std::env::var("REDROB_FONT")
-            .ok()
-            .into_iter()
-            .chain(FONT_PATHS.iter().map(|s| s.to_string()))
-            .find_map(|p| std::fs::read(p).ok())
-            .expect("no Pretendard face found (set REDROB_FONT)");
-        let font = fontdue::Font::from_bytes(font_bytes, fontdue::FontSettings::default())
-            .expect("font parse");
+        let fonts = Fonts { semibold: load_font("REDROB_FONT", FONT_SEMIBOLD), medium: load_font("REDROB_FONT_MEDIUM", FONT_MEDIUM) };
         let cfg = Config::load();
         tracing::info!(style = ?cfg.style, theme = ?cfg.theme, shortcuts = cfg.shortcuts.len(), "desktop settings");
+        apply_qt_colors(cfg.theme);
         Self {
             mode: cfg.theme,
             style: cfg.style,
             shortcuts: cfg.shortcuts,
             stamp: Config::stamp(),
-            font, launchers: default_launchers(), key: None, bar: None, cursor: None, ground_px: None, frames: 0, ticks: 0, dock: None, hits: vec![] }
+            fonts,
+            icons: IconCache::default(),
+            launchers: default_launchers(),
+            key: None,
+            bar: None,
+            dock: None,
+            cursor: None,
+            ground_px: None,
+            wallpaper: None,
+            frames: 0,
+            ticks: 0,
+            hits: vec![],
+            hover: None,
+            app: String::new(),
+        }
     }
 
     /// What the pointer hit, in output-logical coordinates, if anything.
     pub fn hit(&self, p: Point<f64, Logical>) -> Option<Action> {
         let p = p.to_i32_round();
         self.hits.iter().find(|(r, _)| r.contains(p)).map(|(_, a)| *a)
+    }
+
+    /// Track the pointer for hover states (dock name tips, taskbar wash).
+    pub fn pointer(&mut self, p: Point<f64, Logical>) {
+        self.hover = self.hit(p);
     }
 
     pub fn act(&mut self, action: Action) {
@@ -137,6 +199,7 @@ impl Chrome {
         self.mode = self.mode.toggled();
         Config::save_theme(self.mode);
         self.stamp = Config::stamp(); // our own write is not an outside edit
+        apply_qt_colors(self.mode);
     }
 
     pub fn shortcuts(&self) -> &[(Combo, Act)] {
@@ -153,6 +216,9 @@ impl Chrome {
         self.stamp = now;
         let cfg = Config::load();
         tracing::info!(style = ?cfg.style, theme = ?cfg.theme, "desktop settings changed");
+        if cfg.theme != self.mode {
+            apply_qt_colors(cfg.theme);
+        }
         self.style = cfg.style;
         self.mode = cfg.theme;
         self.shortcuts = cfg.shortcuts;
@@ -189,26 +255,23 @@ impl Chrome {
             self.reload_if_changed();
         }
         let running: Vec<bool> = self.launchers.iter_mut().map(|l| l.running()).collect();
-        let key = Key { style: self.style, mode: self.mode, size: (out.w, out.h), clock: clock_text(), running };
+        let key = Key {
+            style: self.style,
+            mode: self.mode,
+            size: (out.w, out.h),
+            clock: clock_text(),
+            running,
+            hover: self.hover,
+            app: self.app.clone(),
+        };
         if self.key.as_ref() != Some(&key) {
             self.repaint(&key);
             self.key = Some(key);
         }
         let mut v = Vec::new();
-        if let Some((buf, loc)) = &self.dock {
+        for (buf, loc) in [&self.dock, &self.bar].into_iter().flatten() {
             if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(
                 renderer, loc.to_f64().to_physical(1.0), buf, None, None, None, Kind::Unspecified,
-            ) {
-                v.push(e);
-            }
-        }
-        if let Some(buf) = &self.bar {
-            let y = match self.style {
-                Style::Mac => 0.0,
-                Style::Windows => (out.h - theme::TASKBAR_H) as f64,
-            };
-            if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(
-                renderer, (0.0, y), buf, None, None, None, Kind::Unspecified,
             ) {
                 v.push(e);
             }
@@ -216,31 +279,61 @@ impl Chrome {
         v
     }
 
-    /// The desktop ground as an explicit back-most element (a 1x1 surface-base
-    /// texel stretched over the output). The DRM compositor does not repaint the
-    /// clear colour into areas no element covers, so the ground must be drawn.
+    /// The desktop ground as the back-most element: the Redrob wallpaper
+    /// (Redrob Black crossed by the brand seam) in dark, the design system's
+    /// --gradient-light in light. Opaque, so the DRM compositor treats it as
+    /// the bottom of the stack.
     pub fn ground_element(
         &mut self,
         renderer: &mut GlesRenderer,
         out: Size<i32, Physical>,
     ) -> Option<MemoryRenderBufferRenderElement<GlesRenderer>> {
-        // A full-size buffer, not a stretched texel: a fresh buffer of the
-        // output's size damages the whole output when the theme changes.
         let key = (self.mode, out.w, out.h);
         if self.ground_px.as_ref().map(|(k, _)| *k) != Some(key) {
-            let c = theme::theme(self.mode).surface_base;
-            let mut p = Pixmap::new(out.w.max(1) as u32, out.h.max(1) as u32).unwrap();
-            p.fill(tiny_skia::Color::from_rgba8(c.0, c.1, c.2, 255));
-            // Mark it opaque so the DRM compositor treats it as the bottom of the stack.
+            let t = theme::theme(self.mode);
+            let mut p = Pixmap::new(out.w.max(1) as u32, out.h.max(1) as u32)?;
+            let wall = if self.mode == Mode::Dark { self.wallpaper(out.w, out.h) } else { None };
+            match wall {
+                Some(img) => draw::draw_cover(&mut p, img),
+                None => draw::fill_gradient(&mut p, t.ground),
+            }
             let full = Rectangle::<i32, smithay::utils::Buffer>::from_size((out.w, out.h).into());
-            let buf = MemoryRenderBuffer::from_slice(p.data(), Fourcc::Abgr8888, (out.w, out.h), 1, Transform::Normal, Some(vec![full]));
+            let buf = MemoryRenderBuffer::from_slice(
+                p.data(),
+                smithay::backend::allocator::Fourcc::Abgr8888,
+                (out.w, out.h),
+                1,
+                Transform::Normal,
+                Some(vec![full]),
+            );
             self.ground_px = Some((key, buf));
         }
         let (_, buf) = self.ground_px.as_ref()?;
-        let size: Size<i32, Logical> = (out.w, out.h).into();
-        MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, Some(size), Kind::Unspecified)
+        MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, None, Kind::Unspecified)
             .map_err(|e| tracing::warn!(?e, "ground texture"))
             .ok()
+    }
+
+    /// The smallest packaged wallpaper that covers the output (or
+    /// REDROB_WALLPAPER), decoded once.
+    fn wallpaper(&mut self, w: i32, h: i32) -> Option<&Pixmap> {
+        if self.wallpaper.is_none() {
+            let mut paths: Vec<String> = std::env::var("REDROB_WALLPAPER").ok().into_iter().collect();
+            let fit: Vec<&str> = WALLPAPERS
+                .iter()
+                .copied()
+                .filter(|p| {
+                    let dims = p.rsplit('/').next().and_then(|f| f.strip_suffix(".png")).and_then(|d| d.split_once('x'));
+                    dims.and_then(|(a, b)| Some((a.parse::<i32>().ok()?, b.parse::<i32>().ok()?)))
+                        .is_some_and(|(a, b)| a >= w && b >= h)
+                })
+                .collect();
+            paths.extend(fit.iter().chain(WALLPAPERS.iter().rev()).map(|s| s.to_string()));
+            let img = paths.iter().find_map(|p| Pixmap::load_png(p).ok());
+            tracing::info!(found = img.is_some(), "wallpaper");
+            self.wallpaper = Some(img);
+        }
+        self.wallpaper.as_ref().and_then(|w| w.as_ref())
     }
 
     /// The pointer arrow (DRM backend only; nested runs use the host cursor):
@@ -263,251 +356,316 @@ impl Chrome {
             pb.line_to(16.0, 14.0);
             pb.close();
             if let Some(path) = pb.finish() {
-                p.fill_path(&path, &paint(t.ink_primary), FillRule::Winding, tiny_skia::Transform::identity(), None);
+                p.fill_path(&path, &draw::paint(t.ink_primary), FillRule::Winding, tiny_skia::Transform::identity(), None);
                 let s = Stroke { width: 1.5, ..Default::default() };
-                p.stroke_path(&path, &paint(t.surface_base), &s, tiny_skia::Transform::identity(), None);
+                p.stroke_path(&path, &draw::paint(t.surface_base), &s, tiny_skia::Transform::identity(), None);
             }
-            self.cursor = Some((self.mode, upload(p)));
+            self.cursor = Some((self.mode, upload(&p)));
         }
         let (_, buf) = self.cursor.as_ref()?;
         MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_physical(1.0), buf, None, None, None, Kind::Cursor).ok()
     }
 
     fn repaint(&mut self, key: &Key) {
+        self.hits.clear();
         match key.style {
-            Style::Mac => self.repaint_mac(key),
-            Style::Windows => self.repaint_windows(key),
+            Style::Mac => {
+                self.paint_menu_bar(key);
+                self.paint_dock(key);
+            }
+            Style::Windows => self.paint_taskbar(key),
         }
     }
 
-    /// Windows-style: one full-width taskbar at the bottom. Start button and
-    /// launchers centred as a group, clock (time over date) and the light/dark
-    /// switch at the right. Running apps get a short pill under the icon.
-    fn repaint_windows(&mut self, key: &Key) {
+    /// Draw a launcher's tile: the product icon, or a neutral system tile.
+    fn tile(&mut self, p: &mut Pixmap, tile: Tile, mode: Mode, x: f32, y: f32, size: f32) {
+        let t = theme::theme(mode);
+        match tile {
+            Tile::App((light, dark)) => {
+                self.icons.draw(p, if mode == Mode::Dark { dark } else { light }, None, x, y, size);
+            }
+            Tile::System(glyph) => {
+                // The app-icon superellipse: ~22.5% corner radius, like the masters.
+                let r = size * 0.225;
+                let (top, bottom) = match mode {
+                    Mode::Dark => (theme::hexa(0x2a2f38), theme::hexa(0x16191d)),
+                    Mode::Light => (theme::hexa(0xffffff), theme::hexa(0xe7eaf0)),
+                };
+                let inset = size * 0.04;
+                draw::fill_rrect_vgrad(p, x + inset, y + inset, size - 2.0 * inset, size - 2.0 * inset, r, top, bottom);
+                stroke_rrect(p, x + inset + 0.5, y + inset + 0.5, size - 2.0 * inset - 1.0, size - 2.0 * inset - 1.0, r, t.border_subtle);
+                let g = size * 0.5;
+                self.icons.draw(p, glyph, Some(t.ink_primary), x + (size - g) / 2.0, y + (size - g) / 2.0, g);
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- Mac
+
+    fn paint_menu_bar(&mut self, key: &Key) {
+        let t = theme::theme(key.mode);
+        let (w, _) = key.size;
+        let bh = theme::BAR_H;
+        let mut bar = Pixmap::new(w.max(1) as u32, bh as u32).unwrap();
+        fill_rect(&mut bar, 0.0, 0.0, w as f32, bh as f32, t.surface_material);
+        fill_rect(&mut bar, 0.0, bh as f32 - 1.0, w as f32, 1.0, with_alpha(t.border_subtle, 160));
+        let mid = bh as f32 / 2.0;
+
+        // Left: the Redrob symbol (opens the Launcher), then the app in front.
+        let sym = 16.0;
+        let sym_x = 16.0;
+        self.symbol(&mut bar, key.mode, sym_x, mid - sym / 2.0, sym);
+        self.hits.push((Rectangle::new((6, 0).into(), (36, bh).into()), Action::Start));
+        let name = if key.app.is_empty() { "Redrob" } else { key.app.as_str() };
+        draw::draw_text(&mut bar, &self.fonts.semibold, name, sym_x + sym + 18.0, mid + 4.5, 13.0, t.ink_primary);
+
+        // Right, from the edge: date-time, theme switch, volume, Wi-Fi, search.
+        let mut x = w as f32 - 16.0;
+        let clock = format!("{}  {}", key.clock.1, key.clock.0);
+        let cw = draw::text_width(&self.fonts.medium, &clock, 13.0);
+        x -= cw;
+        draw::draw_text(&mut bar, &self.fonts.medium, &clock, x, mid + 4.5, 13.0, t.ink_primary);
+        let g = 16.0;
+        let glyphs: [(&'static str, Option<Action>); 4] = [
+            (if key.mode == Mode::Dark { ICON_SUN } else { ICON_MOON }, Some(Action::ToggleTheme)),
+            (ICON_VOLUME, None),
+            (ICON_WIFI, None),
+            (ICON_SEARCH, Some(Action::Start)),
+        ];
+        for (glyph, action) in glyphs {
+            x -= 14.0 + g;
+            let hx = x as i32 - 6;
+            if let Some(a) = action {
+                if key.hover == Some(a) {
+                    fill_rrect(&mut bar, hx as f32, 4.0, g + 12.0, bh as f32 - 8.0, theme::RADIUS_SM, t.hover);
+                }
+                self.hits.push((Rectangle::new((hx, 0).into(), (g as i32 + 12, bh).into()), a));
+            }
+            self.icons.draw(&mut bar, glyph, Some(t.ink_primary), x, mid - g / 2.0, g);
+        }
+        self.bar = Some((upload(&bar), (0, 0).into()));
+    }
+
+    /// The Redrob symbol in ink (the master is white-on-transparent).
+    fn symbol(&mut self, p: &mut Pixmap, mode: Mode, x: f32, y: f32, size: f32) {
+        let svg: &'static str = if mode == Mode::Dark { REDROB_SYMBOL } else { symbol_dark_ink() };
+        self.icons.draw(p, svg, None, x, y, size);
+    }
+
+    fn paint_dock(&mut self, key: &Key) {
         let t = theme::theme(key.mode);
         let (w, h) = key.size;
-        self.hits.clear();
+        let tile = 52.0;
+        let gap = 6.0;
+        let pad = 8.0;
+        let sep = 17.0; // 1px rule with 8px either side
+        let n = self.launchers.len();
+        let groups = self.launchers.iter().filter(|l| l.group).count() as f32;
+        let dw = pad * 2.0 + n as f32 * tile + (n as f32 - 1.0) * gap + groups * (sep - gap);
+        let dh = tile + pad * 2.0;
+        // Room around the dock for its shadow and above it for the name tip.
+        let (m, tip) = (28.0, 40.0);
+        let bw = dw + 2.0 * m;
+        let bh = dh + m + tip + 4.0;
+        let mut p = Pixmap::new(bw.ceil() as u32, bh.ceil() as u32).unwrap();
+        let (x0, y0) = (m, tip + 4.0);
+        let r = theme::RADIUS_2XL.min(dh / 2.0);
+        draw::shadow(&mut p, x0, y0, dw, dh, r, 24.0, 8.0, t.shadow_lg);
+        fill_rrect(&mut p, x0, y0, dw, dh, r, t.surface_material);
+        stroke_rrect(&mut p, x0 + 0.5, y0 + 0.5, dw - 1.0, dh - 1.0, r, t.border_subtle);
+
+        let bx = (w as f32 - bw) / 2.0;
+        let by = h as f32 - bh - 6.0 + m; // dock bottom 6px over the screen edge
+        let mut x = x0 + pad;
+        let mut tip_at: Option<(f32, &'static str)> = None;
+        for i in 0..n {
+            if self.launchers[i].group {
+                let rx = x + (sep - gap) / 2.0 - 0.5;
+                draw::line(&mut p, rx, y0 + 14.0, rx, y0 + dh - 14.0, 1.0, t.border_subtle);
+                x += sep - gap;
+            }
+            let ty = y0 + pad;
+            let tl = self.launchers[i].tile;
+            self.tile(&mut p, tl, key.mode, x, ty, tile);
+            if key.running[i] {
+                fill_circle(&mut p, x + tile / 2.0, y0 + dh - 3.5, 2.0, t.ink_primary);
+            }
+            let hit = Rectangle::new(
+                ((bx + x).round() as i32, (by + ty).round() as i32).into(),
+                (tile as i32, tile as i32).into(),
+            );
+            self.hits.push((hit, Action::Launch(i)));
+            if key.hover == Some(Action::Launch(i)) {
+                tip_at = Some((x + tile / 2.0, self.launchers[i].name));
+            }
+            x += tile + gap;
+        }
+        // Name tip over the hovered tile: a small material pill.
+        if let Some((cx, name)) = tip_at {
+            let tw = draw::text_width(&self.fonts.medium, name, 12.0) + 20.0;
+            let tx = (cx - tw / 2.0).clamp(2.0, bw - tw - 2.0);
+            let (th, tyy) = (26.0, 6.0);
+            draw::shadow(&mut p, tx, tyy, tw, th, theme::RADIUS_MD, 10.0, 3.0, t.shadow_md);
+            fill_rrect(&mut p, tx, tyy, tw, th, theme::RADIUS_MD, t.surface_raised);
+            stroke_rrect(&mut p, tx + 0.5, tyy + 0.5, tw - 1.0, th - 1.0, theme::RADIUS_MD, t.border_subtle);
+            draw::draw_text(&mut p, &self.fonts.medium, name, tx + 10.0, tyy + 17.5, 12.0, t.ink_primary);
+        }
+        self.dock = Some((upload(&p), (bx.round() as i32, by.round() as i32).into()));
+    }
+
+    // ---------------------------------------------------------------- Windows
+
+    fn paint_taskbar(&mut self, key: &Key) {
         self.dock = None;
+        let t = theme::theme(key.mode);
+        let (w, h) = key.size;
         let th = theme::TASKBAR_H;
         let y0 = h - th; // taskbar top, in output coordinates
         let mut bar = Pixmap::new(w.max(1) as u32, th as u32).unwrap();
         fill_rect(&mut bar, 0.0, 0.0, w as f32, th as f32, t.surface_material);
-        fill_rect(&mut bar, 0.0, 0.0, w as f32, 1.0, t.border_subtle);
+        fill_rect(&mut bar, 0.0, 0.0, w as f32, 1.0, with_alpha(t.border_subtle, 200));
 
-        let slot = theme::TASK_SLOT;
-        let gap = theme::SPACE_1;
-        let n = self.launchers.len() as i32 + 1; // + start
-        let group = n * slot + (n - 1) * gap;
-        let gx = (w - group) / 2;
-        let sy = (th - slot) / 2;
-        // Start button: the Redrob mark.
-        fill_rrect(&mut bar, gx as f32, sy as f32, slot as f32, slot as f32, theme::RADIUS_MD, t.surface_raised);
-        draw_svg(&mut bar, REDROB_MARK, None, gx as f32 + 9.0, sy as f32 + 9.0, 22.0);
-        self.hits.push((Rectangle::new((gx, y0 + sy).into(), (slot, slot).into()), Action::Start));
-        for (i, l) in self.launchers.iter().enumerate() {
-            let sx = gx + (i as i32 + 1) * (slot + gap);
-            draw_svg(&mut bar, l.icon, Some(t.ink_primary), sx as f32 + 9.0, sy as f32 + 9.0, 22.0);
-            if key.running[i] {
-                fill_rrect(&mut bar, sx as f32 + 16.0, th as f32 - 6.0, 8.0, 3.0, 1.5, t.action_primary);
+        let slot = theme::TASK_SLOT as f32;
+        let icon = 26.0;
+        let gap = 4.0;
+        let search_w = 196.0;
+        let n = self.launchers.len() as f32;
+        let group = slot + gap + search_w + gap + n * slot + (n - 1.0) * gap;
+        let mut x = ((w as f32 - group) / 2.0).round();
+        let sy = ((th as f32 - slot) / 2.0).round();
+        let wash = |p: &mut Pixmap, x: f32, wd: f32, on: bool| {
+            if on {
+                fill_rrect(p, x, sy, wd, slot, theme::RADIUS_SM, t.hover);
             }
-            self.hits.push((Rectangle::new((sx, y0 + sy).into(), (slot, slot).into()), Action::Launch(i)));
+        };
+
+        // Start: the Redrob app icon.
+        wash(&mut bar, x, slot, key.hover == Some(Action::Start));
+        let (light, dark) = APP_REDROB;
+        self.icons.draw(&mut bar, if key.mode == Mode::Dark { dark } else { light }, None, x + (slot - icon) / 2.0, sy + (slot - icon) / 2.0, icon);
+        self.hits.push((Rectangle::new((x as i32, y0 + sy as i32).into(), (slot as i32, slot as i32).into()), Action::Start));
+        x += slot + gap;
+
+        // Search pill (opens the Launcher too, like Windows search).
+        let ph = 32.0;
+        let py = ((th as f32 - ph) / 2.0).round();
+        fill_rrect(&mut bar, x, py, search_w, ph, theme::RADIUS_FULL, t.surface_sunken);
+        stroke_rrect(&mut bar, x + 0.5, py + 0.5, search_w - 1.0, ph - 1.0, ph / 2.0, t.border_subtle);
+        self.icons.draw(&mut bar, ICON_SEARCH, Some(t.ink_secondary), x + 12.0, py + 8.0, 16.0);
+        draw::draw_text(&mut bar, &self.fonts.medium, "검색", x + 36.0, py + 21.0, 13.0, t.ink_muted);
+        self.hits.push((Rectangle::new((x as i32, y0 + py as i32).into(), (search_w as i32, ph as i32).into()), Action::Start));
+        x += search_w + gap;
+
+        for i in 0..self.launchers.len() {
+            wash(&mut bar, x, slot, key.hover == Some(Action::Launch(i)));
+            let tl = self.launchers[i].tile;
+            self.tile(&mut bar, tl, key.mode, x + (slot - icon) / 2.0, sy + (slot - icon) / 2.0, icon);
+            if key.running[i] {
+                // Windows 11: a short pill under a running app, Redrob Blue.
+                fill_rrect(&mut bar, x + slot / 2.0 - 3.0, th as f32 - 5.0, 6.0, 3.0, 1.5, t.action_primary);
+            }
+            self.hits.push((Rectangle::new((x as i32, y0 + sy as i32).into(), (slot as i32, slot as i32).into()), Action::Launch(i)));
+            x += slot + gap;
         }
 
-        // Right: switch, then the clock to its left (time over date).
-        let switch_x = w - theme::SPACE_3 - 18;
-        let icon = if key.mode == Mode::Dark { ICON_SUN } else { ICON_MOON };
-        draw_svg(&mut bar, icon, Some(t.ink_primary), switch_x as f32, (th - 18) as f32 / 2.0, 18.0);
-        self.hits.push((Rectangle::new((switch_x - 6, y0).into(), (30, th).into()), Action::ToggleTheme));
-        let (time, date) = key.clock.split_once(' ').unwrap_or((&key.clock, ""));
-        let right = switch_x as f32 - theme::SPACE_4 as f32;
-        let tw = text_width(&self.font, time, 12.0);
-        let dw = text_width(&self.font, date, 12.0);
-        draw_text(&mut bar, &self.font, time, right - tw, 21.0, 12.0, t.ink_primary);
-        draw_text(&mut bar, &self.font, date, right - dw, 38.0, 12.0, t.ink_primary);
-        self.bar = Some(upload(bar));
-    }
-
-    fn repaint_mac(&mut self, key: &Key) {
-        let t = theme::theme(key.mode);
-        let (w, h) = key.size;
-        self.hits.clear();
-
-        // ---- Top bar: material + hairline, mark + name left, clock + switch right.
-        let mut bar = Pixmap::new(w.max(1) as u32, theme::BAR_H as u32).unwrap();
-        fill_rect(&mut bar, 0.0, 0.0, w as f32, theme::BAR_H as f32, t.surface_material);
-        fill_rect(&mut bar, 0.0, theme::BAR_H as f32 - 1.0, w as f32, 1.0, t.border_subtle);
-        draw_svg(&mut bar, REDROB_MARK, None, theme::SPACE_3 as f32, 7.0, 18.0);
-        let x = theme::SPACE_3 as f32 + 18.0 + theme::SPACE_2 as f32;
-        draw_text(&mut bar, &self.font, "Redrob OS", x, 21.0, 13.0, t.ink_primary);
-        let switch_x = w - theme::SPACE_3 - 18;
-        let icon = if key.mode == Mode::Dark { ICON_SUN } else { ICON_MOON };
-        draw_svg(&mut bar, icon, Some(t.ink_primary), switch_x as f32, 7.0, 18.0);
-        self.hits.push((Rectangle::new((switch_x - 6, 0).into(), (30, theme::BAR_H).into()), Action::ToggleTheme));
-        let clock = key.clock.split_once(' ').map(|(time, _)| time).unwrap_or(&key.clock);
-        let cw = text_width(&self.font, clock, 13.0);
-        draw_text(&mut bar, &self.font, clock, switch_x as f32 - theme::SPACE_4 as f32 - cw, 21.0, 13.0, t.ink_primary);
-        self.bar = Some(upload(bar));
-
-        // ---- Dock: floating rounded material, launchers in rounded slots.
-        let n = self.launchers.len() as i32;
-        let pad = theme::SPACE_2;
-        let dw = n * theme::SLOT + (n - 1) * theme::SPACE_2 + 2 * pad;
-        let dh = theme::SLOT + 2 * pad;
-        let mut dock = Pixmap::new(dw as u32, dh as u32).unwrap();
-        let r = theme::RADIUS_2XL.min(dh as f32 / 2.0);
-        fill_rrect(&mut dock, 0.5, 0.5, dw as f32 - 1.0, dh as f32 - 1.0, r, t.surface_material);
-        stroke_rrect(&mut dock, 0.5, 0.5, dw as f32 - 1.0, dh as f32 - 1.0, r, t.border_subtle);
-        let dx = (w - dw) / 2;
-        let dy = h - dh - theme::SPACE_3;
-        for (i, l) in self.launchers.iter().enumerate() {
-            let sx = pad + i as i32 * (theme::SLOT + theme::SPACE_2);
-            fill_rrect(&mut dock, sx as f32, pad as f32, theme::SLOT as f32, theme::SLOT as f32, theme::RADIUS_MD, t.surface_raised);
-            draw_svg(&mut dock, l.icon, Some(t.ink_primary), sx as f32 + 12.0, pad as f32 + 12.0, 24.0);
-            if key.running[i] {
-                fill_rrect(&mut dock, sx as f32 + 18.0, dh as f32 - 5.0, 12.0, 3.0, theme::RADIUS_FULL.min(1.5), t.action_primary);
+        // Right: time over date, then tray glyphs to its left, switch first.
+        let right = w as f32 - 14.0;
+        let time = &key.clock.0;
+        let date_short = chrono::Local::now().format("%Y-%m-%d").to_string();
+        let tw = draw::text_width(&self.fonts.medium, time, 12.0);
+        let dw = draw::text_width(&self.fonts.medium, &date_short, 12.0);
+        let block = tw.max(dw);
+        draw::draw_text(&mut bar, &self.fonts.medium, time, right - tw, 21.0, 12.0, t.ink_primary);
+        draw::draw_text(&mut bar, &self.fonts.medium, &date_short, right - dw, 37.0, 12.0, t.ink_primary);
+        let mut gx = right - block - 14.0;
+        let g = 16.0;
+        let tray: [(&'static str, Option<Action>); 3] = [
+            (ICON_VOLUME, None),
+            (ICON_WIFI, None),
+            (if key.mode == Mode::Dark { ICON_SUN } else { ICON_MOON }, Some(Action::ToggleTheme)),
+        ];
+        for (glyph, action) in tray {
+            gx -= g + 12.0;
+            if let Some(a) = action {
+                wash(&mut bar, gx - 6.0, g + 12.0, key.hover == Some(a));
+                self.hits.push((Rectangle::new(((gx - 6.0) as i32, y0).into(), (g as i32 + 12, th).into()), a));
             }
-            self.hits.push((
-                Rectangle::new((dx + sx, dy + pad).into(), (theme::SLOT, theme::SLOT).into()),
-                Action::Launch(i),
-            ));
+            self.icons.draw(&mut bar, glyph, Some(t.ink_primary), gx, (th as f32 - g) / 2.0, g);
         }
-        self.dock = Some((upload(dock), (dx, dy).into()));
+        self.bar = Some((upload(&bar), (0, y0).into()));
     }
-
 }
 
-/// Dock launchers. Override with REDROB_DOCK="terminal=cmd args;folder=cmd;...".
-fn default_launchers() -> Vec<Launcher> {
-    let mut map: Vec<(&'static str, Vec<String>)> = vec![
-        (ICON_TERMINAL, vec!["konsole".into()]),
-        (ICON_FOLDER, vec!["dolphin".into()]),
-        // Redrob Browser when the Launcher has installed it, else the default browser.
-        (ICON_BROWSER, sh("command -v redrob-browser >/dev/null && exec redrob-browser || exec xdg-open https://redrob.ai")),
-        (ICON_SETTINGS, vec!["systemsettings".into()]),
-        // Redrob Code (a terminal app) when installed, else a text editor.
-        (ICON_CODE, sh("command -v redrob >/dev/null && exec konsole -e redrob || exec kwrite")),
-    ];
-    if let Ok(spec) = std::env::var("REDROB_DOCK") {
-        for part in spec.split(';') {
-            let Some((name, cmd)) = part.split_once('=') else { continue };
-            let slot = match name {
-                "terminal" => 0,
-                "folder" => 1,
-                "browser" => 2,
-                "settings" => 3,
-                "code" => 4,
-                _ => continue,
-            };
-            map[slot].1 = cmd.split_whitespace().map(String::from).collect();
-        }
-    }
-    map.into_iter().map(|(icon, command)| Launcher { icon, command, child: None }).collect()
+/// The Redrob symbol recoloured to Redrob Black for the light bar.
+fn symbol_dark_ink() -> &'static str {
+    use std::sync::OnceLock;
+    static S: OnceLock<String> = OnceLock::new();
+    // Only the painted rect: the mask's own white must stay white.
+    S.get_or_init(|| REDROB_SYMBOL.replace("fill=\"#FFFFFF\" mask=", "fill=\"#0a0b0c\" mask="))
+}
+
+/// Match Qt/KDE apps to the shell theme: the image's Redrob colour schemes.
+fn apply_qt_colors(mode: Mode) {
+    let scheme = if mode == Mode::Dark { "RedrobDark" } else { "Redrob" };
+    crate::shell::spawn(&["plasma-apply-colorscheme", scheme]);
 }
 
 fn sh(script: &str) -> Vec<String> {
     vec!["sh".into(), "-c".into(), script.into()]
 }
 
-/// "HH:MM YYYY-MM-DD": the Mac bar shows the time, the taskbar both.
-fn clock_text() -> String {
-    chrono::Local::now().format("%H:%M %Y-%m-%d").to_string()
-}
-
-fn upload(p: Pixmap) -> MemoryRenderBuffer {
-    // tiny-skia stores premultiplied RGBA bytes: that is DRM Abgr8888 (little-endian).
-    let size = (p.width() as i32, p.height() as i32);
-    MemoryRenderBuffer::from_slice(p.data(), Fourcc::Abgr8888, size, 1, Transform::Normal, None)
-}
-
-fn paint(c: Rgba) -> Paint<'static> {
-    let mut p = Paint::default();
-    p.set_color_rgba8(c.0, c.1, c.2, c.3);
-    p.anti_alias = true;
-    p
-}
-
-fn fill_rect(p: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, c: Rgba) {
-    if let Some(r) = tiny_skia::Rect::from_xywh(x, y, w, h) {
-        p.fill_rect(r, &paint(c), tiny_skia::Transform::identity(), None);
-    }
-}
-
-fn rrect_path(x: f32, y: f32, w: f32, h: f32, r: f32) -> Option<tiny_skia::Path> {
-    let r = r.min(w / 2.0).min(h / 2.0);
-    let k = 0.552_284_8 * r; // cubic circle approximation
-    let mut pb = PathBuilder::new();
-    pb.move_to(x + r, y);
-    pb.line_to(x + w - r, y);
-    pb.cubic_to(x + w - r + k, y, x + w, y + r - k, x + w, y + r);
-    pb.line_to(x + w, y + h - r);
-    pb.cubic_to(x + w, y + h - r + k, x + w - r + k, y + h, x + w - r, y + h);
-    pb.line_to(x + r, y + h);
-    pb.cubic_to(x + r - k, y + h, x, y + h - r + k, x, y + h - r);
-    pb.line_to(x, y + r);
-    pb.cubic_to(x, y + r - k, x + r - k, y, x + r, y);
-    pb.close();
-    pb.finish()
-}
-
-fn fill_rrect(p: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, r: f32, c: Rgba) {
-    if let Some(path) = rrect_path(x, y, w, h, r) {
-        p.fill_path(&path, &paint(c), FillRule::Winding, tiny_skia::Transform::identity(), None);
-    }
-}
-
-fn stroke_rrect(p: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, r: f32, c: Rgba) {
-    if let Some(path) = rrect_path(x, y, w, h, r) {
-        let s = Stroke { width: 1.0, ..Default::default() };
-        p.stroke_path(&path, &paint(c), &s, tiny_skia::Transform::identity(), None);
-    }
-}
-
-/// Render an SVG into `p` at (x, y), `size` px square. `ink` replaces
-/// `currentColor` (the redrob-ui icons are stroke="currentColor").
-fn draw_svg(p: &mut Pixmap, svg: &str, ink: Option<Rgba>, x: f32, y: f32, size: f32) {
-    let src = match ink {
-        Some(c) => svg.replace("currentColor", &format!("#{:02x}{:02x}{:02x}", c.0, c.1, c.2)),
-        None => svg.to_string(),
-    };
-    let Ok(tree) = usvg::Tree::from_str(&src, &usvg::Options::default()) else { return };
-    let s = tree.size();
-    let scale = size / s.width().max(s.height());
-    let ts = tiny_skia::Transform::from_translate(x, y).pre_scale(scale, scale);
-    resvg::render(&tree, ts, &mut p.as_mut());
-}
-
-fn text_width(font: &fontdue::Font, s: &str, px: f32) -> f32 {
-    s.chars().map(|c| font.metrics(c, px).advance_width).sum()
-}
-
-/// Draw a single line of text with its baseline at `baseline`.
-fn draw_text(p: &mut Pixmap, font: &fontdue::Font, s: &str, x: f32, baseline: f32, px: f32, c: Rgba) {
-    let (pw, ph) = (p.width() as i32, p.height() as i32);
-    let mut pen = x;
-    for ch in s.chars() {
-        let (m, cov) = font.rasterize(ch, px);
-        let gx = (pen + m.xmin as f32).round() as i32;
-        let gy = (baseline - m.height as f32 - m.ymin as f32).round() as i32;
-        let data = p.data_mut();
-        for row in 0..m.height as i32 {
-            for col in 0..m.width as i32 {
-                let (tx, ty) = (gx + col, gy + row);
-                if tx < 0 || ty < 0 || tx >= pw || ty >= ph {
-                    continue;
-                }
-                let a = cov[(row * m.width as i32 + col) as usize] as u32 * c.3 as u32 / 255;
-                if a == 0 {
-                    continue;
-                }
-                let i = ((ty * pw + tx) * 4) as usize;
-                // src-over in premultiplied space
-                let inv = 255 - a;
-                for (k, ch_v) in [c.0, c.1, c.2].iter().enumerate() {
-                    data[i + k] = ((*ch_v as u32 * a + data[i + k] as u32 * inv) / 255) as u8;
-                }
-                data[i + 3] = (a + data[i + 3] as u32 * inv / 255) as u8;
+/// Dock / taskbar launchers. Redrob products open through Redrob Launcher's
+/// `redrob://open/<app>` link: it starts the installed app or shows its
+/// Install button. Override a command with REDROB_DOCK="name=cmd;...".
+fn default_launchers() -> Vec<Launcher> {
+    let mut v = vec![
+        Launcher { name: "파일", tile: Tile::System(ICON_FOLDER), command: vec!["dolphin".into()], child: None, group: false },
+        Launcher { name: "터미널", tile: Tile::System(ICON_TERMINAL), command: vec!["konsole".into()], child: None, group: false },
+        Launcher {
+            name: "Redrob Browser",
+            tile: Tile::App(APP_BROWSER),
+            command: sh("command -v redrob-browser >/dev/null && exec redrob-browser || exec redrob-launcher redrob://open/browser"),
+            child: None,
+            group: false,
+        },
+        Launcher {
+            name: "Redrob Code",
+            tile: Tile::App(APP_CODE),
+            command: sh("command -v redrob >/dev/null && exec konsole -e redrob || exec redrob-launcher redrob://open/code"),
+            child: None,
+            group: false,
+        },
+        Launcher {
+            name: "Redrob Office",
+            tile: Tile::App(APP_OFFICE),
+            command: vec!["redrob-launcher".into(), "redrob://open/office".into()],
+            child: None,
+            group: false,
+        },
+        Launcher { name: "설정", tile: Tile::System(ICON_SETTINGS), command: vec!["systemsettings".into()], child: None, group: false },
+        Launcher { name: "Redrob Launcher", tile: Tile::App(APP_REDROB), command: vec!["redrob-launcher".into()], child: None, group: true },
+    ];
+    if let Ok(spec) = std::env::var("REDROB_DOCK") {
+        for part in spec.split(';') {
+            let Some((name, cmd)) = part.split_once('=') else { continue };
+            if let Some(l) = v.iter_mut().find(|l| l.name.eq_ignore_ascii_case(name.trim())) {
+                l.command = cmd.split_whitespace().map(String::from).collect();
             }
         }
-        pen += m.advance_width;
     }
+    v
+}
+
+/// (time, date) in Korean: ("오후 9:10", "10월 21일 (화)").
+fn clock_text() -> (String, String) {
+    use chrono::{Datelike, Timelike};
+    let now = chrono::Local::now();
+    let (h, m) = (now.hour(), now.minute());
+    let ampm = if h < 12 { "오전" } else { "오후" };
+    let h12 = match h % 12 {
+        0 => 12,
+        x => x,
+    };
+    let wd = ["월", "화", "수", "목", "금", "토", "일"][now.weekday().num_days_from_monday() as usize];
+    (format!("{ampm} {h12}:{m:02}"), format!("{}월 {}일 ({wd})", now.month(), now.day()))
 }

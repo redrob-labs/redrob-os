@@ -53,6 +53,11 @@ pub struct Smallvil {
     pub eaten: Vec<u32>,
     /// A modifier went down alone: a bare "Super" tap fires on its release.
     pub tap: bool,
+    /// Server-side window frames.
+    pub deco: crate::deco::Decorations,
+    pub xdg_decoration_state: smithay::wayland::shell::xdg::decoration::XdgDecorationState,
+    /// Minimized windows, most recent last, with where they were.
+    pub minimized: Vec<(Window, Point<i32, Logical>)>,
 }
 
 impl Smallvil {
@@ -75,6 +80,9 @@ impl Smallvil {
 
         // Data device is responsible for clipboard and drag-and-drop
         let data_device_state = DataDeviceState::new::<Self>(&dh);
+        // Server-side decorations: Redrob draws the window frames.
+        let xdg_decoration_state =
+            smithay::wayland::shell::xdg::decoration::XdgDecorationState::new::<Self>(&dh);
 
         // A seat is a group of keyboards, pointer and touch devices.
         // A seat typically has a pointer and maintains a keyboard focus and a pointer focus.
@@ -122,6 +130,9 @@ impl Smallvil {
             saved: Vec::new(),
             eaten: Vec::new(),
             tap: false,
+            deco: Default::default(),
+            xdg_decoration_state,
+            minimized: Vec::new(),
         }
     }
 

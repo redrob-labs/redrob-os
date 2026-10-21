@@ -30,6 +30,7 @@ impl Smallvil {
         use smithay::utils::IsAlive;
         self.saved.retain(|(w, _)| w.alive());
         self.hidden.retain(|(w, _)| w.alive());
+        self.minimized.retain(|(w, _)| w.alive());
         match act {
             Act::Close => {
                 if let Some(t) = self.top_window().and_then(|w| w.toplevel().cloned()) {
@@ -37,6 +38,7 @@ impl Smallvil {
                 }
             }
             Act::Cycle => self.cycle(),
+            Act::Minimize => self.minimize_top(),
             Act::ShowDesktop => self.show_desktop(),
             Act::Maximize => self.place_top(Place::Max),
             Act::Restore => self.place_top(Place::Restore),
@@ -69,10 +71,36 @@ impl Smallvil {
     /// Alt+Tab / Command+Tab: bring the bottom-most window to the top, so
     /// repeated presses walk through every window.
     fn cycle(&mut self) {
+        // Minimized windows come back first, most recent first.
+        if let Some((w, loc)) = self.minimized.pop() {
+            self.space.map_element(w.clone(), loc, true);
+            self.focus(Some(w));
+            return;
+        }
         let bottom = self.space.elements().next().cloned();
         if self.space.elements().len() > 1 {
             self.focus(bottom);
         }
+    }
+
+    pub fn minimize(&mut self, w: &Window) {
+        if let Some(loc) = self.space.element_location(w) {
+            self.space.unmap_elem(w);
+            self.minimized.push((w.clone(), loc));
+        }
+        let top = self.top_window();
+        self.focus(top);
+    }
+
+    fn minimize_top(&mut self) {
+        if let Some(w) = self.top_window() {
+            self.minimize(&w);
+        }
+    }
+
+    pub fn toggle_maximize(&mut self, w: &Window) {
+        self.focus(Some(w.clone()));
+        self.place_top(Place::Max);
     }
 
     /// Hide every window; the next press brings them all back where they were.
@@ -115,7 +143,8 @@ impl Smallvil {
     fn place_top(&mut self, place: Place) {
         let Some(window) = self.top_window() else { return };
         let Some(toplevel) = window.toplevel().cloned() else { return };
-        let Some(current) = self.space.element_geometry(&window) else { return };
+        let Some(current) = self.content_rect(&window) else { return };
+        let title = if crate::deco::wants_frame(&window) { crate::theme::TITLE_H } else { 0 };
         let area = self.work_area();
         let saved = self.saved.iter().position(|(w, _)| *w == window);
 
@@ -133,11 +162,16 @@ impl Smallvil {
                 (area.size.w - area.size.w / 2, area.size.h).into(),
             )),
         };
-        let Some(target) = target else { return };
+        let Some(mut target) = target else { return };
+        // A restore target is already a content rect; the others are frames.
+        let from_frame = place != Place::Restore && !(place == Place::Max && target != area);
+        if from_frame && title > 0 {
+            target = Rectangle::new((target.loc.x, target.loc.y + title).into(), (target.size.w, target.size.h - title).into());
+        }
         if saved.is_none() && place != Place::Restore {
             self.saved.push((window.clone(), current));
         }
-        let maximized = place == Place::Max && target == area;
+        let maximized = place == Place::Max && from_frame;
         toplevel.with_pending_state(|s| {
             s.size = Some(target.size);
             if maximized {
@@ -147,7 +181,8 @@ impl Smallvil {
             }
         });
         toplevel.send_pending_configure();
-        self.space.map_element(window.clone(), target.loc, true);
+        let geo_loc = window.geometry().loc;
+        self.space.map_element(window.clone(), target.loc - geo_loc, true);
         self.focus(Some(window));
     }
 
@@ -155,7 +190,7 @@ impl Smallvil {
     pub fn new_window_location(&mut self) -> Point<i32, Logical> {
         let area = self.work_area();
         let n = (self.space.elements().len() % 8) as i32;
-        (area.loc.x + 48 + 32 * n, area.loc.y + 24 + 28 * n).into()
+        (area.loc.x + 64 + 32 * n, area.loc.y + 24 + crate::theme::TITLE_H + 28 * n).into()
     }
 }
 

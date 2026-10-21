@@ -218,3 +218,29 @@ impl Smallvil {
         });
     }
 }
+
+impl smithay::wayland::shell::xdg::decoration::XdgDecorationHandler for Smallvil {
+    // Always server-side: Redrob draws the frame. Apps that never bind
+    // xdg-decoration (GTK with CSD) keep their own.
+    fn new_decoration(&mut self, toplevel: ToplevelSurface) {
+        set_ssd(&toplevel);
+    }
+    fn request_mode(
+        &mut self,
+        toplevel: ToplevelSurface,
+        _mode: smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode,
+    ) {
+        set_ssd(&toplevel);
+    }
+    fn unset_mode(&mut self, toplevel: ToplevelSurface) {
+        set_ssd(&toplevel);
+    }
+}
+
+fn set_ssd(toplevel: &ToplevelSurface) {
+    use smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode;
+    toplevel.with_pending_state(|s| s.decoration_mode = Some(Mode::ServerSide));
+    if toplevel.is_initial_configure_sent() {
+        toplevel.send_pending_configure();
+    }
+}

@@ -9,6 +9,8 @@ license = "MIT"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 bitflags = "2.2.1"
 resvg = { version = "=0.48.1", default-features = false }
+# Same tiny-skia as resvg, plus PNG decoding for the wallpaper.
+tiny-skia = { version = "=0.12.0", default-features = false, features = ["std", "simd", "png-format"] }
 fontdue = "=0.9.5"
 chrono = { version = "=0.4.45", default-features = false, features = ["clock"] }
 tracing = "=0.1.44"
