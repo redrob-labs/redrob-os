@@ -688,7 +688,9 @@ fn write_gtk_css() {
     let Some(home) = std::env::var_os("HOME") else { return };
     let path = std::path::PathBuf::from(home).join(".config/gtk-4.0/gtk.css");
     if let Ok(old) = std::fs::read_to_string(&path) {
-        if !old.starts_with(GTK_MARK) {
+        // Ours, or the one-line file Plasma's GTK bridge writes (it imports
+        // colours that only update while Plasma runs): both are replaced.
+        if !old.starts_with(GTK_MARK) && old.trim() != "@import 'colors.css';" {
             return;
         }
     }

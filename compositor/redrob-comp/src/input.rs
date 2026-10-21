@@ -336,8 +336,17 @@ impl smithay::wayland::virtual_keyboard::VirtualKeyboardHandler for Smallvil {
                 }
             }
             InputEvent::Keyboard { event } => {
+                use smithay::wayland::input_method::InputMethodSeat;
                 let serial = SERIAL_COUNTER.next_serial();
-                keyboard.input::<(), _>(self, event.key_code(), event.state(), serial, Event::time(&event), |_, _, _| FilterResult::Forward);
+                let time = Event::time(&event);
+                // Keys the input method passes through must not go back into
+                // its own grab (that loops); they go straight to the client.
+                let grab = self.seat.input_method().keyboard_grab_client();
+                if grab.is_some() && grab == Event::device(&event).client() {
+                    keyboard.input_forward_bypassing_grab(self, event.key_code(), event.state(), serial, time, true);
+                } else {
+                    keyboard.input::<(), _>(self, event.key_code(), event.state(), serial, time, |_, _, _| FilterResult::Forward);
+                }
             }
             InputEvent::Special(Sp::Modifiers { mods_depressed, mods_latched, mods_locked, group, .. }) => {
                 keyboard.with_xkb_state(self, |mut c| c.set_modifier_mask(mods_depressed, mods_latched, mods_locked, group));
