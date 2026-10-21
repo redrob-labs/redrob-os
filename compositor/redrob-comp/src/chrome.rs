@@ -298,7 +298,7 @@ impl Chrome {
         let mut v = Vec::new();
         for (buf, loc) in [&self.dock, &self.bar].into_iter().flatten() {
             if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(
-                renderer, loc.to_f64().to_physical(1.0), buf, None, None, None, Kind::Unspecified,
+                renderer, loc.to_f64().to_physical(crate::display::scale()), buf, None, None, None, Kind::Unspecified,
             ) {
                 v.push(e);
             }
@@ -395,7 +395,7 @@ impl Chrome {
             self.cursor = Some((self.mode, upload(&p)));
         }
         let (_, buf) = self.cursor.as_ref()?;
-        MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_physical(1.0), buf, None, None, None, Kind::Cursor).ok()
+        MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_physical(crate::display::scale()), buf, None, None, None, Kind::Cursor).ok()
     }
 
     fn repaint(&mut self, key: &Key) {

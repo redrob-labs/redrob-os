@@ -21,6 +21,10 @@ smithay::backend::renderer::element::render_elements! {
 }
 
 pub fn elements(state: &mut Smallvil, renderer: &mut GlesRenderer, size: Size<i32, Physical>, cursor: bool) -> Vec<ShellElement> {
+    // The shell lays out in logical pixels; elements are placed at
+    // logical * scale and the renderer scales the buffers.
+    let scale = crate::display::scale();
+    let size: Size<i32, Physical> = ((size.w as f64 / scale).round() as i32, (size.h as f64 / scale).round() as i32).into();
     state.place_im_popups();
     // The menu bar names the app in front, and shows live status.
     let top = state.space.elements().last().cloned();
@@ -55,7 +59,7 @@ pub fn elements(state: &mut Smallvil, renderer: &mut GlesRenderer, size: Size<i3
         for window in windows {
             let Some(loc) = state.space.element_location(&window) else { continue };
             let w: Vec<WaylandSurfaceRenderElement<GlesRenderer>> =
-                window.render_elements(renderer, loc.to_physical(1), Scale::from(1.0), 1.0);
+                window.render_elements(renderer, loc.to_f64().to_physical(scale).to_i32_round(), Scale::from(scale), 1.0);
             out.extend(w.into_iter().map(ShellElement::Window));
             if let Some(f) = state.frame_element(renderer, &window) {
                 out.push(ShellElement::Memory(f));

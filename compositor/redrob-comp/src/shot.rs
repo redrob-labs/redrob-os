@@ -45,6 +45,10 @@ pub fn capture(renderer: &mut GlesRenderer, elements: &[ShellElement], size: Siz
 pub fn save(img: Pixmap, region: Option<Rectangle<i32, Logical>>) -> Option<std::path::PathBuf> {
     let img = match region {
         Some(r) => {
+            // The region is in logical pixels; the image is physical.
+            let k = crate::display::scale();
+            let r = r.to_f64().to_physical(k).to_i32_round::<i32>();
+            let r: Rectangle<i32, Logical> = Rectangle::new((r.loc.x, r.loc.y).into(), (r.size.w, r.size.h).into());
             let r = r.intersection(Rectangle::from_size((img.width() as i32, img.height() as i32).into()))?;
             let rect = tiny_skia::IntRect::from_xywh(r.loc.x, r.loc.y, r.size.w as u32, r.size.h as u32)?;
             img.clone_rect(rect)?

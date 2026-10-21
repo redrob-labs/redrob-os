@@ -62,6 +62,9 @@ pub struct Layers {
     pub dirty: bool,
     buf: Option<MemoryRenderBuffer>,
     pub hits: Vec<(Rectangle<i32, Logical>, usize)>,
+    /// Settings volume sliders (id, track) and the one being dragged.
+    pub sliders: Vec<(usize, Rectangle<i32, Logical>)>,
+    pub drag: Option<usize>,
     minute: u32,
     pub apps: Vec<apps::App>,
     icons: HashMap<(String, u32), Option<Pixmap>>,
@@ -428,10 +431,16 @@ impl Smallvil {
                 }
                 self.layers.dirty = true;
             }
-            _ if !pressed => {}
+            _ if !pressed => {
+                self.layers.drag = None;
+            }
             _ => {
                 let hit = self.layers.hits.iter().rev().find(|(r, i)| *i != usize::MAX && r.contains(pi)).map(|(_, i)| *i);
                 match (self.layers.overlay.as_ref().unwrap(), hit) {
+                    (Overlay::Settings { .. }, Some(id)) if id == crate::settings::ID_OUT_SLIDER || id == crate::settings::ID_IN_SLIDER => {
+                        self.layers.drag = Some(id);
+                        self.settings_slider(id, pi.x);
+                    }
                     (Overlay::Settings { .. }, Some(id)) => self.settings_click(id),
                     (Overlay::Finder { matches, .. }, Some(row)) => {
                         let pick = matches.get(row).copied();
@@ -472,6 +481,10 @@ impl Smallvil {
     pub fn overlay_motion(&mut self, p: Point<f64, Logical>) {
         let pi = p.to_i32_round();
         let hit = self.layers.hits.iter().find(|(r, i)| *i != usize::MAX && r.contains(pi)).map(|(_, i)| *i);
+        if let Some(id) = self.layers.drag {
+            self.settings_slider(id, pi.x);
+            return;
+        }
         match self.layers.overlay.as_mut() {
             Some(Overlay::Region { cur, .. }) => {
                 *cur = pi;
@@ -579,7 +592,7 @@ impl Smallvil {
         }
         if !self.locked() {
             if let Some((buf, at, _)) = &self.layers.toast_buf {
-                if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_f64().to_physical(1.0), buf, None, None, None, Kind::Unspecified) {
+                if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_f64().to_physical(crate::display::scale()), buf, None, None, None, Kind::Unspecified) {
                     front.push(e);
                 }
             }
@@ -601,7 +614,7 @@ impl Smallvil {
                 let geo = w.geometry();
                 let at = Point::<f64, Logical>::from((r.loc.x as f64 - geo.loc.x as f64 * s, r.loc.y as f64 - geo.loc.y as f64 * s));
                 let els: Vec<WaylandSurfaceRenderElement<GlesRenderer>> =
-                    w.render_elements(renderer, at.to_physical(1.0).to_i32_round(), Scale::from(s), 1.0);
+                    w.render_elements(renderer, at.to_physical(crate::display::scale()).to_i32_round(), Scale::from(s * crate::display::scale()), 1.0);
                 thumbs.extend(els);
             }
         }
@@ -610,6 +623,7 @@ impl Smallvil {
 
     fn paint_overlay(&mut self, w: i32, h: i32) {
         self.layers.hits.clear();
+        self.layers.sliders.clear();
         let mode = self.chrome.mode;
         let t = theme::theme(mode);
         let Some(mut p) = Pixmap::new(w.max(1) as u32, h.max(1) as u32) else { return };

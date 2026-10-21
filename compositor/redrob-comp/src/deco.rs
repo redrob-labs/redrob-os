@@ -182,7 +182,7 @@ impl Smallvil {
         let at = Point::<i32, Logical>::from((c.loc.x - SHADOW, c.loc.y - TITLE_H - SHADOW));
         MemoryRenderBufferRenderElement::from_buffer(
             renderer,
-            at.to_f64().to_physical(1.0),
+            at.to_f64().to_physical(crate::display::scale()),
             &self.deco.cache[idx].2,
             None,
             None,

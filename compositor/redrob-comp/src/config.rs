@@ -127,6 +127,9 @@ pub struct Config {
     pub style: Style,
     pub theme: Mode,
     pub shortcuts: Vec<(Combo, Act)>,
+    /// `resolution = 1920x1080` and `scale = 1.25`, when set.
+    pub resolution: Option<(i32, i32)>,
+    pub scale: Option<f64>,
 }
 
 impl Config {
@@ -149,6 +152,8 @@ impl Config {
         let text = Self::paths().iter().find_map(|p| std::fs::read_to_string(p).ok()).unwrap_or_default();
         let mut style = Style::Mac;
         let mut theme = Mode::Dark;
+        let mut resolution = None;
+        let mut scale = None;
         let mut extra: Vec<(Combo, Option<Act>)> = Vec::new();
         let mut in_shortcuts = false;
         for raw in text.lines() {
@@ -171,6 +176,10 @@ impl Config {
                 style = parse_style(v).unwrap_or(style);
             } else if k.eq_ignore_ascii_case("theme") {
                 theme = parse_theme(v).unwrap_or(theme);
+            } else if k.eq_ignore_ascii_case("resolution") {
+                resolution = v.split_once('x').and_then(|(a, b)| Some((a.trim().parse().ok()?, b.trim().parse().ok()?)));
+            } else if k.eq_ignore_ascii_case("scale") {
+                scale = v.parse::<f64>().ok().filter(|s| (0.5..=3.0).contains(s));
             }
         }
         if let Some(s) = std::env::var("REDROB_STYLE").ok().and_then(|v| parse_style(&v)) {
@@ -186,7 +195,7 @@ impl Config {
                 shortcuts.push((combo, a));
             }
         }
-        Config { style, theme, shortcuts }
+        Config { style, theme, shortcuts, resolution, scale }
     }
 
     /// Modification time of the file `load` would read, to notice edits.

@@ -51,6 +51,8 @@ struct Drm {
     output: Output,
     /// A frame is queued and we are waiting for its vblank.
     pending: bool,
+    /// The connector's modes, one per entry of `state.display.modes`.
+    modes: Vec<smithay::reexports::drm::control::Mode>,
 }
 
 pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> Result<(), Box<dyn std::error::Error>> {
@@ -94,6 +96,30 @@ pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> 
         })
         .ok_or("no connected output")?;
 
+    // Resolutions for the settings window: distinct sizes, highest refresh,
+    // largest first. The settings file can pick one (`resolution = WxH`).
+    let info = drm.get_connector(conn, false)?;
+    let mut modes: Vec<smithay::reexports::drm::control::Mode> = Vec::new();
+    for m in info.modes() {
+        match modes.iter_mut().find(|x| x.size() == m.size()) {
+            Some(x) if x.vrefresh() < m.vrefresh() => *x = *m,
+            Some(_) => {}
+            None => modes.push(*m),
+        }
+    }
+    modes.sort_by_key(|m| std::cmp::Reverse(m.size().0 as i32 * m.size().1 as i32));
+    let cfg = crate::config::Config::load();
+    let mode = cfg
+        .resolution
+        .and_then(|(w, h)| modes.iter().find(|m| m.size() == (w as u16, h as u16)).copied())
+        .unwrap_or(mode);
+    let current = modes.iter().position(|m| m.size() == mode.size()).unwrap_or(0);
+    state.display.name = format!("{:?}-{}", info.interface(), info.interface_id());
+    state.display.modes = modes.iter().map(|m| (m.size().0 as i32, m.size().1 as i32, WlMode::from(*m).refresh)).collect();
+    state.display.current = current;
+    if let Some(s) = cfg.scale {
+        crate::display::set_scale(s);
+    }
     let wl_mode = WlMode::from(mode);
     let output = Output::new(
         "redrob-0".into(),
@@ -101,7 +127,12 @@ pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> 
     );
     let _global = output.create_global::<Smallvil>(&state.display_handle);
     output.set_preferred(wl_mode);
-    output.change_current_state(Some(wl_mode), Some(Transform::Normal), None, Some((0, 0).into()));
+    output.change_current_state(
+        Some(wl_mode),
+        Some(Transform::Normal),
+        Some(smithay::output::Scale::Fractional(crate::display::scale())),
+        Some((0, 0).into()),
+    );
     state.space.map_output(&output, (0, 0));
 
     let surface = drm.create_surface(crtc, mode, &[conn])?;
@@ -121,7 +152,7 @@ pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> 
         Some(gbm),
     )?;
 
-    let drm_state = Rc::new(RefCell::new(Drm { renderer, compositor, output, pending: false }));
+    let drm_state = Rc::new(RefCell::new(Drm { renderer, compositor, output, pending: false, modes }));
 
     // Scan-out finished: release the buffer and draw the next frame.
     let d = drm_state.clone();
@@ -191,7 +222,33 @@ fn render(d: &Rc<RefCell<Drm>>, state: &mut Smallvil) {
     // repaints left stale ground and missing chrome. The shell is small, so a
     // full repaint is cheap; revisit with real GPUs.
     drm.compositor.reset_buffer_ages();
-    let Drm { renderer, compositor, output, pending, .. } = &mut *drm;
+    let Drm { renderer, compositor, output, pending, modes } = &mut *drm;
+    // A resolution or scale picked in the settings window.
+    if let Some(req) = state.display.request.take() {
+        match req {
+            crate::display::Request::Mode(i) => {
+                if let Some(m) = modes.get(i).copied() {
+                    match compositor.use_mode(m) {
+                        Ok(()) => {
+                            output.change_current_state(Some(WlMode::from(m)), None, None, None);
+                            state.display.current = i;
+                            crate::config::set_value("resolution", &format!("{}x{}", m.size().0, m.size().1));
+                            tracing::info!(size = ?m.size(), "display: resolution");
+                        }
+                        Err(e) => tracing::warn!(?e, "display: mode change failed"),
+                    }
+                }
+            }
+            crate::display::Request::Scale(s) => {
+                crate::display::set_scale(s);
+                output.change_current_state(None, None, Some(smithay::output::Scale::Fractional(s)), None);
+                crate::config::set_value("scale", &format!("{s}"));
+                tracing::info!(s, "display: scale");
+            }
+        }
+        compositor.reset_buffers();
+        state.space.map_output(output, (0, 0));
+    }
     let size = output.current_mode().unwrap().size;
 
     crate::scene::take_shot(state, renderer, size);

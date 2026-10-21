@@ -19,13 +19,22 @@ use crate::{
 const W: i32 = 840;
 const H: i32 = 560;
 const SIDE: i32 = 208;
-const PAGES: [&str; 4] = ["화면 구성", "테마", "단축키", "입력"];
+const PAGES: [&str; 6] = ["화면 구성", "테마", "단축키", "입력", "소리", "디스플레이"];
 
 pub const ID_CLOSE: usize = 9_999;
 const ID_PAGE: usize = 1_000;
 const ID_ITEM: usize = 2_000;
 const ID_RESET: usize = 3_000;
 const ID_IME: usize = 3_001;
+pub const ID_OUT_SLIDER: usize = 4_000;
+pub const ID_IN_SLIDER: usize = 4_001;
+const ID_OUT_MUTE: usize = 4_002;
+const ID_IN_MUTE: usize = 4_003;
+const ID_SINK: usize = 5_000;
+const ID_SOURCE: usize = 6_000;
+const ID_MODE: usize = 7_000;
+const ID_SCALE: usize = 8_000;
+const SLIDER_W: f32 = 300.0;
 
 impl Smallvil {
     pub fn open_settings(&mut self) {
@@ -48,6 +57,38 @@ impl Smallvil {
                 self.chrome.reload_now();
             }
             ID_IME => crate::shell::spawn(&["fcitx5-configtool"]),
+            ID_OUT_MUTE => {
+                crate::status::toggle_mute_of(false);
+                self.status_edit(|s| s.muted = !s.muted);
+            }
+            ID_IN_MUTE => {
+                crate::status::toggle_mute_of(true);
+                self.status_edit(|s| s.in_muted = !s.in_muted);
+            }
+            i if (ID_SINK..ID_SINK + 100).contains(&i) || (ID_SOURCE..ID_SOURCE + 100).contains(&i) => {
+                let src = i >= ID_SOURCE;
+                let k = i - if src { ID_SOURCE } else { ID_SINK };
+                let st = self.chrome.status.clone();
+                let list = if src { &st.sources } else { &st.sinks };
+                if let Some((id, _, _)) = list.get(k) {
+                    crate::status::set_default(*id);
+                    let id = *id;
+                    self.status_edit(|s| {
+                        let l = if src { &mut s.sources } else { &mut s.sinks };
+                        for n in l.iter_mut() {
+                            n.2 = n.0 == id;
+                        }
+                    });
+                }
+            }
+            i if (ID_MODE..ID_MODE + 100).contains(&i) => {
+                self.display.request = Some(crate::display::Request::Mode(i - ID_MODE));
+            }
+            i if (ID_SCALE..ID_SCALE + 10).contains(&i) => {
+                if let Some(s) = crate::display::SCALES.get(i - ID_SCALE) {
+                    self.display.request = Some(crate::display::Request::Scale(*s));
+                }
+            }
             i if i >= ID_ITEM => {
                 let k = i - ID_ITEM;
                 match *page {
@@ -224,6 +265,8 @@ impl Smallvil {
                 }
                 self.button(p, &t, "기본값으로", cx0, yf + H as f32 - 52.0, ID_RESET);
             }
+            4 => self.paint_sound(p, &t, cx0, cy0, cw),
+            5 => self.paint_display(p, &t, cx0, cy0, cw),
             _ => {
                 let lines = [
                     ("한/영 전환", "한/영 키 · 오른쪽 Alt · Shift+Space"),
@@ -299,4 +342,143 @@ fn mini_desktop(p: &mut Pixmap, t: &theme::Theme, s: Style, x: f32, y: f32, w: f
         }
     }
     stroke_rrect(p, x + 0.5, y + 0.5, w - 1.0, h - 1.0, theme::RADIUS_MD, t.border_subtle);
+}
+
+impl Smallvil {
+    /// Change the shown status at once (the poller confirms a moment later).
+    fn status_edit(&mut self, f: impl FnOnce(&mut crate::status::Status)) {
+        if let Ok(mut g) = self.status.lock() {
+            f(&mut g);
+            self.chrome.status = g.clone();
+        }
+        self.layers.dirty = true;
+    }
+
+    /// A press or drag on a volume slider at pointer x.
+    pub fn settings_slider(&mut self, id: usize, x: i32) {
+        let Some((_, r)) = self.layers.sliders.iter().find(|(i, _)| *i == id).copied() else { return };
+        let v = (((x - r.loc.x) as f32 / r.size.w as f32).clamp(0.0, 1.0) * 100.0).round() as u32;
+        let src = id == ID_IN_SLIDER;
+        crate::status::set_volume(src, v);
+        self.status_edit(|s| if src { s.in_volume = Some(v) } else { s.volume = Some(v) });
+    }
+
+    fn slider(&mut self, p: &mut Pixmap, t: &theme::Theme, x: f32, y: f32, v: Option<u32>, muted: bool, id: usize) {
+        let w = SLIDER_W;
+        fill_rrect(p, x, y - 3.0, w, 6.0, 3.0, t.surface_sunken);
+        stroke_rrect(p, x + 0.5, y - 2.5, w - 1.0, 5.0, 2.5, t.border_subtle);
+        let val = v.unwrap_or(0).min(100) as f32 / 100.0;
+        let c = if muted { t.border_strong } else { t.action_primary };
+        if val > 0.0 {
+            fill_rrect(p, x, y - 3.0, (w * val).max(6.0), 6.0, 3.0, c);
+        }
+        let kx = x + w * val;
+        fill_circle(p, kx, y, 9.0, t.surface_base);
+        draw::stroke_rrect(p, kx - 9.0, y - 9.0, 18.0, 18.0, 9.0, t.border_strong);
+        let label = match v {
+            Some(v) => format!("{v}%"),
+            None => "—".into(),
+        };
+        draw::draw_text(p, &self.chrome.fonts.medium, &label, x + w + 16.0, y + 5.0, 13.0, t.ink_secondary);
+        let r = Rectangle::new(((x - 10.0) as i32, (y - 14.0) as i32).into(), ((w + 20.0) as i32, 28).into());
+        self.layers.hits.push((r, id));
+        let track = Rectangle::new((x as i32, (y - 14.0) as i32).into(), (w as i32, 28).into());
+        self.layers.sliders.push((id, track));
+    }
+
+    fn chip(&mut self, p: &mut Pixmap, t: &theme::Theme, label: &str, x: f32, y: f32, w: f32, on: bool, id: usize) {
+        fill_rrect(p, x, y, w, 34.0, theme::RADIUS_MD, if on { t.action_primary } else { t.surface_raised });
+        if !on {
+            stroke_rrect(p, x + 0.5, y + 0.5, w - 1.0, 33.0, theme::RADIUS_MD, t.border_subtle);
+        }
+        let md = &self.chrome.fonts.medium;
+        let lw = draw::text_width(md, label, 13.0);
+        draw::draw_text(p, md, label, x + (w - lw) / 2.0, y + 22.0, 13.0, if on { Rgba(255, 255, 255, 255) } else { t.ink_primary });
+        self.layers.hits.push((Rectangle::new((x as i32, y as i32).into(), (w as i32, 34).into()), id));
+    }
+
+    fn paint_sound(&mut self, p: &mut Pixmap, t: &theme::Theme, x: f32, y0: f32, cw: f32) {
+        let st = self.chrome.status.clone();
+        let mut y = y0 + 40.0;
+        for (src, title, vol, muted, list, sid, mid, did) in [
+            (false, "출력", st.volume, st.muted, st.sinks.clone(), ID_OUT_SLIDER, ID_OUT_MUTE, ID_SINK),
+            (true, "입력", st.in_volume, st.in_muted, st.sources.clone(), ID_IN_SLIDER, ID_IN_MUTE, ID_SOURCE),
+        ] {
+            let _ = src;
+            draw::draw_text(p, &self.chrome.fonts.semibold, title, x, y + 14.0, 15.0, t.ink_primary);
+            y += 36.0;
+            self.slider(p, t, x + 6.0, y, vol, muted, sid);
+            let ml = if muted { "음소거 해제" } else { "음소거" };
+            let mw = draw::text_width(&self.chrome.fonts.medium, ml, 12.0) + 22.0;
+            let (bx, by) = (x + cw - mw, y - 14.0);
+            fill_rrect(p, bx, by, mw, 28.0, theme::RADIUS_SM, if muted { t.action_primary } else { t.surface_raised });
+            stroke_rrect(p, bx + 0.5, by + 0.5, mw - 1.0, 27.0, theme::RADIUS_SM, t.border_subtle);
+            draw::draw_text(p, &self.chrome.fonts.medium, ml, bx + 11.0, by + 18.5, 12.0, if muted { Rgba(255, 255, 255, 255) } else { t.ink_primary });
+            self.layers.hits.push((Rectangle::new((bx as i32, by as i32).into(), (mw as i32, 28).into()), mid));
+            y += 26.0;
+            if list.is_empty() {
+                draw::draw_text(p, &self.chrome.fonts.medium, "장치 없음", x + 6.0, y + 18.0, 13.0, t.ink_muted);
+                y += 40.0;
+            }
+            for (k, (_, name, default)) in list.iter().take(3).enumerate() {
+                let ry = y + k as f32 * 36.0;
+                fill_rrect(p, x, ry, cw, 32.0, theme::RADIUS_MD, if *default { with_alpha(t.action_primary, 36) } else { t.surface_raised });
+                fill_circle(p, x + 18.0, ry + 16.0, 6.0, if *default { t.action_primary } else { t.surface_sunken });
+                if *default {
+                    fill_circle(p, x + 18.0, ry + 16.0, 2.5, Rgba(255, 255, 255, 255));
+                }
+                let n = draw::fit_text(&self.chrome.fonts.medium, name, 13.0, cw - 50.0);
+                draw::draw_text(p, &self.chrome.fonts.medium, &n, x + 34.0, ry + 21.0, 13.0, t.ink_primary);
+                self.layers.hits.push((Rectangle::new((x as i32, ry as i32).into(), (cw as i32, 32).into()), did + k));
+            }
+            y += list.len().min(3) as f32 * 36.0 + 18.0;
+        }
+    }
+
+    fn paint_display(&mut self, p: &mut Pixmap, t: &theme::Theme, x: f32, y0: f32, cw: f32) {
+        let modes = self.display.modes.clone();
+        let cur = self.display.current;
+        let scale = crate::display::scale();
+        // The screen: a little monitor with what it runs at.
+        let (mx, my, mw, mh) = (x, y0 + 30.0, 220.0, 124.0);
+        fill_rrect(p, mx, my, mw, mh, theme::RADIUS_MD, t.surface_sunken);
+        stroke_rrect(p, mx + 0.5, my + 0.5, mw - 1.0, mh - 1.0, theme::RADIUS_MD, t.border_strong);
+        let mut g = Pixmap::new((mw - 16.0) as u32, (mh - 16.0) as u32).unwrap();
+        draw::fill_gradient(&mut g, &[(0.0, 0x0a0b0c), (0.6, 0x0a0b0c), (1.0, 0x09209c)]);
+        p.draw_pixmap((mx + 8.0) as i32, (my + 8.0) as i32, g.as_ref(), &tiny_skia::PixmapPaint::default(), tiny_skia::Transform::identity(), None);
+        fill_rect(p, mx + mw / 2.0 - 20.0, my + mh, 40.0, 10.0, t.border_strong);
+        fill_rrect(p, mx + mw / 2.0 - 40.0, my + mh + 10.0, 80.0, 5.0, 2.5, t.border_strong);
+        let sb = &self.chrome.fonts.semibold;
+        let md = &self.chrome.fonts.medium;
+        let name = if self.display.name.is_empty() { "디스플레이".to_string() } else { self.display.name.clone() };
+        draw::draw_text(p, sb, &name, mx + mw + 24.0, my + 30.0, 15.0, t.ink_primary);
+        if let Some((w, h, r)) = modes.get(cur) {
+            let line = format!("{w} × {h} · {}Hz", (*r as f32 / 1000.0).round());
+            draw::draw_text(p, md, &line, mx + mw + 24.0, my + 56.0, 13.0, t.ink_secondary);
+        }
+        let sl = format!("배율 {}%", (scale * 100.0).round());
+        draw::draw_text(p, md, &sl, mx + mw + 24.0, my + 78.0, 13.0, t.ink_secondary);
+
+        let mut y = my + mh + 40.0;
+        draw::draw_text(p, sb, "해상도", x, y, 14.0, t.ink_primary);
+        y += 12.0;
+        let cols = 3.0;
+        let chip_w = (cw - 16.0) / cols;
+        if modes.is_empty() {
+            draw::draw_text(p, md, "이 화면에서는 바꿀 수 없습니다", x, y + 24.0, 13.0, t.ink_muted);
+            y += 40.0;
+        }
+        for (k, (w, h, _)) in modes.iter().take(9).enumerate() {
+            let (c, r) = ((k % 3) as f32, (k / 3) as f32);
+            self.chip(p, t, &format!("{w} × {h}"), x + c * (chip_w + 8.0), y + r * 42.0, chip_w, k == cur, ID_MODE + k);
+        }
+        y += ((modes.len().min(9) + 2) / 3) as f32 * 42.0 + 26.0;
+        draw::draw_text(p, &self.chrome.fonts.semibold, "배율", x, y, 14.0, t.ink_primary);
+        y += 12.0;
+        let sw = (cw - 32.0) / 5.0;
+        for (k, s) in crate::display::SCALES.iter().enumerate() {
+            let label = format!("{}%", (s * 100.0).round());
+            self.chip(p, t, &label, x + k as f32 * (sw + 8.0), y, sw, (s - scale).abs() < 0.01, ID_SCALE + k);
+        }
+    }
 }

@@ -67,6 +67,7 @@ pub struct Smallvil {
     pub status: crate::status::Shared,
     /// Input-method popups (candidate windows), placed each frame.
     pub im_popups: Vec<smithay::wayland::input_method::PopupSurface>,
+    pub display: crate::display::Display,
 }
 
 impl Smallvil {
@@ -160,6 +161,7 @@ impl Smallvil {
             shot: None,
             status: Default::default(),
             im_popups: Vec::new(),
+            display: Default::default(),
         }
     }
 

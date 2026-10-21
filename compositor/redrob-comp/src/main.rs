@@ -1,6 +1,7 @@
 #![allow(irrefutable_let_patterns)]
 
 mod apps;
+mod display;
 mod hangul;
 mod settings;
 mod chrome;
