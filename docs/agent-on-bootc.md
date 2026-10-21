@@ -168,12 +168,14 @@ pairing token, so an unpaired host on the LAN gets nothing.
      which reads `/run/redrob-pairing/pairing.json`). It disappears on its own
      once paired. Needs `libnotify` (`notify-send`) in the image.
 3. Scan the QR or enter the code in the Redrob app. It encodes
-   `redrob://pair?device=<id>&host=<device-ip>:42617&code=<code>`.
-4. The phone pairs and opens the dashboard at the device's LAN address.
+   `redrob://pair?device=<id>&host=<device-ip>:42617&code=<code>&fp=<sha256>`.
+4. The phone pairs and opens the dashboard at `https://<device-ip>:42617`,
+   pinning the certificate fingerprint `fp`.
 
-This listener is plain HTTP: fine on a trusted home/office LAN, not on one you do
-not trust. From anywhere else use the relay (`docs/remote-access.md`, "Relay");
-the relay path is unchanged by the bootc move.
+This listener serves HTTPS with a self-provisioned certificate (see
+`docs/remote-access.md`, "LAN-direct"); loopback callers such as the greenboot
+health check may still use plain HTTP. From anywhere else use the relay
+(`docs/remote-access.md`, "Relay"); the relay path is unchanged by the bootc move.
 
 ## Turning the agent off (and back on)
 

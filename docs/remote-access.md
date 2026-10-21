@@ -17,14 +17,25 @@ paired client gets in.
 
 1. Put the phone on the **same Wi‑Fi** as the device.
 2. Scan the pairing QR on the device screen (or read the code over serial).
-   It encodes `redrob://pair?device=<id>&host=<device-ip>:42617&code=<code>`.
-3. The phone pairs with that code and opens the device dashboard at its LAN
-   address.
+   It encodes `redrob://pair?device=<id>&host=<device-ip>:42617&code=<code>&fp=<sha256>`.
+3. The phone pairs with that code and opens the device dashboard at
+   `https://<device-ip>:42617`, pinning the certificate whose SHA‑256
+   fingerprint is `fp`.
 
-Security: this listener is **plain HTTP**, so dashboard traffic is unencrypted
-on the local network. Fine on a trusted home/office LAN; do not use it on a
-network you do not trust. For untrusted networks, use the relay (its
-client↔device channel is mTLS‑encrypted end to end).
+Encryption: the listener serves **HTTPS**. On first start the agent
+self‑provisions a certificate under its data dir (`gateway-tls/`) and reuses it
+on every later start, so the pin survives reboots. The certificate is
+self‑signed (per‑device CA), so clients must pin `fp` rather than rely on
+public CAs; a browser opened at the address shows a certificate warning.
+`GET /admin/paircode` (loopback + admin token) reports the same value as
+`tls_fingerprint`. Loopback callers (health check, pairing banner) may still
+use plain HTTP on the same port.
+
+| `[gateway.tls]` | Behaviour |
+|---|---|
+| `enabled = true` (image default), no paths | HTTPS, self‑provisioned certificate |
+| `enabled = true`, `cert_path` + `key_path` | HTTPS with your own certificate |
+| `enabled = false` (or no `[gateway.tls]`) | plain HTTP — trusted LANs only |
 
 ## Relay (from anywhere)
 

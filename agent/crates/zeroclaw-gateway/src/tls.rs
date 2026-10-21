@@ -7,19 +7,73 @@
 //! it can also be consumed by `zeroclaw-runtime` without an upward dependency on
 //! the gateway.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
+use std::path::{Path, PathBuf};
 use tokio_rustls::TlsAcceptor;
 use zeroclaw_config::schema::GatewayTlsConfig;
 use zeroclaw_tls::{ClientAuthParams, ServerConfigParams};
 
+/// Directory under the agent data dir that holds the self-provisioned gateway
+/// certificate (`[gateway.tls] enabled = true` with empty `cert_path`/`key_path`).
+pub const AUTO_TLS_DIR: &str = "gateway-tls";
+
+/// True when the config asks the gateway to self-provision its certificate.
+fn is_auto(config: &GatewayTlsConfig) -> bool {
+    config.cert_path.is_empty() && config.key_path.is_empty()
+}
+
+/// The certificate file this config serves, without generating anything.
+fn served_cert_path(config: &GatewayTlsConfig, data_dir: &Path) -> PathBuf {
+    if is_auto(config) {
+        data_dir.join(AUTO_TLS_DIR).join("server.crt")
+    } else {
+        PathBuf::from(&config.cert_path)
+    }
+}
+
+/// Resolve the cert/key pair to serve: the configured pair, or — when both
+/// paths are empty — the self-provisioned pair under `<data_dir>/gateway-tls/`,
+/// generated on first call and reused on every later start.
+fn resolve_cert_key(config: &GatewayTlsConfig, data_dir: &Path) -> Result<(String, String)> {
+    if is_auto(config) {
+        let mats = zeroclaw_tls::ensure_server_materials(&data_dir.join(AUTO_TLS_DIR), &[])
+            .context("self-provisioning the gateway TLS certificate")?;
+        return Ok((
+            mats.server_cert_path.to_string_lossy().into_owned(),
+            mats.server_key_path.to_string_lossy().into_owned(),
+        ));
+    }
+    if config.cert_path.is_empty() || config.key_path.is_empty() {
+        anyhow::bail!(
+            "[gateway.tls] set both cert_path and key_path, or leave both empty to self-provision"
+        );
+    }
+    Ok((config.cert_path.clone(), config.key_path.clone()))
+}
+
 /// Build a [`TlsAcceptor`] from the gateway TLS configuration.
-pub fn build_tls_acceptor(config: &GatewayTlsConfig) -> Result<TlsAcceptor> {
-    zeroclaw_tls::build_tls_acceptor(&to_params(config))
+pub fn build_tls_acceptor(config: &GatewayTlsConfig, data_dir: &Path) -> Result<TlsAcceptor> {
+    zeroclaw_tls::build_tls_acceptor(&to_params(config, data_dir)?)
 }
 
 /// Build a [`rustls::ServerConfig`] from the gateway TLS configuration.
-pub fn build_server_config(config: &GatewayTlsConfig) -> Result<rustls::ServerConfig> {
-    zeroclaw_tls::build_server_config(&to_params(config))
+pub fn build_server_config(
+    config: &GatewayTlsConfig,
+    data_dir: &Path,
+) -> Result<rustls::ServerConfig> {
+    zeroclaw_tls::build_server_config(&to_params(config, data_dir)?)
+}
+
+/// Hex SHA-256 fingerprint of the leaf certificate the gateway serves, so a
+/// pairing client can pin it. Read from the certificate file at call time (the
+/// file is the source of truth); `None` when it does not exist yet or is
+/// unreadable.
+pub fn served_cert_fingerprint(config: &GatewayTlsConfig, data_dir: &Path) -> Option<String> {
+    let path = served_cert_path(config, data_dir);
+    let certs = zeroclaw_tls::load_certs(path.to_str()?).ok()?;
+    certs
+        .first()
+        .map(|c| zeroclaw_tls::cert_sha256_fingerprint(c.as_ref()))
 }
 
 /// Map the gateway TLS config onto the transport-neutral params.
@@ -28,7 +82,8 @@ pub fn build_server_config(config: &GatewayTlsConfig) -> Result<rustls::ServerCo
 /// block is present AND `enabled = true`, preserving the previous
 /// `.filter(|ca| ca.enabled)` behavior (a `client_auth` with `enabled = false`
 /// is treated as server-only TLS, skipping CA loading).
-fn to_params(config: &GatewayTlsConfig) -> ServerConfigParams {
+fn to_params(config: &GatewayTlsConfig, data_dir: &Path) -> Result<ServerConfigParams> {
+    let (cert_path, key_path) = resolve_cert_key(config, data_dir)?;
     let client_auth = config
         .client_auth
         .as_ref()
@@ -40,11 +95,11 @@ fn to_params(config: &GatewayTlsConfig) -> ServerConfigParams {
             crl_path: ca.crl_path.clone(),
         });
 
-    ServerConfigParams {
-        cert_path: config.cert_path.clone(),
-        key_path: config.key_path.clone(),
+    Ok(ServerConfigParams {
+        cert_path,
+        key_path,
         client_auth,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -107,7 +162,7 @@ mod tests {
         };
 
         // Should build successfully without client auth.
-        let _server_config = build_server_config(&tls_config).unwrap();
+        let _server_config = build_server_config(&tls_config, Path::new("/nonexistent")).unwrap();
     }
 
     #[test]
@@ -134,7 +189,7 @@ mod tests {
         };
 
         // Should build successfully with mandatory client auth.
-        let _server_config = build_server_config(&tls_config).unwrap();
+        let _server_config = build_server_config(&tls_config, Path::new("/nonexistent")).unwrap();
     }
 
     #[test]
@@ -161,7 +216,7 @@ mod tests {
         };
 
         // Should build successfully with optional client auth.
-        let _server_config = build_server_config(&tls_config).unwrap();
+        let _server_config = build_server_config(&tls_config, Path::new("/nonexistent")).unwrap();
     }
 
     #[test]
@@ -210,7 +265,7 @@ mod tests {
         };
 
         // Should build successfully - pinning is checked at connection time, not config time.
-        let _server_config = build_server_config(&tls_config).unwrap();
+        let _server_config = build_server_config(&tls_config, Path::new("/nonexistent")).unwrap();
     }
 
     #[test]
@@ -237,6 +292,29 @@ mod tests {
         };
 
         // Should succeed because client_auth.enabled=false skips the CA loading.
-        let _server_config = build_server_config(&tls_config).unwrap();
+        let _server_config = build_server_config(&tls_config, Path::new("/nonexistent")).unwrap();
+    }
+
+    #[test]
+    fn auto_cert_is_provisioned_once_and_reused_across_restarts() {
+        ensure_crypto_provider();
+        let data_dir = tempfile::tempdir().unwrap();
+        let tls_config = GatewayTlsConfig {
+            enabled: true,
+            ..GatewayTlsConfig::default()
+        };
+
+        assert!(served_cert_fingerprint(&tls_config, data_dir.path()).is_none());
+        build_tls_acceptor(&tls_config, data_dir.path()).unwrap();
+        let first = served_cert_fingerprint(&tls_config, data_dir.path()).unwrap();
+        assert_eq!(first.len(), 64);
+
+        // A second start (new acceptor) must serve the same certificate, or every
+        // paired phone's pin would break on reboot.
+        build_tls_acceptor(&tls_config, data_dir.path()).unwrap();
+        assert_eq!(
+            served_cert_fingerprint(&tls_config, data_dir.path()).unwrap(),
+            first
+        );
     }
 }
