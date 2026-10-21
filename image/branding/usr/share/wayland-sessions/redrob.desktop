@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
 Name=Redrob
-Comment=Redrob OS shell (experiment): Redrob's own compositor, no Plasma
-Exec=/usr/bin/redrob-comp --drm
+Comment=Redrob OS desktop
+Exec=/usr/bin/redrob-session
 DesktopNames=Redrob

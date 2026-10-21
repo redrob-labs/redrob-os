@@ -1,4 +1,5 @@
 use crate::{Smallvil, grabs::resize_grab, state::ClientState};
+use smithay::wayland::seat::WaylandFocus;
 use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
     reexports::wayland_server::{
@@ -22,6 +23,10 @@ impl CompositorHandler for Smallvil {
     }
 
     fn client_compositor_state<'a>(&self, client: &'a Client) -> &'a CompositorClientState {
+        // Xwayland is a client with its own data type.
+        if let Some(x) = client.get_data::<smithay::xwayland::XWaylandClientData>() {
+            return &x.compositor_state;
+        }
         &client.get_data::<ClientState>().unwrap().compositor_state
     }
 
@@ -35,13 +40,14 @@ impl CompositorHandler for Smallvil {
             if let Some(window) = self
                 .space
                 .elements()
-                .find(|w| w.toplevel().unwrap().wl_surface() == &root)
+                .find(|w| w.wl_surface().is_some_and(|s| *s == root))
             {
                 window.on_commit();
             }
         };
 
         xdg_shell::handle_commit(&mut self.popups, &self.space, surface);
+        self.pin_sidebar(surface);
         resize_grab::handle_commit(&mut self.space, surface);
     }
 }

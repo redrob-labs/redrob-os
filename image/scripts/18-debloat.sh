@@ -12,7 +12,7 @@
 # shellcheck source=lib.sh
 . "$(dirname "$0")/lib.sh"
 
-for pkg in firefox firefox-langpacks plasma-welcome; do
+for pkg in firefox firefox-langpacks; do
   if rpm -q "${pkg}" >/dev/null 2>&1; then
     dnf5 -y remove "${pkg}" || echo "warning: could not remove ${pkg}" >&2
   fi

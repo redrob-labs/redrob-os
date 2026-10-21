@@ -16,7 +16,7 @@ use smithay::{
     backend::renderer::{
         element::{
             AsRenderElements, Kind,
-            memory::{MemoryRenderBuffer, MemoryRenderBufferRenderElement},
+            memory::MemoryRenderBufferRenderElement,
             surface::WaylandSurfaceRenderElement,
         },
         gles::GlesRenderer,
@@ -48,6 +48,8 @@ pub enum Overlay {
     Expose { slots: Vec<(Window, Rectangle<i32, Logical>, f64)>, hover: Option<usize> },
     Lock { input: String, error: bool, busy: Option<Receiver<bool>> },
     Region { start: Option<Point<i32, Logical>>, cur: Point<i32, Logical> },
+    /// "Keep this resolution?" after a change; reverts at `until`.
+    KeepMode { back: Option<usize>, size: (i32, i32), until: Instant },
 }
 
 pub struct Toast {
@@ -60,7 +62,7 @@ pub struct Toast {
 pub struct Layers {
     pub overlay: Option<Overlay>,
     pub dirty: bool,
-    buf: Option<MemoryRenderBuffer>,
+    buf: Option<draw::Buf>,
     pub hits: Vec<(Rectangle<i32, Logical>, usize)>,
     /// Settings volume sliders (id, track) and the one being dragged.
     pub sliders: Vec<(usize, Rectangle<i32, Logical>)>,
@@ -71,7 +73,7 @@ pub struct Layers {
     pub toasts: Vec<Toast>,
     /// The finder types Hangul (toggled with 한/영, right Alt or Shift+Space).
     pub ko: bool,
-    toast_buf: Option<(MemoryRenderBuffer, Point<i32, Logical>, Vec<(Rectangle<i32, Logical>, u32)>)>,
+    toast_buf: Option<(draw::Buf, Point<i32, Logical>, Vec<(Rectangle<i32, Logical>, u32)>)>,
     toast_dirty: bool,
 }
 
@@ -83,7 +85,15 @@ const TOAST_W: i32 = 360;
 const TOAST_H: i32 = 76;
 
 impl Layers {
+    pub fn invalidate(&mut self) {
+        self.dirty = true;
+        self.toast_dirty = true;
+        self.icons.clear();
+    }
+
+    /// `px` is logical; the icon is rendered at the output scale.
     fn icon(&mut self, name: &str, px: u32) -> Option<&Pixmap> {
+        let px = (px as f32 * draw::k()).round() as u32;
         let key = (name.to_string(), px);
         if !self.icons.contains_key(&key) {
             let img = apps::icon(name, px);
@@ -119,7 +129,7 @@ fn title(w: &Window) -> String {
 }
 
 fn blit(dst: &mut Pixmap, src: &Pixmap, x: f32, y: f32) {
-    dst.draw_pixmap(x.round() as i32, y.round() as i32, src.as_ref(), &tiny_skia::PixmapPaint::default(), tiny_skia::Transform::identity(), None);
+    draw::blit(dst, src, x, y, 1.0);
 }
 
 fn letter_tile(p: &mut Pixmap, font: &fontdue::Font, name: &str, x: f32, y: f32, size: f32, t: &theme::Theme) {
@@ -162,6 +172,31 @@ impl Smallvil {
     }
 
     // ------------------------------------------------------------ openers
+
+    /// Ask whether to keep a new resolution; `back` is the mode to return to.
+    pub fn confirm_resolution(&mut self, back: Option<usize>, size: (i32, i32)) {
+        let until = Instant::now() + std::time::Duration::from_secs(15);
+        self.layers.overlay = Some(Overlay::KeepMode { back, size, until });
+        self.layers.dirty = true;
+    }
+
+    fn keep_mode(&mut self, keep: bool) {
+        let Some(Overlay::KeepMode { back, size, .. }) = self.layers.overlay.take() else { return };
+        if keep {
+            crate::config::set_value("resolution", &format!("{}x{}", size.0, size.1));
+            if let Some(i) = self.display.modes.iter().position(|m| (m.0, m.1) == size) {
+                self.display.current = i;
+            }
+            tracing::info!(?size, "display: resolution kept");
+        } else if let Some(i) = back {
+            self.display.request = Some(crate::display::Request::Revert(i));
+            self.display.current = i;
+        }
+        // Back to the settings window it came from.
+        self.layers.overlay = Some(Overlay::Settings { page: 5, capture: None });
+        self.layers.dirty = true;
+    }
+
 
     pub fn open_finder(&mut self) {
         if matches!(self.layers.overlay, Some(Overlay::Finder { .. })) {
@@ -362,11 +397,25 @@ impl Smallvil {
                 }
                 self.layers.dirty = true;
             }
+            Overlay::Region { .. } if raw == keysyms::KEY_space => {
+                let p = self.seat.get_pointer().unwrap().current_location();
+                let under = self.space.element_under(p).map(|(w, _)| w.clone());
+                self.layers.overlay = None;
+                self.layers.dirty = true;
+                if let Some(w) = under {
+                    self.shot = Some(self.window_shot_rect(&w));
+                }
+            }
             Overlay::Expose { .. } | Overlay::Region { .. } => {
                 if raw == keysyms::KEY_Escape {
                     self.close_overlay();
                 }
             }
+            Overlay::KeepMode { .. } => match raw {
+                keysyms::KEY_Return | keysyms::KEY_KP_Enter => self.keep_mode(true),
+                keysyms::KEY_Escape => self.keep_mode(false),
+                _ => {}
+            },
             Overlay::Lock { input, error, busy } => {
                 if busy.is_some() {
                     return;
@@ -375,8 +424,10 @@ impl Smallvil {
                     keysyms::KEY_Return | keysyms::KEY_KP_Enter if !input.is_empty() => {
                         let pw = std::mem::take(input);
                         let (tx, rx) = channel();
+                        let user = crate::greeter::current().0;
                         std::thread::spawn(move || {
-                            let _ = tx.send(crate::pam::check(&pw));
+                            let ok = if crate::greeter::active() { crate::greeter::login(&user, &pw) } else { crate::pam::check(&pw) };
+                            let _ = tx.send(ok);
                         });
                         *busy = Some(rx);
                     }
@@ -384,6 +435,17 @@ impl Smallvil {
                         input.pop();
                     }
                     keysyms::KEY_Escape => input.clear(),
+                    // The login screen: pick the user.
+                    keysyms::KEY_Tab | keysyms::KEY_Right | keysyms::KEY_Down if crate::greeter::active() => {
+                        crate::greeter::step(1);
+                        input.clear();
+                        *error = false;
+                    }
+                    keysyms::KEY_Left | keysyms::KEY_Up | keysyms::KEY_ISO_Left_Tab if crate::greeter::active() => {
+                        crate::greeter::step(-1);
+                        input.clear();
+                        *error = false;
+                    }
                     _ => {
                         if let Some(c) = ch {
                             input.push(c);
@@ -442,6 +504,7 @@ impl Smallvil {
                         self.settings_slider(id, pi.x);
                     }
                     (Overlay::Settings { .. }, Some(id)) => self.settings_click(id),
+                    (Overlay::KeepMode { .. }, Some(id)) => self.keep_mode(id == 0),
                     (Overlay::Finder { matches, .. }, Some(row)) => {
                         let pick = matches.get(row).copied();
                         self.close_overlay();
@@ -520,6 +583,11 @@ impl Smallvil {
         unsafe { while libc::waitpid(-1, std::ptr::null_mut(), libc::WNOHANG) > 0 {} }
         if let Some(Overlay::Lock { busy: Some(rx), error, .. }) = &mut self.layers.overlay {
             if let Ok(ok) = rx.try_recv() {
+                if ok && crate::greeter::active() {
+                    // greetd starts the session once the greeter is gone.
+                    tracing::info!("greeter: logged in");
+                    std::process::exit(0);
+                }
                 if ok {
                     self.layers.overlay = None;
                     tracing::info!("unlocked");
@@ -531,6 +599,15 @@ impl Smallvil {
                 }
                 self.layers.dirty = true;
             }
+        }
+        // A screenshot finished encoding: offer it as the clipboard.
+        if let Some(png) = crate::shot::CLIPBOARD.lock().ok().and_then(|mut c| c.take()) {
+            smithay::wayland::selection::data_device::set_data_device_selection(
+                &self.display_handle,
+                &self.seat,
+                vec!["image/png".into()],
+                crate::handlers::Selection::Bytes(std::sync::Arc::new(png)),
+            );
         }
         while let Ok(m) = self.note_rx.try_recv() {
             match m {
@@ -546,6 +623,15 @@ impl Smallvil {
         self.layers.toasts.retain(|t| t.until > now);
         if self.layers.toasts.len() != before {
             self.layers.toast_dirty = true;
+        }
+        if let Some(Overlay::KeepMode { until, .. }) = &self.layers.overlay {
+            let left = until.saturating_duration_since(now).as_secs();
+            if *until <= now {
+                self.keep_mode(false);
+            } else if left as u32 != self.layers.minute {
+                self.layers.minute = left as u32;
+                self.layers.dirty = true;
+            }
         }
         if let Some(Overlay::Lock { .. }) = &self.layers.overlay {
             use chrono::Timelike;
@@ -592,7 +678,7 @@ impl Smallvil {
         }
         if !self.locked() {
             if let Some((buf, at, _)) = &self.layers.toast_buf {
-                if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(renderer, at.to_f64().to_physical(crate::display::scale()), buf, None, None, None, Kind::Unspecified) {
+                if let Some(e) = draw::element(renderer, at.to_f64(), buf, Kind::Unspecified) {
                     front.push(e);
                 }
             }
@@ -605,7 +691,7 @@ impl Smallvil {
             self.layers.dirty = false;
         }
         if let Some(buf) = &self.layers.buf {
-            if let Ok(e) = MemoryRenderBufferRenderElement::from_buffer(renderer, (0.0, 0.0), buf, None, None, None, Kind::Unspecified) {
+            if let Some(e) = draw::element(renderer, (0.0, 0.0).into(), buf, Kind::Unspecified) {
                 front.push(e);
             }
         }
@@ -626,7 +712,7 @@ impl Smallvil {
         self.layers.sliders.clear();
         let mode = self.chrome.mode;
         let t = theme::theme(mode);
-        let Some(mut p) = Pixmap::new(w.max(1) as u32, h.max(1) as u32) else { return };
+        let Some(mut p) = draw::canvas(w.max(1) as f32, h.max(1) as f32) else { return };
         let style = self.chrome.style;
         let ov = self.layers.overlay.take();
         match &ov {
@@ -653,6 +739,31 @@ impl Smallvil {
                 }
             }
             Some(Overlay::Lock { input, error, busy }) => self.paint_lock(&mut p, input, *error, busy.is_some()),
+            Some(Overlay::KeepMode { size, until, .. }) => {
+                let left = until.saturating_duration_since(Instant::now()).as_secs() + 1;
+                fill_rect(&mut p, 0.0, 0.0, w as f32, h as f32, Rgba(0, 0, 0, 110));
+                let (cw, ch) = (440.0, 176.0);
+                let (cx, cy) = ((w as f32 - cw) / 2.0, (h as f32 - ch) / 2.0);
+                draw::shadow(&mut p, cx, cy, cw, ch, theme::RADIUS_LG, 24.0, 12.0, t.shadow_lg);
+                fill_rrect(&mut p, cx, cy, cw, ch, theme::RADIUS_LG, t.surface_base);
+                stroke_rrect(&mut p, cx + 0.5, cy + 0.5, cw - 1.0, ch - 1.0, theme::RADIUS_LG, t.border_subtle);
+                let sb = &self.chrome.fonts.semibold;
+                let md = &self.chrome.fonts.medium;
+                draw::draw_text(&mut p, sb, "이 해상도를 유지할까요?", cx + 24.0, cy + 40.0, 17.0, t.ink_primary);
+                let line = format!("{} × {} · {left}초 뒤 원래대로 돌아갑니다", size.0, size.1);
+                draw::draw_text(&mut p, md, &line, cx + 24.0, cy + 68.0, 13.0, t.ink_secondary);
+                let (bw, bh, by) = (120.0, 36.0, cy + ch - 24.0 - 36.0);
+                for (k, (label, primary)) in [("유지", true), ("되돌리기", false)].iter().enumerate() {
+                    let bx = cx + cw - 24.0 - bw - k as f32 * (bw + 10.0);
+                    fill_rrect(&mut p, bx, by, bw, bh, theme::RADIUS_MD, if *primary { t.action_primary } else { t.surface_raised });
+                    if !*primary {
+                        stroke_rrect(&mut p, bx + 0.5, by + 0.5, bw - 1.0, bh - 1.0, theme::RADIUS_MD, t.border_subtle);
+                    }
+                    let lw = draw::text_width(md, label, 14.0);
+                    draw::draw_text(&mut p, md, label, bx + (bw - lw) / 2.0, by + 23.0, 14.0, if *primary { Rgba(255, 255, 255, 255) } else { t.ink_primary });
+                    self.layers.hits.push((Rectangle::new((bx as i32, by as i32).into(), (bw as i32, bh as i32).into()), k));
+                }
+            }
             Some(Overlay::Region { start, cur }) => {
                 let dim = Rgba(0, 0, 0, 90);
                 match start {
@@ -689,7 +800,7 @@ impl Smallvil {
 
     #[allow(clippy::too_many_arguments)]
     fn paint_finder(&mut self, p: &mut Pixmap, t: &theme::Theme, style: Style, query: &str, sel: usize, top: usize, matches: &[usize]) {
-        let (w, h) = (p.width() as i32, p.height() as i32);
+        let (w, h) = (draw::lw(p) as i32, draw::lh(p) as i32);
         let rows = matches.len().saturating_sub(top).min(ROWS) as i32;
         let list_h = if rows > 0 { rows * ROW_H + 12 } else { 52 };
         let ph = FIELD_H + 1 + list_h;
@@ -766,7 +877,7 @@ impl Smallvil {
     }
 
     fn paint_switcher(&mut self, p: &mut Pixmap, t: &theme::Theme, items: &[Window], sel: usize) {
-        let (w, h) = (p.width() as f32, p.height() as f32);
+        let (w, h) = (draw::lw(p), draw::lh(p));
         let card = 112.0;
         let gap = 8.0;
         let pad = 16.0;
@@ -802,7 +913,7 @@ impl Smallvil {
 
     fn paint_lock(&mut self, p: &mut Pixmap, input: &str, error: bool, busy: bool) {
         use chrono::{Datelike, Timelike};
-        let (w, h) = (p.width() as f32, p.height() as f32);
+        let (w, h) = (draw::lw(p), draw::lh(p));
         // Always the dark ground: the lock screen reads the same in both themes.
         let t = theme::theme(Mode::Dark);
         draw::fill_gradient(p, t.ground);
@@ -822,7 +933,11 @@ impl Smallvil {
         draw::draw_text(p, f, &time, (w - tw) / 2.0, h * 0.18 + 100.0, 96.0, white);
 
         // Avatar, name, password pill.
-        let user = std::env::var("USER").unwrap_or_else(|_| "user".into());
+        let user = if crate::greeter::active() {
+            crate::greeter::current().1
+        } else {
+            std::env::var("USER").unwrap_or_else(|_| "user".into())
+        };
         let cy = h * 0.62;
         fill_circle(p, w / 2.0, cy - 70.0, 36.0, with_alpha(white, 40));
         let initial: String = user.chars().next().map(|c| c.to_uppercase().collect()).unwrap_or_default();
@@ -850,6 +965,11 @@ impl Smallvil {
             }
         }
         self.chrome.icons.draw(p, ICON_LOCK, Some(with_alpha(white, 160)), px + 14.0, py + 12.0, 16.0);
+        if crate::greeter::active() && crate::greeter::user_count() > 1 {
+            let hint = "Tab 키로 사용자 바꾸기";
+            let hw = draw::text_width(m, hint, 13.0);
+            draw::draw_text(p, m, hint, (w - hw) / 2.0, py + ph + 52.0, 13.0, with_alpha(white, 140));
+        }
         if error {
             let e = "암호가 맞지 않습니다";
             let ew = draw::text_width(m, e, 13.0);
@@ -868,7 +988,7 @@ impl Smallvil {
         let gap = 10;
         let bw = TOAST_W + 2 * m;
         let bh = n * TOAST_H + (n - 1) * gap + 2 * m;
-        let Some(mut p) = Pixmap::new(bw as u32, bh as u32) else { return };
+        let Some(mut p) = draw::canvas(bw as f32, bh as f32) else { return };
         let mut hits = Vec::new();
         let notes: Vec<Note> = self.layers.toasts.iter().rev().map(|t| t.note.clone()).collect();
         for (i, note) in notes.iter().enumerate() {

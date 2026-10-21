@@ -19,6 +19,9 @@ enable redrob-flathub.service
 # Windows-app installer (Bottles) once, after Flathub.
 enable redrob-gaming-apps.service
 
+# Login screen (redrob-comp in greeter mode).
+enable greetd.service
+
 # Printing + firmware updates.
 enable cups.socket
 enable fwupd-refresh.timer

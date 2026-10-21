@@ -3,7 +3,7 @@
 Redrob OS is one bootable container image: `ghcr.io/redrob-labs/redrob-os`.
 `image/Containerfile` describes the whole operating system; CI builds it, signs it and
 pushes it; devices pull it with `bootc`, stage it, and roll back if the new deployment
-fails its health checks. Nobody maintains packages by hand -- the Fedora Kinoite base
+fails its health checks. Nobody maintains packages by hand -- the Fedora Atomic base
 does, and we layer only what makes it Redrob OS.
 
 Tags: `stable` (what devices follow), `44` (the Fedora release the image is built on),
@@ -15,11 +15,11 @@ The Containerfile applies, in order:
 
 | # | Step | Source | Notes |
 |---|------|--------|-------|
-| 1 | Base image | `image/base.env` -> `quay.io/fedora-ostree-desktops/kinoite:44` | KDE Plasma 6, bootc, podman, flatpak already inside. |
-| 2 | Packages | `image/Containerfile` (one `dnf5` transaction) | `fedora-logos` -> `generic-logos` swap; `naver-nanum-fonts-all`, `ibus-hangul`, `greenboot` + default checks, `distrobox`, `plasma-discover-flatpak`, printing (`cups`, `plasma-print-manager`), scanning (`sane-backends*`), `fwupd`, `tuned-ppd`, `zstd`. `install_weak_deps=False`. |
+| 1 | Base image | `image/base.env` -> `quay.io/fedora-ostree-desktops/base-atomic:44` | Fedora Atomic without a desktop: kernel, bootc, podman, flatpak, NetworkManager, PipeWire. The desktop is redrob-comp (greetd runs its login screen). |
+| 2 | Packages | `image/Containerfile` (one `dnf5` transaction) | `fedora-logos` -> `generic-logos` swap; `naver-nanum-fonts-all`, `greetd`, the GTK desktop pieces, `greenboot` + default checks, `distrobox`, GNOME Software, printing (`cups`, `system-config-printer`), scanning (`sane-backends*`), `fwupd`, `tuned-ppd`, `zstd`. `install_weak_deps=False`. |
 | 3 | Pinned binaries | `image/scripts/10-pins.sh`, `20-launcher.sh`, `image/pins.env` | gVisor `runsc` -> `/usr/libexec/gvisor` (+`/usr/bin` symlinks, podman runtime `runsc`); Redrob Launcher -> `/usr/bin/redrob-launcher`, desktop entry, icons, autostart. Every download is checksum-verified. |
 | 4 | Base-OS overlay | `image/files/` COPYed onto `/` | Update timers, greenboot presets and check, Flathub unit, container signature policy, sysctl, README. |
-| 5 | Branding overlay | `image/branding/` | `/usr/lib/os-release`, logos, wallpaper, SDDM/Plymouth/Plasma look. Owned by the branding work; **nothing in `image/files/` writes os-release.** |
+| 5 | Branding overlay | `image/branding/` | `/usr/lib/os-release`, logos, wallpaper, Plymouth, the greetd and session config. Owned by the branding work; **nothing in `image/files/` writes os-release.** |
 | 6 | Agent overlay | `image/agent/` | `redrob-agent` units, sandbox config, pairing. |
 | 7 | Installer overlay | `image/installer/` | first-login hooks. |
 | 8 | Cleanup | `image/scripts/30-cleanup.sh` | Applies our presets (`systemctl preset` for each unit named in `90-redrob.preset`), masks Fedora Flatpak remotes, empties `/var`, `/opt -> var/opt`, exec bits on greenboot checks, sanity asserts (launcher, runsc, `generic-logos` present, `fedora-logos` gone). |
@@ -63,7 +63,7 @@ Run the lint again on a built image if you want to see it outside the build:
 podman run --rm -it localhost/redrob-os:dev bootc container lint
 ```
 
-## Testing on a running Kinoite / Redrob OS machine
+## Testing on a running Redrob OS machine
 
 Any Fedora Atomic desktop (or an older Redrob OS) can rebase onto the image:
 
@@ -84,7 +84,7 @@ machine that built it.
 
 Signature policy applies to `bootc switch`/`upgrade` too: the pull is refused until
 `/etc/pki/containers/redrob-os.pub` on the device matches the key CI signs with
-(see Signing). On a plain Fedora Kinoite, the first `switch` is unverified (Fedora's
+(see Signing). On a plain Fedora Atomic desktop, the first `switch` is unverified (Fedora's
 default policy accepts anything); from then on the image's own policy is in effect.
 
 ## Updates on devices
@@ -103,7 +103,7 @@ default policy accepts anything); from then on the image's own policy is in effe
 - **Apps**: Flathub is added once by `redrob-flathub.service` (marker
   `/var/lib/redrob/flathub-added`); Fedora's own Flatpak remote unit is masked.
   `redrob-flatpak-update.timer` (user, daily, `Persistent=true`) runs
-  `flatpak update -y` and prunes unused runtimes. Discover shows the same apps.
+  `flatpak update -y` and prunes unused runtimes. Software shows the same apps.
 - **Redrob apps**: Redrob Launcher autostarts at login (`/etc/xdg/autostart/ai.redrob.launcher.desktop`)
   and installs/updates Browser/Office/Canvas/Code into the user's home, as before.
 

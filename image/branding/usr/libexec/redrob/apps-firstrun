@@ -35,13 +35,17 @@ CATALOG=(
   "shape|Redrob Shape — 3D 모델링|off"
 )
 
-dialog() { command -v kdialog >/dev/null 2>&1 && kdialog --title "Redrob OS" "$@"; }
+# zenity (GTK4/libadwaita) follows the Redrob light/dark theme.
+have_dialog() { command -v zenity >/dev/null 2>&1; }
+z() { zenity --title "Redrob OS" --width 560 --height 460 "$@"; }
 
 # ---- 1. Style (Redrob session only, once: when the user has no style yet).
 if [ "${XDG_CURRENT_DESKTOP:-}" = "Redrob" ] && ! grep -qiE '^\s*style\s*=' "${conf}" 2>/dev/null; then
-  pick="$(dialog --radiolist "어떤 화면 구성이 익숙하신가요? 나중에 설정에서 바꿀 수 있습니다." \
-            mac "맥 스타일 — 위 메뉴 바, 아래 도크, ⌘ 단축키" on \
-            windows "윈도우 스타일 — 아래 작업 표시줄, 시작 버튼, Win 단축키" off 2>/dev/null)" || pick=""
+  pick="$(z --list --radiolist --hide-header --hide-column 2 --print-column 2 \
+            --text "어떤 화면 구성이 익숙하신가요? 나중에 설정에서 바꿀 수 있습니다." \
+            --column "" --column id --column "" \
+            TRUE mac "맥 스타일 — 위 메뉴 바, 아래 도크, ⌘ 단축키" \
+            FALSE windows "윈도우 스타일 — 아래 작업 표시줄, 시작 버튼, Win 단축키" 2>/dev/null)" || pick=""
   if [ -n "${pick}" ]; then
     mkdir -p "$(dirname "${conf}")"
     { printf 'style = %s\n' "${pick}"; cat "${conf}" 2>/dev/null; } > "${conf}.new" && mv "${conf}.new" "${conf}"
@@ -53,11 +57,14 @@ if [ ! -e "${wanted}" ]; then
   args=()
   for row in "${CATALOG[@]}"; do
     IFS='|' read -r id label on <<<"${row}"
-    args+=("${id}" "${label}" "${on}")
+    [ "${on}" = on ] && on=TRUE || on=FALSE
+    args+=("${on}" "${id}" "${label}")
   done
-  if picked="$(dialog --separate-output --checklist "받을 레드롭 앱을 고르세요. 런처가 차례로 내려받습니다." "${args[@]}" 2>/dev/null)"; then
+  if picked="$(z --list --checklist --hide-header --hide-column 2 --print-column 2 --separator ' ' \
+                 --text "받을 레드롭 앱을 고르세요. 런처가 차례로 내려받습니다." \
+                 --column "" --column id --column "" "${args[@]}" 2>/dev/null)"; then
     printf '%s\n' ${picked} > "${wanted}"
-  elif ! command -v kdialog >/dev/null 2>&1; then
+  elif ! have_dialog; then
     printf 'browser\ncode\n' > "${wanted}"   # no dialog available: the defaults
   else
     : > "${wanted}"                          # cancelled: nothing, never ask again

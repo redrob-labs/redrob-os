@@ -68,7 +68,7 @@ impl XdgShellHandler for Smallvil {
             let window = self
                 .space
                 .elements()
-                .find(|w| w.toplevel().unwrap().wl_surface() == wl_surface)
+                .find(|w| w.toplevel().is_some_and(|t| t.wl_surface() == wl_surface))
                 .unwrap()
                 .clone();
             let initial_window_location = self.space.element_location(&window).unwrap();
@@ -100,7 +100,7 @@ impl XdgShellHandler for Smallvil {
             let window = self
                 .space
                 .elements()
-                .find(|w| w.toplevel().unwrap().wl_surface() == wl_surface)
+                .find(|w| w.toplevel().is_some_and(|t| t.wl_surface() == wl_surface))
                 .unwrap()
                 .clone();
             let initial_window_location = self.space.element_location(&window).unwrap();
@@ -156,7 +156,7 @@ pub fn handle_commit(popups: &mut PopupManager, space: &Space<Window>, surface: 
     // Handle toplevel commits.
     if let Some(window) = space
         .elements()
-        .find(|w| w.toplevel().unwrap().wl_surface() == surface)
+        .find(|w| w.toplevel().is_some_and(|t| t.wl_surface() == surface))
         .cloned()
     {
         let initial_configure_sent = with_states(surface, |states| {
@@ -198,7 +198,7 @@ impl Smallvil {
         let Some(window) = self
             .space
             .elements()
-            .find(|w| w.toplevel().unwrap().wl_surface() == &root)
+            .find(|w| w.toplevel().is_some_and(|t| t.wl_surface() == &root))
         else {
             return;
         };

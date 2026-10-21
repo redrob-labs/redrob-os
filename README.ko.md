@@ -64,7 +64,7 @@ Redrob Code(샌드박스 안에서 도는 코딩 툴)는 별도 저장소
 | 대상 | 추적 방식 |
 |---|---|
 | `agent/` | [zeroclaw-labs/zeroclaw](https://github.com/zeroclaw-labs/zeroclaw)를 전체 히스토리와 함께 `git subtree`로 가져오고 태그 단위로 동기화 |
-| 베이스 OS 이미지 | `image/base.env`의 OCI 이미지 참조: [Fedora Kinoite](https://fedoraproject.org/atomic-desktops/kinoite/) (`quay.io/fedora-ostree-desktops/kinoite`). 커널, KDE Plasma 데스크톱, bootc를 공급하며 태그는 Renovate PR이 올립니다 |
+| 베이스 OS 이미지 | `image/base.env`의 OCI 이미지 참조: [Fedora Atomic](https://fedoraproject.org/atomic-desktops/) `base-atomic` (`quay.io/fedora-ostree-desktops/base-atomic`). 커널, systemd, bootc(데스크톱은 없음: redrob-comp가 데스크톱)를 공급하며 태그는 Renovate PR이 올립니다 |
 
 그 밖에 이미지에 들어가는 것은 전부 베이스 배포판의 패키지 저장소에서 오며 `NOTICE`에
 적혀 있습니다.

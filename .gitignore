@@ -10,8 +10,6 @@
 *.key
 
 # build outputs
-/os/output/
-/os/release/
 /agent/target/
 /modules/*/target/
 /modules/*/*/target/
@@ -20,5 +18,7 @@
 /scripts/ota-harness/*.serial.log
 /scripts/ota-harness/*.vars.fd
 /scripts/ota-harness/*.sock
-os/buildroot-external/.dev-signing/
 __pycache__/
+
+# local dev-loop logs (tools/devloop-build.sh)
+/target/

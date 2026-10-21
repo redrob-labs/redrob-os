@@ -36,7 +36,12 @@ pub fn init_winit(
         },
     );
     let _global = output.create_global::<Smallvil>(&state.display_handle);
-    output.change_current_state(Some(mode), Some(Transform::Flipped180), None, Some((0, 0).into()));
+    output.change_current_state(
+        Some(mode),
+        Some(Transform::Flipped180),
+        Some(smithay::output::Scale::Fractional(crate::display::scale())),
+        Some((0, 0).into()),
+    );
     output.set_preferred(mode);
 
     state.space.map_output(&output, (0, 0));

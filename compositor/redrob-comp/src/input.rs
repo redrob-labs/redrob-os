@@ -11,6 +11,7 @@ use smithay::{
     utils::SERIAL_COUNTER,
 };
 
+use smithay::wayland::seat::WaylandFocus;
 use crate::state::Smallvil;
 
 impl Smallvil {
@@ -37,10 +38,16 @@ impl Smallvil {
             InputEvent::PointerMotion { event, .. } => {
                 // Relative mouse (real hardware): move and clamp to the output.
                 use smithay::backend::input::PointerMotionEvent;
-                let output = self.space.outputs().next().unwrap();
-                let geo = self.space.output_geometry(output).unwrap().to_f64();
                 let pointer = self.seat.get_pointer().unwrap();
                 let mut pos = pointer.current_location() + event.delta();
+                // The screen under the new x (screens sit side by side).
+                let geos: Vec<_> = self.space.outputs().filter_map(|o| self.space.output_geometry(o)).map(|g| g.to_f64()).collect();
+                let geo = geos
+                    .iter()
+                    .find(|g| pos.x >= g.loc.x && pos.x < g.loc.x + g.size.w)
+                    .or_else(|| if pos.x < 0.0 { geos.first() } else { geos.iter().max_by(|a, b| a.loc.x.total_cmp(&b.loc.x)) })
+                    .copied()
+                    .unwrap();
                 pos.x = pos.x.clamp(geo.loc.x, geo.loc.x + geo.size.w - 1.0);
                 pos.y = pos.y.clamp(geo.loc.y, geo.loc.y + geo.size.h - 1.0);
                 let under = self.surface_under(pos);
@@ -122,18 +129,21 @@ impl Smallvil {
                         .map(|(w, l)| (w.clone(), l))
                     {
                         self.space.raise_element(&window, true);
-                        keyboard.set_focus(
-                            self,
-                            Some(window.toplevel().unwrap().wl_surface().clone()),
-                            serial,
-                        );
+                        if let Some(x) = window.x11_surface() {
+                            let _ = x.set_activated(true);
+                        }
+                        keyboard.set_focus(self, window.wl_surface().map(|s| s.into_owned()), serial);
                         self.space.elements().for_each(|window| {
-                            window.toplevel().unwrap().send_pending_configure();
+                            if let Some(t) = window.toplevel() {
+                                t.send_pending_configure();
+                            }
                         });
                     } else {
                         self.space.elements().for_each(|window| {
                             window.set_activated(false);
-                            window.toplevel().unwrap().send_pending_configure();
+                            if let Some(t) = window.toplevel() {
+                                t.send_pending_configure();
+                            }
                         });
                         keyboard.set_focus(self, Option::<WlSurface>::None, serial);
                     }
@@ -213,6 +223,8 @@ impl Smallvil {
             .first()
             .map(|s| xkb::keysym_get_name(*s).to_ascii_lowercase())
             .unwrap_or_default();
+        // Alt+Print arrives as Sys_Req.
+        let name = if name == "sys_req" { "print".to_string() } else { name };
         let is_super = name == "super_l" || name == "super_r";
 
         // An overlay takes the keyboard (a release a shortcut already took
