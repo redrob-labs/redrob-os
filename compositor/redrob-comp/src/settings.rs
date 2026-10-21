@@ -440,7 +440,7 @@ impl Smallvil {
         let cur = self.display.current;
         let scale = crate::display::scale();
         // The screen: a little monitor with what it runs at.
-        let (mx, my, mw, mh) = (x, y0 + 30.0, 220.0, 124.0);
+        let (mx, my, mw, mh) = (x, y0 + 26.0, 200.0, 112.0);
         fill_rrect(p, mx, my, mw, mh, theme::RADIUS_MD, t.surface_sunken);
         stroke_rrect(p, mx + 0.5, my + 0.5, mw - 1.0, mh - 1.0, theme::RADIUS_MD, t.border_strong);
         let mut g = Pixmap::new((mw - 16.0) as u32, (mh - 16.0) as u32).unwrap();
@@ -468,11 +468,13 @@ impl Smallvil {
             draw::draw_text(p, md, "이 화면에서는 바꿀 수 없습니다", x, y + 24.0, 13.0, t.ink_muted);
             y += 40.0;
         }
-        for (k, (w, h, _)) in modes.iter().take(9).enumerate() {
+        // Native first (marked), then the common ones, up to four rows.
+        for (k, (w, h, _)) in modes.iter().take(12).enumerate() {
             let (c, r) = ((k % 3) as f32, (k / 3) as f32);
-            self.chip(p, t, &format!("{w} × {h}"), x + c * (chip_w + 8.0), y + r * 42.0, chip_w, k == cur, ID_MODE + k);
+            let label = if k == 0 { format!("{w} × {h} (권장)") } else { format!("{w} × {h}") };
+            self.chip(p, t, &label, x + c * (chip_w + 8.0), y + r * 40.0, chip_w, k == cur, ID_MODE + k);
         }
-        y += ((modes.len().min(9) + 2) / 3) as f32 * 42.0 + 26.0;
+        y += ((modes.len().min(12) + 2) / 3) as f32 * 40.0 + 22.0;
         draw::draw_text(p, &self.chrome.fonts.semibold, "배율", x, y, 14.0, t.ink_primary);
         y += 12.0;
         let sw = (cw - 32.0) / 5.0;

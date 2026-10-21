@@ -107,7 +107,11 @@ pub fn init_udev(event_loop: &mut EventLoop<Smallvil>, state: &mut Smallvil) -> 
             None => modes.push(*m),
         }
     }
-    modes.sort_by_key(|m| std::cmp::Reverse(m.size().0 as i32 * m.size().1 as i32));
+    // The screen's preferred (native) mode first, then the rest largest first.
+    modes.sort_by_key(|m| {
+        let preferred = m.mode_type().contains(ModeTypeFlags::PREFERRED);
+        (!preferred, std::cmp::Reverse(m.size().0 as i32 * m.size().1 as i32))
+    });
     let cfg = crate::config::Config::load();
     let mode = cfg
         .resolution
