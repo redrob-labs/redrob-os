@@ -276,6 +276,61 @@ pub fn ensure_server_materials_protected(
     Ok(materials)
 }
 
+/// Re-sign the server leaf under `dir` (laid out by [`ensure_server_materials`])
+/// when it expires within `within`. The leaf keeps its key pair and SANs and the
+/// CA is reused, so a client pinning the leaf's public key
+/// ([`crate::spki_sha256_fingerprint`]) keeps trusting the renewed certificate.
+/// Returns `true` when a new leaf was written. The write is a rename, so a
+/// concurrent reader sees the old or the new certificate, never half of one.
+pub fn renew_server_leaf_if_expiring(dir: &Path, within: std::time::Duration) -> Result<bool> {
+    let cert_path = dir.join("server.crt");
+    let cert_pem = std::fs::read_to_string(&cert_path)
+        .with_context(|| format!("reading {}", cert_path.display()))?;
+    let der = rustls_pemfile::certs(&mut cert_pem.as_bytes())
+        .next()
+        .context("no certificate in server.crt")?
+        .context("invalid server certificate PEM")?;
+    let not_after = {
+        use x509_parser::prelude::*;
+        let (_, cert) =
+            X509Certificate::from_der(der.as_ref()).context("parsing server certificate")?;
+        cert.validity().not_after.timestamp()
+    };
+    let now = time::OffsetDateTime::now_utc().unix_timestamp();
+    if not_after - now > i64::try_from(within.as_secs()).unwrap_or(i64::MAX) {
+        return Ok(false);
+    }
+
+    let (ca_cert, ca_key) = load_ca(
+        &dir.join("ca.crt"),
+        &dir.join("ca.key"),
+        &CaKeyProtection::None,
+    )?;
+    let key_path = dir.join("server.key");
+    let key_pem = Zeroizing::new(
+        std::fs::read_to_string(&key_path)
+            .with_context(|| format!("reading {}", key_path.display()))?,
+    );
+    let server_key = rcgen::KeyPair::from_pem(&key_pem).context("loading server key")?;
+    let sans: Vec<String> = match std::fs::read_to_string(dir.join("server.sans")) {
+        Ok(s) => s
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .map(str::to_string)
+            .collect(),
+        Err(_) => default_server_sans(),
+    };
+    let leaf = server_params(&sans)?
+        .signed_by(&server_key, &ca_cert, &ca_key)
+        .context("re-signing server certificate")?;
+    let tmp = dir.join("server.crt.new");
+    write_public_pem(&tmp, &leaf.pem())?;
+    std::fs::rename(&tmp, &cert_path)
+        .with_context(|| format!("replacing {}", cert_path.display()))?;
+    Ok(true)
+}
+
 /// Issue a client certificate signed by the CA whose PEM cert + key are given.
 /// The returned key is generated fresh (server-side keygen path, e.g. the
 /// operator `issue-client-cert` CLI); the subject CN is the device identity.

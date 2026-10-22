@@ -19,12 +19,15 @@ paired client gets in.
 2. Scan the pairing QR on the device screen (or read the code over serial).
    It encodes `redrob://pair?device=<id>&host=<device-ip>:42617&code=<code>&fp=<sha256>`.
 3. The phone pairs with that code and opens the device dashboard at
-   `https://<device-ip>:42617`, pinning the certificate whose SHA‑256
-   fingerprint is `fp`.
+   `https://<device-ip>:42617`, trusting only a certificate whose public key
+   (SPKI) has the SHA‑256 `fp`.
 
 Encryption: the listener serves **HTTPS**. On first start the agent
 self‑provisions a certificate under its data dir (`gateway-tls/`) and reuses it
-on every later start, so the pin survives reboots. The certificate is
+on every later start, so the pin survives reboots. The leaf is valid 825 days;
+the agent re‑signs it with the **same key** once it is within 60 days of expiry
+(checked at start and daily), so the pin also survives renewals and phones need
+no re‑pairing. The certificate is
 self‑signed (per‑device CA), so clients must pin `fp` rather than rely on
 public CAs; a browser opened at the address shows a certificate warning.
 `GET /admin/paircode` (loopback + admin token) reports the same value as

@@ -20,7 +20,7 @@ pub mod certgen;
 pub use certgen::{
     CaKeyProtection, IssuedLeaf, Pem, ServerMaterials, ensure_server_materials,
     ensure_server_materials_protected, generate_client_csr, issue_client_cert, load_ca_key_pem,
-    sign_csr,
+    renew_server_leaf_if_expiring, sign_csr,
 };
 
 pub mod csr;
@@ -230,6 +230,16 @@ pub fn cert_sha256_fingerprint(cert_der: &[u8]) -> String {
     hasher.update(cert_der);
     let hash = hasher.finalize();
     hex::encode(hash)
+}
+
+/// SHA-256 (lowercase hex) of a DER certificate's SubjectPublicKeyInfo: the
+/// public-key pin. Unlike [`cert_sha256_fingerprint`] it survives re-signing the
+/// same key, so a renewed certificate keeps matching. `None` for an
+/// unparseable certificate.
+pub fn spki_sha256_fingerprint(cert_der: &[u8]) -> Option<String> {
+    use x509_parser::prelude::*;
+    let (_, cert) = X509Certificate::from_der(cert_der).ok()?;
+    Some(hex::encode(Sha256::digest(cert.public_key().raw)))
 }
 
 /// Compute the SHA-256 fingerprint of a PEM chain that must contain exactly one

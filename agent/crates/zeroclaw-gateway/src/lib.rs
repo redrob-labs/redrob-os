@@ -2517,9 +2517,45 @@ pub async fn run_gateway_with_plugin_webhooks(
                 ::zeroclaw_log::record!(
                     INFO,
                     ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note)
-                        .with_attrs(::serde_json::json!({"sha256": fp})),
-                    "Gateway TLS certificate fingerprint"
+                        .with_attrs(::serde_json::json!({"spki_sha256": fp})),
+                    "Gateway TLS public-key pin"
                 );
+            }
+            let acceptor = Arc::new(parking_lot::RwLock::new(acceptor));
+            // Daily: re-sign a self-provisioned leaf that is close to expiry (same
+            // key, so paired phones keep their pin) and swap it in for new
+            // connections. Holds only a Weak handle, so it ends with the listener.
+            {
+                let weak = Arc::downgrade(&acceptor);
+                let tls_cfg = tls_cfg.clone();
+                let data_dir = config.data_dir.clone();
+                zeroclaw_spawn::spawn!(async move {
+                    loop {
+                        tokio::time::sleep(tls::RENEW_CHECK_EVERY).await;
+                        let Some(shared) = weak.upgrade() else { break };
+                        let renewed = tls::renew_auto_cert(&tls_cfg, &data_dir).and_then(|r| {
+                            if r {
+                                *shared.write() = tls::build_tls_acceptor(&tls_cfg, &data_dir)?;
+                            }
+                            Ok(r)
+                        });
+                        match renewed {
+                            Ok(true) => ::zeroclaw_log::record!(
+                                INFO,
+                                ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note),
+                                "Gateway TLS certificate renewed (same key)"
+                            ),
+                            Ok(false) => {}
+                            Err(e) => ::zeroclaw_log::record!(
+                                WARN,
+                                ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note)
+                                    .with_outcome(::zeroclaw_log::EventOutcome::Unknown)
+                                    .with_attrs(::serde_json::json!({"error": format!("{e:#}")})),
+                                "Gateway TLS certificate renewal failed; will retry tomorrow"
+                            ),
+                        }
+                    }
+                });
             }
             // Loopback peers may still speak plain HTTP (greenboot health check,
             // the pairing banner) unless mTLS is on: a local plaintext path would
@@ -2557,7 +2593,7 @@ pub async fn run_gateway_with_plugin_webhooks(
                             return Err(e.into());
                         }
                     };
-                    let tls_acceptor = tls_acceptor.clone();
+                    let tls_acceptor = tls_acceptor.read().clone();
                     let svc = tower::MakeService::<
                         SocketAddr,
                         hyper::Request<hyper::body::Incoming>,
