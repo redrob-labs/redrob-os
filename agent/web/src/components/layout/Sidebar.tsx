@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { basePath } from '../../lib/basePath';
+import { RedrobLockup } from '../RedrobLockup';
 import { findActiveNavPath } from './sidebarNav';
 import { railAsideStyle, railLinkClassName, railNavClassName } from './sidebarRail';
 import { SidebarNavLink } from './SidebarNavLink';
@@ -430,58 +431,31 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
 // ── Logo / mark ─────────────────────────────────────────────────────────────
 
-// Compact mark for the slim rail — the logo image only, centered, no wordmark.
+// Compact mark for the slim rail: the Redrob OS app icon (white symbol on a
+// Redrob Blue tile, verbatim from the design system), centered.
 function RailLogo() {
   return (
     <div
       className="flex items-center justify-center border-b shrink-0"
       style={{ borderColor: 'var(--pc-border)', height: '56px' }}
     >
-      <div className="relative shrink-0">
-        <div
-          className="absolute -inset-1.5 rounded-xl"
-          style={{ background: 'linear-gradient(135deg, rgba(var(--pc-accent-rgb), 0.15), rgba(var(--pc-accent-rgb), 0.05))' }}
-        />
-        <img
-          src={`${basePath}/_app/logo.png`}
-          alt={t('sidebar.logo_alt')}
-          className="relative h-8 w-8 rounded-xl object-cover"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      </div>
+      <img
+        src={`${basePath}/_app/logo.png`}
+        alt={t('sidebar.logo_alt')}
+        className="h-8 w-8"
+      />
     </div>
   );
 }
 
-// Full mark + wordmark for the mobile drawer.
+// The Redrob lockup for the mobile drawer.
 function DrawerLogo() {
   return (
     <div
       className="flex items-center border-b shrink-0 overflow-hidden"
-      style={{ borderColor: 'var(--pc-border)', height: '56px', padding: '0 16px', gap: '12px' }}
+      style={{ borderColor: 'var(--pc-border)', height: '56px', padding: '0 16px' }}
     >
-      <div className="relative shrink-0">
-        <div
-          className="absolute -inset-1.5 rounded-xl"
-          style={{ background: 'linear-gradient(135deg, rgba(var(--pc-accent-rgb), 0.15), rgba(var(--pc-accent-rgb), 0.05))' }}
-        />
-        <img
-          src={`${basePath}/_app/logo.png`}
-          alt={t('sidebar.logo_alt')}
-          className="relative h-9 w-9 rounded-xl object-cover"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      </div>
-      <span
-        className="text-sm font-semibold tracking-wide whitespace-nowrap"
-        style={{ color: 'var(--pc-text-primary)' }}
-      >
-        {t('sidebar.brand')}
-      </span>
+      <RedrobLockup height={24} />
     </div>
   );
 }

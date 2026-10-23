@@ -50,7 +50,7 @@ export default function Layout() {
       const key = TITLE_KEYS[first];
       name = key ? t(key) : null;
     }
-    document.title = name ? `${name} — ZeroClaw` : 'ZeroClaw';
+    document.title = name ? `${name} — Redrob OS` : 'Redrob OS';
   }, [pathname]);
 
   return (
