@@ -411,7 +411,7 @@ export default function SopCanvas({
         label,
       );
       const desc = flowRoleDesc.get(role);
-      return desc ? `${chrome} — ${desc}` : chrome;
+      return desc ? `${chrome} - ${desc}` : chrome;
     },
     [flowRoleDesc, flowRoleLabel],
   );
@@ -739,7 +739,7 @@ export default function SopCanvas({
                   ) : (
                     <title>
                       {flowRoleDesc.get(kind) ?? roleLabel(kind)}
-                      {readOnly ? '' : ` — ${t('sops.wire_delete_hint')}`}
+                      {readOnly ? '' : ` - ${t('sops.wire_delete_hint')}`}
                     </title>
                   )}
                 </path>
@@ -874,7 +874,7 @@ export default function SopCanvas({
                 >
                   <title>
                     {dataWireTitle}
-                    {readOnly ? '' : ` — ${t('sops.data_wire_delete_hint')}`}
+                    {readOnly ? '' : ` - ${t('sops.data_wire_delete_hint')}`}
                   </title>
                 </path>
                 <path
@@ -1275,7 +1275,7 @@ export default function SopCanvas({
                   <li key={`allow-${name}`} className="flex items-center gap-1 truncate">
                     <span className="text-pc-accent-light">•</span>
                     <span className="text-pc-text-secondary">{name}</span>
-                    <span className="text-pc-text-muted">— {t('sops.tool_allowed')}</span>
+                    <span className="text-pc-text-muted">- {t('sops.tool_allowed')}</span>
                   </li>
                 ))}
                 {plannedCalls.map((call, ci) => {

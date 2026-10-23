@@ -352,7 +352,7 @@ export default function ChatWorkspace({ initialAlias }: ChatWorkspaceProps) {
               className={paneClass}
             >
               {/* Keyed by the tab, not the alias, so one agent can be mounted
-                  twice — and so a conversation switch inside a pane does not
+                  twice - and so a conversation switch inside a pane does not
                   remount the provider and drop its socket. */}
               <AgentProvider
                 key={tab.key}

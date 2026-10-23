@@ -1408,7 +1408,7 @@ const FieldForm = forwardRef<FieldFormHandle, FieldFormProps>(
         {/* flex-1 + min-h-full stretches the form to fill the scroll area so
           the sticky save bar anchors to the viewport bottom even with a
           short field list. pb-20 reserves room so the last field isn't
-          covered. inlineSaveBar drops both — the save bar is rendered
+          covered. inlineSaveBar drops both - the save bar is rendered
           tight against the last field as a footer of the embedding
           card. */}
         {(title || enabledEntry) && (
@@ -1922,7 +1922,7 @@ function FieldRow({
             className="block text-sm font-medium font-sans break-words"
             style={{ color: "var(--pc-text-primary)" }}
             htmlFor={entry.path}
-            title={`${entry.path}${entry.type_hint ? ` — ${entry.type_hint}` : ""}`}
+            title={`${entry.path}${entry.type_hint ? ` - ${entry.type_hint}` : ""}`}
           >
             {humanizeFieldLabel(entry.path)}
             {requirement && (
@@ -1993,7 +1993,7 @@ function FieldRow({
             onChange={onChange}
             aria-label={fieldShortLabel(entry)}
             options={[
-              { value: "", label: "—" },
+              { value: "", label: "-" },
               ...(entry.enum_variants ?? []).map((v) => ({
                 value: v,
                 label: v,
@@ -2659,7 +2659,7 @@ function ObjectArrayField({
           onChange={(e) => onChange(e.target.value)}
           className="input-electric w-full px-2 py-1 mt-1 text-sm appearance-none cursor-pointer"
         >
-          <option value="">—</option>
+          <option value="">-</option>
           {meta.enumVariants.map((v) => (
             <option key={v} value={v}>
               {v}

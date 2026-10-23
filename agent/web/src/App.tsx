@@ -16,7 +16,7 @@ import { DraftContext, useDraftStore } from "./hooks/useDraft";
 import { getAdminPairCode, generatePairCode, PairCodeForbiddenError, getQuickstartState } from "./lib/api";
 import { RedrobLockup } from "./components/RedrobLockup";
 import { ConfigDraftProvider } from "./lib/draftStore";
-import { setLocale, type Locale } from "./lib/i18n";
+import { setLocale, t, type Locale } from "./lib/i18n";
 import { Router } from "./router/router";
 
 // Locale context
@@ -153,7 +153,7 @@ function PairingDialog({
   // can show the exact recovery command — including the alternate port that made
   // the config-default `get-paircode` miss the running instance (#5266).
   const gatewayPort = window.location.port;
-  const cliRecoveryCommand = `zeroclaw gateway get-paircode --new${gatewayPort ? ` --port ${gatewayPort}` : ""}`;
+  const cliRecoveryCommand = `redrob-agent gateway get-paircode --new${gatewayPort ? ` --port ${gatewayPort}` : ""}`;
 
   // Fetch the current pairing code (public endpoint works in Docker too)
   useEffect(() => {
@@ -183,7 +183,7 @@ function PairingDialog({
     try {
       await onPair(code);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Pairing failed");
+      setError(err instanceof Error ? err.message : t("auth.pairing_failed"));
     } finally {
       setLoading(false);
     }
@@ -211,7 +211,7 @@ function PairingDialog({
         setShowCliFallback(true);
       } else {
         setError(
-          err instanceof Error ? err.message : "Failed to generate pairing code",
+          err instanceof Error ? err.message : t("pair.generate_failed"),
         );
       }
     } finally {
@@ -232,10 +232,10 @@ function PairingDialog({
           </div>
           <p className="text-sm" style={{ color: "var(--pc-text-muted)" }}>
             {codeLoading
-              ? "Checking pairing status…"
+              ? t("pair.checking")
               : displayCode
-                ? "Your pairing code — click Pair to connect"
-                : "This gateway is already paired — generate a code to add this device"}
+                ? t("pair.code_ready")
+                : t("pair.already_paired")}
           </p>
         </div>
 
@@ -252,10 +252,7 @@ function PairingDialog({
           >
             {isLocalhost && !showCliFallback ? (
               <>
-                <p className="mb-3">
-                  No pairing code was generated because a device is already
-                  paired.
-                </p>
+                <p className="mb-3">{t("pair.no_code_yet")}</p>
                 <button
                   type="button"
                   onClick={handleGenerate}
@@ -265,10 +262,10 @@ function PairingDialog({
                   {generating ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Generating…
+                      {t("pair.generating")}
                     </span>
                   ) : (
-                    "Generate pairing code"
+                    t("pair.generate")
                   )}
                 </button>
               </>
@@ -276,8 +273,8 @@ function PairingDialog({
               <>
                 <p className="mb-2">
                   {isLocalhost
-                    ? "Couldn't generate a code from the browser. On the machine running the gateway, run:"
-                    : "Pairing codes can only be generated on the machine running the gateway. Run:"}
+                    ? t("pair.browser_failed")
+                    : t("pair.remote_only")}
                 </p>
                 <code
                   className="block px-3 py-2 rounded-lg font-mono text-xs break-all select-all"
@@ -312,7 +309,7 @@ function PairingDialog({
               className="text-xs mt-2"
               style={{ color: "var(--pc-text-muted)" }}
             >
-              Enter this code below or on another device
+              {t("pair.enter_below")}
             </p>
           </div>
         )}
@@ -326,7 +323,7 @@ function PairingDialog({
             type="text"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="pairing code"
+            placeholder={t("pair.placeholder")}
             className="input-electric w-full px-4 py-4 text-center text-xl tracking-widest font-medium mb-4"
             maxLength={128}
             autoCapitalize="none"
@@ -351,10 +348,10 @@ function PairingDialog({
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Pairing...
+                {t("pair.pairing")}
               </span>
             ) : (
-              "Pair"
+              t("auth.pair_button")
             )}
           </button>
         </form>
@@ -396,7 +393,7 @@ function AppContent() {
             }}
           />
           <p className="text-sm" style={{ color: "var(--pc-text-muted)" }}>
-            Connecting...
+            {t("app.connecting")}
           </p>
         </div>
       </div>

@@ -188,7 +188,7 @@ function formatUSD(value: number): string {
 }
 
 function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "—";
+  if (!Number.isFinite(bytes) || bytes <= 0) return "-";
   const units = ["B", "KiB", "MiB", "GiB", "TiB"];
   let v = bytes;
   let i = 0;
@@ -228,7 +228,7 @@ function ProcessRamCard({ process }: { process?: ProcessStats }) {
         className="text-lg font-semibold truncate"
         style={{ color: "var(--pc-text-primary)" }}
       >
-        {supported ? formatBytes(process!.rss_bytes) : "—"}
+        {supported ? formatBytes(process!.rss_bytes) : "-"}
       </p>
       <p className="text-sm truncate" style={{ color: "var(--pc-text-muted)" }}>
         {pct !== null
@@ -268,7 +268,7 @@ function ProcessCpuCard({ process }: { process?: ProcessStats }) {
         className="text-lg font-semibold truncate"
         style={{ color: "var(--pc-text-primary)" }}
       >
-        {supported ? `${pct.toFixed(1)}%` : "—"}
+        {supported ? `${pct.toFixed(1)}%` : "-"}
       </p>
       <p className="text-sm truncate" style={{ color: "var(--pc-text-muted)" }}>
         {supported
@@ -1652,7 +1652,7 @@ function ChannelsTab() {
           </div>
 
           {/* Stats. `message_count` / `last_message_at` come back as
-              hardcoded 0 / null from the gateway — drop those rows until the
+              hardcoded 0 / null from the gateway - drop those rows until the
               backend wires real counters. Health stays since it reflects the
               listener supervisor's state. */}
           <div
@@ -2876,7 +2876,7 @@ function DashboardMetrics({ agents }: { agents: AgentSummary[] }) {
       />
       <StatCard
         label={t("dash.metric.spend")}
-        value={trackedSpend.length === 0 ? "—" : formatMetricUsd(totalSpend)}
+        value={trackedSpend.length === 0 ? "-" : formatMetricUsd(totalSpend)}
         sublabel={
           trackedSpend.length === 0
             ? t("dash.metric.spend.untracked")

@@ -1,7 +1,7 @@
 import { t } from '@/lib/i18n';
 
 export function formatUsd(value: number | null): string {
-  if (value === null) return '—';
+  if (value === null) return '-';
   if (value < 0.01) return '<$0.01';
   return `$${value.toFixed(2)}`;
 }

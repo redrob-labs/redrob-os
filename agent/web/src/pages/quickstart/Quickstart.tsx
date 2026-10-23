@@ -258,7 +258,7 @@ export default function Quickstart() {
         done={providerDone}
         summary={
           form.provider
-            ? `${form.provider.provider_type}.${form.provider.alias} — ${form.provider.model}`
+            ? `${form.provider.provider_type}.${form.provider.alias} - ${form.provider.model}`
             : null
         }
       >
@@ -1103,7 +1103,7 @@ function PeerGroupAddForm({
 
       <div className="text-xs" style={MUTED}>
         {t("quickstart.peer_group_named_prefix")}
-        <code>{name || "—"}</code>.
+        <code>{name || "-"}</code>.
       </div>
 
       <div className="flex justify-end gap-2">

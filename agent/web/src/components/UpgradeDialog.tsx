@@ -314,7 +314,7 @@ export function UpgradeDialog({
               {t('upgrade.title')}
             </h2>
             {/* Manual re-check: bypass the server-side 1h cache. Only meaningful
-                in the read-only Info view — once an upgrade is in flight the
+                in the read-only Info view - once an upgrade is in flight the
                 version_check result is frozen anyway. The icon mirrors the
                 `loading` state by spinning while a check is in flight. */}
             {(view === 'info' || view === 'confirm') && onRefetch && (
@@ -359,7 +359,7 @@ export function UpgradeDialog({
                   <dd className="text-pc-text font-mono">{info?.current_version}</dd>
                   <dt className="text-pc-text-muted">{t('upgrade.latest')}</dt>
                   <dd className="text-pc-text font-mono">
-                    {info?.latest_version ?? '—'}
+                    {info?.latest_version ?? '-'}
                     {published && <span className="text-pc-text-muted"> · {published}</span>}
                   </dd>
                 </dl>
@@ -538,7 +538,7 @@ export function UpgradeDialog({
                 {reconciled && targetVersion && (
                   <span>
                     {' '}
-                    — {t('upgrade.now_running')}{' '}
+                    - {t('upgrade.now_running')}{' '}
                     <span className="font-mono">v{targetVersion}</span>
                   </span>
                 )}
@@ -624,7 +624,7 @@ export function UpgradeDialog({
           )}
 
           {/* During restart or while waiting for manual restart, keep the dialog
-              modal — closing stops the /api/status poll that triggers auto-reload.
+              modal - closing stops the /api/status poll that triggers auto-reload.
               Once reconciled (reload armed) or on failure, show Close normally. */}
 
           {(view === 'failed' || (view === 'done' && (reconciled || !baselineVersion || pollTimedOut))) && (
