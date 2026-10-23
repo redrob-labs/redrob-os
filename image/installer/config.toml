@@ -34,7 +34,8 @@ graphical
 autopart --type=btrfs --noswap
 # Quiet boot with the Plymouth splash on the installed system.
 bootloader --append="quiet splash"
-# Firewall on; the agent only listens on loopback, the relay is outbound.
+# Firewall on; the agent opens only its LAN dashboard port (42617/tcp, firewalld
+# service redrob-agent) on first start, the relay is outbound.
 firewall --enabled
 # Default network: first wired link with DHCP, Wi-Fi is set up on the desktop.
 network --bootproto=dhcp --device=link --activate --onboot=on

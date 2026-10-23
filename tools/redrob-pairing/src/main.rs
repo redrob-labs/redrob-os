@@ -8,8 +8,9 @@
 //! same code over the agent's channels.
 //!
 //! The QR encodes `redrob://pair?device=<id>&host=<ip>:<port>&code=<code>[&fp=<sha256>]`.
-//! `fp` is the hex SHA-256 fingerprint of the gateway's TLS certificate (present when
-//! `[gateway.tls]` is enabled); the phone connects over `https://` and pins it.
+//! `fp` is the hex SHA-256 of the gateway TLS certificate's public key (SPKI; present
+//! when `[gateway.tls]` is enabled); the phone connects over `https://` and pins it. The
+//! agent renews the certificate with the same key, so the pin does not change.
 //!
 //! `--notify` is the desktop half (Redrob OS bootc image, KDE): run from the user's
 //! session autostart, it reads the `pairing.json` the root service keeps fresh and
