@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Redrob agent LAN dashboard (HTTPS, pinned by the pairing QR). Opened once by
+     /usr/libexec/redrob/agent-upgrade. Copyright 2026 Janghoon Lee (Redrob) and
+     contributors. SPDX-License-Identifier: Apache-2.0 -->
+<service>
+  <short>Redrob Agent</short>
+  <description>Redrob agent dashboard and phone pairing on the local network.</description>
+  <port protocol="tcp" port="42617"/>
+</service>
