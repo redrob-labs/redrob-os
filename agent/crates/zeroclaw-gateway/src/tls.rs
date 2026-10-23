@@ -17,6 +17,13 @@ use zeroclaw_tls::{ClientAuthParams, ServerConfigParams};
 /// certificate (`[gateway.tls] enabled = true` with empty `cert_path`/`key_path`).
 pub const AUTO_TLS_DIR: &str = "gateway-tls";
 
+/// A self-provisioned leaf is re-signed (same key) once it is this close to
+/// expiring. The gateway checks at start and then daily.
+pub const RENEW_BEFORE: std::time::Duration = std::time::Duration::from_secs(60 * 24 * 60 * 60);
+
+/// How often the running gateway checks whether its leaf needs renewing.
+pub const RENEW_CHECK_EVERY: std::time::Duration = std::time::Duration::from_secs(24 * 60 * 60);
+
 /// True when the config asks the gateway to self-provision its certificate.
 fn is_auto(config: &GatewayTlsConfig) -> bool {
     config.cert_path.is_empty() && config.key_path.is_empty()
@@ -36,8 +43,11 @@ fn served_cert_path(config: &GatewayTlsConfig, data_dir: &Path) -> PathBuf {
 /// generated on first call and reused on every later start.
 fn resolve_cert_key(config: &GatewayTlsConfig, data_dir: &Path) -> Result<(String, String)> {
     if is_auto(config) {
-        let mats = zeroclaw_tls::ensure_server_materials(&data_dir.join(AUTO_TLS_DIR), &[])
+        let dir = data_dir.join(AUTO_TLS_DIR);
+        let mats = zeroclaw_tls::ensure_server_materials(&dir, &[])
             .context("self-provisioning the gateway TLS certificate")?;
+        zeroclaw_tls::renew_server_leaf_if_expiring(&dir, RENEW_BEFORE)
+            .context("renewing the gateway TLS certificate")?;
         return Ok((
             mats.server_cert_path.to_string_lossy().into_owned(),
             mats.server_key_path.to_string_lossy().into_owned(),
@@ -64,16 +74,24 @@ pub fn build_server_config(
     zeroclaw_tls::build_server_config(&to_params(config, data_dir)?)
 }
 
-/// Hex SHA-256 fingerprint of the leaf certificate the gateway serves, so a
-/// pairing client can pin it. Read from the certificate file at call time (the
-/// file is the source of truth); `None` when it does not exist yet or is
-/// unreadable.
+/// Re-sign the self-provisioned leaf if it is due ([`RENEW_BEFORE`]). Returns
+/// `true` when a new certificate was written, so the caller rebuilds its
+/// acceptor. A BYO certificate (`cert_path`/`key_path` set) is never touched.
+pub fn renew_auto_cert(config: &GatewayTlsConfig, data_dir: &Path) -> Result<bool> {
+    if !is_auto(config) {
+        return Ok(false);
+    }
+    zeroclaw_tls::renew_server_leaf_if_expiring(&data_dir.join(AUTO_TLS_DIR), RENEW_BEFORE)
+}
+
+/// Hex SHA-256 of the served leaf's public key (SPKI), so a pairing client can
+/// pin it. The self-provisioned leaf is renewed with the same key, so the pin
+/// outlives renewals. Read from the certificate file at call time (the file is
+/// the source of truth); `None` when it does not exist yet or is unreadable.
 pub fn served_cert_fingerprint(config: &GatewayTlsConfig, data_dir: &Path) -> Option<String> {
     let path = served_cert_path(config, data_dir);
     let certs = zeroclaw_tls::load_certs(path.to_str()?).ok()?;
-    certs
-        .first()
-        .map(|c| zeroclaw_tls::cert_sha256_fingerprint(c.as_ref()))
+    zeroclaw_tls::spki_sha256_fingerprint(certs.first()?.as_ref())
 }
 
 /// Map the gateway TLS config onto the transport-neutral params.

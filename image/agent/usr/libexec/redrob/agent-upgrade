@@ -1,0 +1,28 @@
+#!/bin/sh
+# Redrob agent pre-start (root, every start, idempotent): bring a device that was
+# installed before the LAN dashboard existed up to what a fresh install gets.
+# Copyright 2026 Janghoon Lee (Redrob) and contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# 1. firstboot copies /etc/redrob/agent.toml into the agent's own config once, so
+#    a device installed before [gateway.tls] keeps serving plain HTTP on the LAN
+#    and its pairing QR has no fingerprint. Add the section if it is missing; an
+#    admin who wrote their own [gateway.tls] (enabled = false too) is left alone.
+# 2. Open the dashboard port (firewalld service redrob-agent, 42617/tcp) once.
+#    The marker keeps a later admin `--remove-service` from being undone.
+set -eu
+
+CONFIG=/var/lib/redrob/agent/config.toml
+MARKER=/var/lib/redrob/agent/.firewall-opened
+
+if [ -s "$CONFIG" ] && ! grep -q '^\[gateway\.tls\]' "$CONFIG"; then
+    printf '\n[gateway.tls]\nenabled = true   # empty cert_path/key_path = self-provisioned certificate\n' >> "$CONFIG"
+    echo "redrob-agent-upgrade: enabled the LAN dashboard TLS"
+fi
+
+if [ ! -e "$MARKER" ] && command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
+    firewall-cmd --permanent --add-service=redrob-agent >/dev/null
+    firewall-cmd --reload >/dev/null
+    : > "$MARKER"
+    echo "redrob-agent-upgrade: opened the LAN dashboard port"
+fi

@@ -8077,7 +8077,8 @@ pub struct GatewayTlsConfig {
     /// Path to the PEM-encoded server certificate file. Leave both
     /// `cert_path` and `key_path` empty to have the gateway self-provision a
     /// certificate under `<data_dir>/gateway-tls/` on first start and reuse it
-    /// afterwards; clients pin its SHA-256 fingerprint (reported by
+    /// afterwards (re-signed with the same key 60 days before expiry); clients
+    /// pin its public key's SHA-256 (SPKI, reported by
     /// `GET /admin/paircode` as `tls_fingerprint`).
     #[serde(default)]
     pub cert_path: String,
