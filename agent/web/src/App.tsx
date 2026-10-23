@@ -14,7 +14,7 @@ import { loadLocale, saveLocale } from "./contexts/ThemeContext";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { DraftContext, useDraftStore } from "./hooks/useDraft";
 import { getAdminPairCode, generatePairCode, PairCodeForbiddenError, getQuickstartState } from "./lib/api";
-import { basePath } from "./lib/basePath";
+import { RedrobLockup } from "./components/RedrobLockup";
 import { ConfigDraftProvider } from "./lib/draftStore";
 import { setLocale, type Locale } from "./lib/i18n";
 import { Router } from "./router/router";
@@ -227,17 +227,9 @@ function PairingDialog({
       {/* Ambient glow */}
       <div className="relative surface-panel p-8 w-full max-w-md animate-fade-in-scale">
         <div className="text-center mb-8">
-          <img
-            src={`${basePath}/_app/logo.png`}
-            alt="ZeroClaw"
-            className="h-20 w-20 rounded-2xl object-cover mx-auto mb-4 animate-float"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-          <h1 className="text-2xl font-bold mb-2 text-gradient-blue">
-            ZeroClaw
-          </h1>
+          <div className="flex justify-center mb-6">
+            <RedrobLockup height={40} />
+          </div>
           <p className="text-sm" style={{ color: "var(--pc-text-muted)" }}>
             {codeLoading
               ? "Checking pairing status…"

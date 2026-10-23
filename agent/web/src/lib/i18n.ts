@@ -333,7 +333,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': '警告',
     'doctor.all_clear': '一切正常',
     'doctor.system_diagnostics': '系统诊断',
-    'doctor.empty_hint': '点击"运行诊断"检查您的 ZeroClaw 安装。',
+    'doctor.empty_hint': '点击"运行诊断"检查您的 Redrob OS 安装。',
 
     // Auth / Pairing
     'auth.pair': '配对设备',
@@ -503,7 +503,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'agent.context_usage': "Context",
     'acp.agent_select_label': "ACP agent",
     'acp.agent_thought': "Agent thought",
-    'acp.default_prompt': "Summarize the current ZeroClaw gateway state in one paragraph.",
+    'acp.default_prompt': "Summarize the current Redrob OS gateway state in one paragraph.",
     'acp.manage_agents': "Manage agents",
     'acp.role_agent': "Agent",
     'acp.role_system': "System",
@@ -523,11 +523,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'add_entity.choose_different_type': "Choose a different type",
     'agent.open_config_prefix': "Open ",
     'agent.open_config_suffix': " config",
-    'agentchat.empty_title': "ZeroClaw Agent",
+    'agentchat.empty_title': "Redrob OS Agent",
     'agentchat.files': "Files",
     'agentchat.open_workspace': "Open agent file workspace",
     'agentchat.thinking': "Thinking",
-    'agents_list.description': "Configured agents on this ZeroClaw instance.",
+    'agents_list.description': "Configured agents on this Redrob OS instance.",
     'agents_list.empty_hint': "Run Quickstart to create your first agent.",
     'agents_list.empty_title': "No agents configured yet",
     'agents_list.load_failed': "Failed to load agents",
@@ -625,7 +625,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'cron.agent_label': "Agent",
     'cron.agent_required_error': "Pick an agent for this cron job",
     'cron.all_tools': "all tools",
-    'cron.catch_up_description': "Run all overdue jobs when ZeroClaw starts after downtime",
+    'cron.catch_up_description': "Run all overdue jobs when Redrob OS starts after downtime",
     'cron.catch_up_title': "Catch up missed jobs on startup",
     'cron.command_placeholder': "e.g. cleanup --older-than 7d",
     'cron.delivery': "Delivery",
@@ -942,10 +942,10 @@ const translations: Record<Locale, Record<string, string>> = {
     'settings.default_dark': "Default Dark",
     'settings.light_themes': "Light Themes",
     'settings.tab.themes': "Themes",
-    'sidebar.brand': "ZeroClaw",
+    'sidebar.brand': "Redrob OS",
     'sidebar.close_menu': "Close menu",
-    'sidebar.gateway': "ZeroClaw Gateway",
-    'sidebar.logo_alt': "ZeroClaw",
+    'sidebar.gateway': "Redrob OS Gateway",
+    'sidebar.logo_alt': "Redrob OS",
     'sidebar.mobile_menu': "Mobile menu",
     'sidebar.update_available': "Update available",
     'upgrade.title': "Upgrade",
@@ -1868,14 +1868,14 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Warnings',
     'doctor.all_clear': 'All Clear',
     'doctor.system_diagnostics': 'System Diagnostics',
-    'doctor.empty_hint': 'Click "Run Diagnostics" to check your ZeroClaw installation.',
+    'doctor.empty_hint': 'Click "Run Diagnostics" to check your Redrob OS installation.',
 
     // Auth / Pairing
     'auth.pair': 'Pair Device',
     'auth.pairing_code': 'Pairing Code',
     'auth.pair_button': 'Pair',
     'auth.logout': 'Logout',
-    'auth.logout_confirm': 'Log out of ZeroClaw?',
+    'auth.logout_confirm': 'Log out of Redrob OS?',
     'auth.pairing_success': 'Pairing successful!',
     'auth.pairing_failed': 'Pairing failed. Please try again.',
     'auth.enter_code': 'Enter your pairing code to connect to the agent.',
@@ -2450,7 +2450,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Uyarılar',
     'doctor.all_clear': 'Her Şey Yolunda',
     'doctor.system_diagnostics': 'Sistem Tanıları',
-    'doctor.empty_hint': 'ZeroClaw kurulumunuzu kontrol etmek için "Tanı Çalıştır" düğmesine tıklayın.',
+    'doctor.empty_hint': 'Redrob OS kurulumunuzu kontrol etmek için "Tanı Çalıştır" düğmesine tıklayın.',
 
     // Auth / Pairing
     'auth.pair': 'Cihaz Eşleştir',
@@ -2830,7 +2830,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'تحذيرات',
     'doctor.all_clear': 'كل شيء على ما يرام',
     'doctor.system_diagnostics': 'تشخيصات النظام',
-    'doctor.empty_hint': 'انقر على "تشغيل التشخيصات" للتحقق من تثبيت ZeroClaw.',
+    'doctor.empty_hint': 'انقر على "تشغيل التشخيصات" للتحقق من تثبيت Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'إقران الجهاز',
@@ -3243,7 +3243,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'সতর্কতা',
     'doctor.all_clear': 'সব ঠিক আছে',
     'doctor.system_diagnostics': 'সিস্টেম ডায়াগনস্টিকস',
-    'doctor.empty_hint': 'আপনার ZeroClaw ইনস্টলেশন পরীক্ষা করতে "ডায়াগনস্টিকস চালান" ক্লিক করুন।',
+    'doctor.empty_hint': 'আপনার Redrob OS ইনস্টলেশন পরীক্ষা করতে "ডায়াগনস্টিকস চালান" ক্লিক করুন।',
 
     // Auth / Pairing
     'auth.pair': 'ডিভাইস পেয়ার করুন',
@@ -3656,7 +3656,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Varování',
     'doctor.all_clear': 'Vše v pořádku',
     'doctor.system_diagnostics': 'Diagnostika systému',
-    'doctor.empty_hint': 'Klikněte na "Spustit diagnostiku" pro kontrolu instalace ZeroClaw.',
+    'doctor.empty_hint': 'Klikněte na "Spustit diagnostiku" pro kontrolu instalace Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Spárovat zařízení',
@@ -4069,7 +4069,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Advarsler',
     'doctor.all_clear': 'Alt i orden',
     'doctor.system_diagnostics': 'Systemdiagnostik',
-    'doctor.empty_hint': 'Klik på "Kør diagnostik" for at kontrollere din ZeroClaw-installation.',
+    'doctor.empty_hint': 'Klik på "Kør diagnostik" for at kontrollere din Redrob OS-installation.',
 
     // Auth / Pairing
     'auth.pair': 'Par enhed',
@@ -4482,7 +4482,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Warnungen',
     'doctor.all_clear': 'Alles in Ordnung',
     'doctor.system_diagnostics': 'Systemdiagnose',
-    'doctor.empty_hint': 'Klicken Sie auf "Diagnose ausführen", um Ihre ZeroClaw-Installation zu überprüfen.',
+    'doctor.empty_hint': 'Klicken Sie auf "Diagnose ausführen", um Ihre Redrob OS-Installation zu überprüfen.',
 
     // Auth / Pairing
     'auth.pair': 'Gerät koppeln',
@@ -4895,7 +4895,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Προειδοποιήσεις',
     'doctor.all_clear': 'Όλα εντάξει',
     'doctor.system_diagnostics': 'Διαγνωστικά συστήματος',
-    'doctor.empty_hint': 'Κάντε κλικ στο "Εκτέλεση διαγνωστικών" για να ελέγξετε την εγκατάσταση του ZeroClaw.',
+    'doctor.empty_hint': 'Κάντε κλικ στο "Εκτέλεση διαγνωστικών" για να ελέγξετε την εγκατάσταση του Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Σύζευξη συσκευής',
@@ -5308,7 +5308,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Advertencias',
     'doctor.all_clear': 'Todo en orden',
     'doctor.system_diagnostics': 'Diagnóstico del sistema',
-    'doctor.empty_hint': 'Haga clic en "Ejecutar diagnósticos" para verificar su instalación de ZeroClaw.',
+    'doctor.empty_hint': 'Haga clic en "Ejecutar diagnósticos" para verificar su instalación de Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Emparejar dispositivo',
@@ -5721,7 +5721,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Varoitukset',
     'doctor.all_clear': 'Kaikki kunnossa',
     'doctor.system_diagnostics': 'Järjestelmädiagnostiikka',
-    'doctor.empty_hint': 'Napsauta "Suorita diagnostiikka" tarkistaaksesi ZeroClaw-asennuksen.',
+    'doctor.empty_hint': 'Napsauta "Suorita diagnostiikka" tarkistaaksesi Redrob OS-asennuksen.',
 
     // Auth / Pairing
     'auth.pair': 'Yhdistä laite',
@@ -6134,7 +6134,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Avertissements',
     'doctor.all_clear': 'Tout est en ordre',
     'doctor.system_diagnostics': 'Diagnostics système',
-    'doctor.empty_hint': 'Cliquez sur "Exécuter les diagnostics" pour vérifier votre installation ZeroClaw.',
+    'doctor.empty_hint': 'Cliquez sur "Exécuter les diagnostics" pour vérifier votre installation Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Appairer l\'appareil',
@@ -6561,7 +6561,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'אזהרות',
     'doctor.all_clear': 'הכל תקין',
     'doctor.system_diagnostics': 'אבחון מערכת',
-    'doctor.empty_hint': 'לחץ על "הפעל אבחון" כדי לבדוק את התקנת ZeroClaw שלך.',
+    'doctor.empty_hint': 'לחץ על "הפעל אבחון" כדי לבדוק את התקנת Redrob OS שלך.',
 
     // Auth / Pairing
     'auth.pair': 'צמד מכשיר',
@@ -6974,7 +6974,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'चेतावनियाँ',
     'doctor.all_clear': 'सब ठीक है',
     'doctor.system_diagnostics': 'सिस्टम डायग्नोस्टिक्स',
-    'doctor.empty_hint': 'अपनी ZeroClaw स्थापना की जाँच करने के लिए "डायग्नोस्टिक्स चलाएँ" पर क्लिक करें।',
+    'doctor.empty_hint': 'अपनी Redrob OS स्थापना की जाँच करने के लिए "डायग्नोस्टिक्स चलाएँ" पर क्लिक करें।',
 
     // Auth / Pairing
     'auth.pair': 'डिवाइस पेयर करें',
@@ -7387,7 +7387,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Figyelmeztetések',
     'doctor.all_clear': 'Minden rendben',
     'doctor.system_diagnostics': 'Rendszer diagnosztika',
-    'doctor.empty_hint': 'Kattintson a "Diagnosztika futtatása" gombra a ZeroClaw telepítés ellenőrzéséhez.',
+    'doctor.empty_hint': 'Kattintson a "Diagnosztika futtatása" gombra a Redrob OS telepítés ellenőrzéséhez.',
 
     // Auth / Pairing
     'auth.pair': 'Eszköz párosítása',
@@ -7800,7 +7800,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Peringatan',
     'doctor.all_clear': 'Semua Baik',
     'doctor.system_diagnostics': 'Diagnostik Sistem',
-    'doctor.empty_hint': 'Klik "Jalankan Diagnostik" untuk memeriksa instalasi ZeroClaw Anda.',
+    'doctor.empty_hint': 'Klik "Jalankan Diagnostik" untuk memeriksa instalasi Redrob OS Anda.',
 
     // Auth / Pairing
     'auth.pair': 'Pasangkan Perangkat',
@@ -8213,7 +8213,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Avvisi',
     'doctor.all_clear': 'Tutto a posto',
     'doctor.system_diagnostics': 'Diagnostica di sistema',
-    'doctor.empty_hint': 'Clicca su "Esegui diagnostica" per verificare l\'installazione di ZeroClaw.',
+    'doctor.empty_hint': 'Clicca su "Esegui diagnostica" per verificare l\'installazione di Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Associa dispositivo',
@@ -8626,7 +8626,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': '警告',
     'doctor.all_clear': '問題なし',
     'doctor.system_diagnostics': 'システム診断',
-    'doctor.empty_hint': '「診断を実行」をクリックして ZeroClaw のインストールを確認してください。',
+    'doctor.empty_hint': '「診断を実行」をクリックして Redrob OS のインストールを確認してください。',
 
     // Auth / Pairing
     'auth.pair': 'デバイスをペアリング',
@@ -9053,7 +9053,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': '경고',
     'doctor.all_clear': '문제 없음',
     'doctor.system_diagnostics': '시스템 진단',
-    'doctor.empty_hint': '"진단 실행"을 클릭하여 ZeroClaw 설치를 확인하세요.',
+    'doctor.empty_hint': '"진단 실행"을 클릭하여 Redrob OS 설치를 확인하세요.',
 
     // Auth / Pairing
     'auth.pair': '장치 페어링',
@@ -9466,7 +9466,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Advarsler',
     'doctor.all_clear': 'Alt i orden',
     'doctor.system_diagnostics': 'Systemdiagnostikk',
-    'doctor.empty_hint': 'Klikk "Kjør diagnostikk" for å sjekke ZeroClaw-installasjonen din.',
+    'doctor.empty_hint': 'Klikk "Kjør diagnostikk" for å sjekke Redrob OS-installasjonen din.',
 
     // Auth / Pairing
     'auth.pair': 'Par enhet',
@@ -9879,7 +9879,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Waarschuwingen',
     'doctor.all_clear': 'Alles in orde',
     'doctor.system_diagnostics': 'Systeemdiagnostiek',
-    'doctor.empty_hint': 'Klik op "Diagnostiek uitvoeren" om uw ZeroClaw-installatie te controleren.',
+    'doctor.empty_hint': 'Klik op "Diagnostiek uitvoeren" om uw Redrob OS-installatie te controleren.',
 
     // Auth / Pairing
     'auth.pair': 'Apparaat koppelen',
@@ -10292,7 +10292,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Ostrzeżenia',
     'doctor.all_clear': 'Wszystko w porządku',
     'doctor.system_diagnostics': 'Diagnostyka systemu',
-    'doctor.empty_hint': 'Kliknij "Uruchom diagnostykę", aby sprawdzić instalację ZeroClaw.',
+    'doctor.empty_hint': 'Kliknij "Uruchom diagnostykę", aby sprawdzić instalację Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Sparuj urządzenie',
@@ -10705,7 +10705,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Avisos',
     'doctor.all_clear': 'Tudo certo',
     'doctor.system_diagnostics': 'Diagnóstico do Sistema',
-    'doctor.empty_hint': 'Clique em "Executar Diagnóstico" para verificar sua instalação do ZeroClaw.',
+    'doctor.empty_hint': 'Clique em "Executar Diagnóstico" para verificar sua instalação do Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Parear Dispositivo',
@@ -11118,7 +11118,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Avertismente',
     'doctor.all_clear': 'Totul în regulă',
     'doctor.system_diagnostics': 'Diagnosticarea sistemului',
-    'doctor.empty_hint': 'Faceți clic pe "Rulează diagnosticarea" pentru a verifica instalarea ZeroClaw.',
+    'doctor.empty_hint': 'Faceți clic pe "Rulează diagnosticarea" pentru a verifica instalarea Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Împerechere dispozitiv',
@@ -11531,7 +11531,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Предупреждения',
     'doctor.all_clear': 'Всё в порядке',
     'doctor.system_diagnostics': 'Диагностика системы',
-    'doctor.empty_hint': 'Нажмите «Запустить диагностику», чтобы проверить установку ZeroClaw.',
+    'doctor.empty_hint': 'Нажмите «Запустить диагностику», чтобы проверить установку Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'Сопряжение устройства',
@@ -11958,7 +11958,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Varningar',
     'doctor.all_clear': 'Allt klart',
     'doctor.system_diagnostics': 'Systemdiagnostik',
-    'doctor.empty_hint': 'Klicka på "Kör diagnostik" för att kontrollera din ZeroClaw-installation.',
+    'doctor.empty_hint': 'Klicka på "Kör diagnostik" för att kontrollera din Redrob OS-installation.',
 
     // Auth / Pairing
     'auth.pair': 'Parkoppla enhet',
@@ -12371,7 +12371,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'คำเตือน',
     'doctor.all_clear': 'ทุกอย่างปกติ',
     'doctor.system_diagnostics': 'การวินิจฉัยระบบ',
-    'doctor.empty_hint': 'คลิก "เรียกใช้การวินิจฉัย" เพื่อตรวจสอบการติดตั้ง ZeroClaw ของคุณ',
+    'doctor.empty_hint': 'คลิก "เรียกใช้การวินิจฉัย" เพื่อตรวจสอบการติดตั้ง Redrob OS ของคุณ',
 
     // Auth / Pairing
     'auth.pair': 'จับคู่อุปกรณ์',
@@ -12784,7 +12784,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Mga Babala',
     'doctor.all_clear': 'Walang Problema',
     'doctor.system_diagnostics': 'Diagnostiko ng Sistema',
-    'doctor.empty_hint': 'I-click ang "Patakbuhin ang Diagnostiko" upang suriin ang iyong ZeroClaw installation.',
+    'doctor.empty_hint': 'I-click ang "Patakbuhin ang Diagnostiko" upang suriin ang iyong Redrob OS installation.',
 
     // Auth / Pairing
     'auth.pair': 'Ipares ang Device',
@@ -13197,7 +13197,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Попередження',
     'doctor.all_clear': 'Все гаразд',
     'doctor.system_diagnostics': 'Діагностика системи',
-    'doctor.empty_hint': 'Натисніть «Запустити діагностику», щоб перевірити встановлення ZeroClaw.',
+    'doctor.empty_hint': 'Натисніть «Запустити діагностику», щоб перевірити встановлення Redrob OS.',
 
     // Auth / Pairing
     'auth.pair': 'З\'єднати пристрій',
@@ -13610,7 +13610,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'انتباہات',
     'doctor.all_clear': 'سب ٹھیک ہے',
     'doctor.system_diagnostics': 'سسٹم تشخیص',
-    'doctor.empty_hint': 'اپنی ZeroClaw تنصیب کی جانچ کے لیے "تشخیص چلائیں" پر کلک کریں۔',
+    'doctor.empty_hint': 'اپنی Redrob OS تنصیب کی جانچ کے لیے "تشخیص چلائیں" پر کلک کریں۔',
 
     // Auth / Pairing
     'auth.pair': 'ڈیوائس جوڑیں',
@@ -14023,7 +14023,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'doctor.warnings_summary': 'Cảnh báo',
     'doctor.all_clear': 'Mọi thứ bình thường',
     'doctor.system_diagnostics': 'Chẩn đoán hệ thống',
-    'doctor.empty_hint': 'Nhấn "Chạy chẩn đoán" để kiểm tra cài đặt ZeroClaw của bạn.',
+    'doctor.empty_hint': 'Nhấn "Chạy chẩn đoán" để kiểm tra cài đặt Redrob OS của bạn.',
 
     // Auth / Pairing
     'auth.pair': 'Ghép nối thiết bị',
