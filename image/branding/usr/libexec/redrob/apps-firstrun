@@ -21,18 +21,23 @@ wanted="${state}/apps-wanted"
 conf="${XDG_CONFIG_HOME:-$HOME/.config}/redrob/desktop.conf"
 apps_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
-# id | name shown | ticked by default. The ids are Redrob Launcher's catalog
-# (redrob://install/<id> accepts them).
+# Korean or English, like the desktop (redrob-comp's i18n.rs).
+lang="${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}"
+case "${lang}" in ko*|"") ko=1 ;; *) ko=0 ;; esac
+t() { if [ "${ko}" = 1 ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
+
+# id | Korean name | English name | ticked by default. The ids are Redrob
+# Launcher's catalog (redrob://install/<id> accepts them).
 CATALOG=(
-  "browser|Redrob Browser — AI 브라우저|on"
-  "code|Redrob Code — 터미널 코딩 에이전트|on"
-  "office|Redrob Office — 문서·시트·슬라이드|off"
-  "cowork|Redrob Cowork — 일을 맡기는 에이전트|off"
-  "design|Redrob Design — 앱·웹 디자인|off"
-  "canvas|Redrob Canvas — 그림·사진 편집|off"
-  "film|Redrob Film — 영상 편집|off"
-  "cad|Redrob CAD — 정밀 설계|off"
-  "shape|Redrob Shape — 3D 모델링|off"
+  "browser|Redrob Browser · AI 브라우저|Redrob Browser · AI browser|on"
+  "code|Redrob Code · 터미널 코딩 에이전트|Redrob Code · coding agent in the terminal|on"
+  "office|Redrob Office · 문서·시트·슬라이드|Redrob Office · docs, sheets, slides|off"
+  "cowork|Redrob Cowork · 일을 맡기는 에이전트|Redrob Cowork · an agent you hand work to|off"
+  "design|Redrob Design · 앱·웹 디자인|Redrob Design · app and web design|off"
+  "canvas|Redrob Canvas · 그림·사진 편집|Redrob Canvas · drawing and photo editing|off"
+  "film|Redrob Film · 영상 편집|Redrob Film · video editing|off"
+  "cad|Redrob CAD · 정밀 설계|Redrob CAD · precision design|off"
+  "shape|Redrob Shape · 3D 모델링|Redrob Shape · 3D modeling|off"
 )
 
 # zenity (GTK4/libadwaita) follows the Redrob light/dark theme.
@@ -42,10 +47,10 @@ z() { zenity --title "Redrob OS" --width 560 --height 460 "$@"; }
 # ---- 1. Style (Redrob session only, once: when the user has no style yet).
 if [ "${XDG_CURRENT_DESKTOP:-}" = "Redrob" ] && ! grep -qiE '^\s*style\s*=' "${conf}" 2>/dev/null; then
   pick="$(z --list --radiolist --hide-header --hide-column 2 --print-column 2 \
-            --text "어떤 화면 구성이 익숙하신가요? 나중에 설정에서 바꿀 수 있습니다." \
+            --text "$(t "어떤 화면 구성이 익숙하세요? 나중에 설정에서 바꿀 수 있어요." "Which layout feels familiar? You can change it later in Settings.")" \
             --column "" --column id --column "" \
-            TRUE mac "맥 스타일 — 위 메뉴 바, 아래 도크, ⌘ 단축키" \
-            FALSE windows "윈도우 스타일 — 아래 작업 표시줄, 시작 버튼, Win 단축키" 2>/dev/null)" || pick=""
+            TRUE mac "$(t "맥 스타일 · 위 메뉴 바, 아래 도크, ⌘ 단축키" "Mac style · top menu bar, bottom dock, ⌘ shortcuts")" \
+            FALSE windows "$(t "윈도우 스타일 · 아래 작업 표시줄, 시작 버튼, Win 단축키" "Windows style · bottom taskbar, Start button, Win shortcuts")" 2>/dev/null)" || pick=""
   if [ -n "${pick}" ]; then
     mkdir -p "$(dirname "${conf}")"
     { printf 'style = %s\n' "${pick}"; cat "${conf}" 2>/dev/null; } > "${conf}.new" && mv "${conf}.new" "${conf}"
@@ -56,12 +61,12 @@ fi
 if [ ! -e "${wanted}" ]; then
   args=()
   for row in "${CATALOG[@]}"; do
-    IFS='|' read -r id label on <<<"${row}"
+    IFS='|' read -r id label_ko label_en on <<<"${row}"
     [ "${on}" = on ] && on=TRUE || on=FALSE
-    args+=("${on}" "${id}" "${label}")
+    args+=("${on}" "${id}" "$(t "${label_ko}" "${label_en}")")
   done
   if picked="$(z --list --checklist --hide-header --hide-column 2 --print-column 2 --separator ' ' \
-                 --text "받을 레드롭 앱을 고르세요. 런처가 차례로 내려받습니다." \
+                 --text "$(t "받을 레드롭 앱을 고르세요. 런처가 차례로 내려받아요." "Pick the Redrob apps to download. Redrob Launcher installs them one by one.")" \
                  --column "" --column id --column "" "${args[@]}" 2>/dev/null)"; then
     printf '%s\n' ${picked} > "${wanted}"
   elif ! have_dialog; then

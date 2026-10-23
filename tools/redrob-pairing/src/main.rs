@@ -181,16 +181,38 @@ pub fn parse_pairing_json(body: &str) -> Option<PairingState> {
     })
 }
 
+/// True when the desktop session speaks Korean (same rule as redrob-comp).
+fn session_is_ko() -> bool {
+    for var in ["LC_ALL", "LC_MESSAGES", "LANG"] {
+        if let Ok(v) = std::env::var(var) {
+            if !v.is_empty() {
+                return v.starts_with("ko");
+            }
+        }
+    }
+    true
+}
+
 /// Body of the desktop notification shown while unpaired.
-pub fn notify_body(st: &PairingState, code: &str) -> String {
-    format!(
-        "Open the Redrob app on your phone (same Wi-Fi) and enter\n\
-         code  {code}\n\
-         device at  {host}\n\
-         or open  {uri}",
-        host = st.host,
-        uri = pairing_uri(&st.device, &st.host, code, st.fp.as_deref())
-    )
+pub fn notify_body(st: &PairingState, code: &str, ko: bool) -> String {
+    let uri = pairing_uri(&st.device, &st.host, code, st.fp.as_deref());
+    if ko {
+        format!(
+            "같은 Wi-Fi에서 휴대폰의 레드롭 앱을 열고 입력하세요.\n\
+             코드  {code}\n\
+             기기 주소  {host}\n\
+             또는 열기  {uri}",
+            host = st.host
+        )
+    } else {
+        format!(
+            "Open the Redrob app on your phone (same Wi-Fi) and enter\n\
+             code  {code}\n\
+             device at  {host}\n\
+             or open  {uri}",
+            host = st.host
+        )
+    }
 }
 
 /// Send (or replace) a desktop notification via `notify-send`; returns the id
@@ -245,18 +267,20 @@ fn run_notify(json_path: &Path) -> ! {
                 match st.code.as_deref() {
                     Some(code) if prev_code.as_deref() == Some(code) => {}
                     Some(code) => {
+                        let ko = session_is_ko();
                         let id = notify_send(
-                            "Redrob OS -- pair this device",
-                            &notify_body(&st, code),
+                            if ko { "Redrob OS: 이 기기 페어링" } else { "Redrob OS: pair this device" },
+                            &notify_body(&st, code, ko),
                             "critical",
                             prev_id,
                         );
                         shown = Some((code.to_string(), id));
                     }
                     None if shown.is_some() => {
+                        let ko = session_is_ko();
                         notify_send(
-                            "Redrob OS -- paired",
-                            "This device is now paired with your phone.",
+                            if ko { "Redrob OS: 페어링됨" } else { "Redrob OS: paired" },
+                            if ko { "이 기기가 휴대폰과 페어링됐어요." } else { "This device is now paired with your phone." },
                             "low",
                             prev_id,
                         );
@@ -284,7 +308,7 @@ pub fn banner(
     fp: Option<&str>,
 ) -> String {
     let mut b = String::new();
-    b.push_str("\n  Redrob OS -- pair this device\n");
+    b.push_str("\n  Redrob OS: pair this device\n");
     b.push_str(&format!("  device   {device}\n  hostname {hostname}\n"));
     let host = addrs
         .first()
@@ -464,7 +488,7 @@ mod tests {
         assert_eq!(st.device, "dev-1");
         assert_eq!(st.host, "192.168.1.9:42617");
         assert_eq!(st.code.as_deref(), Some("XYZ"));
-        let text = notify_body(&st, "XYZ");
+        let text = notify_body(&st, "XYZ", false);
         assert!(text.contains("code  XYZ"));
         assert!(text.contains("redrob://pair?device=dev-1&host=192.168.1.9:42617&code=XYZ"));
 

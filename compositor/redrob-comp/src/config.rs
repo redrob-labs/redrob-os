@@ -132,6 +132,8 @@ pub struct Config {
     /// `resolution = 1920x1080` and `scale = 1.25`, when set.
     pub resolution: Option<(i32, i32)>,
     pub scale: Option<f64>,
+    /// `language = ko|en`; empty follows the system language.
+    pub language: String,
 }
 
 impl Config {
@@ -156,6 +158,7 @@ impl Config {
         let mut theme = Mode::Dark;
         let mut resolution = None;
         let mut scale = None;
+        let mut language = String::new();
         let mut extra: Vec<(Combo, Option<Act>)> = Vec::new();
         let mut in_shortcuts = false;
         for raw in text.lines() {
@@ -180,6 +183,8 @@ impl Config {
                 theme = parse_theme(v).unwrap_or(theme);
             } else if k.eq_ignore_ascii_case("resolution") {
                 resolution = v.split_once('x').and_then(|(a, b)| Some((a.trim().parse().ok()?, b.trim().parse().ok()?)));
+            } else if k.eq_ignore_ascii_case("language") {
+                language = v.to_ascii_lowercase();
             } else if k.eq_ignore_ascii_case("scale") {
                 scale = v.parse::<f64>().ok().filter(|s| (0.5..=3.0).contains(s));
             }
@@ -197,7 +202,7 @@ impl Config {
                 shortcuts.push((combo, a));
             }
         }
-        Config { style, theme, shortcuts, resolution, scale }
+        Config { style, theme, shortcuts, resolution, scale, language }
     }
 
     /// Modification time of the file `load` would read, to notice edits.
@@ -334,7 +339,7 @@ impl Act {
 
     /// What the settings screen calls it.
     pub fn label(self) -> &'static str {
-        match self {
+        crate::i18n::tr(match self {
             Act::Close => "창 닫기",
             Act::Cycle => "창 전환",
             Act::Minimize => "창 최소화",
@@ -354,7 +359,7 @@ impl Act {
             Act::Browser => "브라우저 열기",
             Act::Settings => "설정 열기",
             Act::ToggleTheme => "라이트/다크 전환",
-        }
+        })
     }
 
     pub const ALL: [Act; 19] = [

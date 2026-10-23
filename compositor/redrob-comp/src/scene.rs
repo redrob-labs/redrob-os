@@ -121,9 +121,9 @@ pub fn take_shot(state: &mut Smallvil, renderer: &mut GlesRenderer, size: Size<i
     let saved = img.and_then(|i| crate::shot::save(i, region));
     let note = crate::notify::Note {
         id: u32::MAX - 1,
-        app: "Redrob".into(),
+        app: crate::i18n::tr("레드롭").into(),
         icon: String::new(),
-        summary: if saved.is_some() { "스크린샷을 저장했습니다".into() } else { "스크린샷을 찍지 못했습니다".into() },
+        summary: crate::i18n::tr(if saved.is_some() { "스크린샷을 저장했어요" } else { "스크린샷을 찍지 못했어요" }).into(),
         body: saved.map(|p| p.display().to_string()).unwrap_or_default(),
         timeout: 4000,
     };

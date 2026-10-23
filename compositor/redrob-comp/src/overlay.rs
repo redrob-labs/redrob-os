@@ -749,11 +749,15 @@ impl Smallvil {
                 stroke_rrect(&mut p, cx + 0.5, cy + 0.5, cw - 1.0, ch - 1.0, theme::RADIUS_LG, t.border_subtle);
                 let sb = &self.chrome.fonts.semibold;
                 let md = &self.chrome.fonts.medium;
-                draw::draw_text(&mut p, sb, "이 해상도를 유지할까요?", cx + 24.0, cy + 40.0, 17.0, t.ink_primary);
-                let line = format!("{} × {} · {left}초 뒤 원래대로 돌아갑니다", size.0, size.1);
+                draw::draw_text(&mut p, sb, crate::i18n::tr("이 해상도를 유지할까요?"), cx + 24.0, cy + 40.0, 17.0, t.ink_primary);
+                let line = if crate::i18n::ko() {
+                    format!("{} × {} · {left}초 뒤 원래대로 돌아가요", size.0, size.1)
+                } else {
+                    format!("{} × {} · reverting in {left} s", size.0, size.1)
+                };
                 draw::draw_text(&mut p, md, &line, cx + 24.0, cy + 68.0, 13.0, t.ink_secondary);
                 let (bw, bh, by) = (120.0, 36.0, cy + ch - 24.0 - 36.0);
-                for (k, (label, primary)) in [("유지", true), ("되돌리기", false)].iter().enumerate() {
+                for (k, (label, primary)) in [(crate::i18n::tr("유지"), true), (crate::i18n::tr("되돌리기"), false)].iter().enumerate() {
                     let bx = cx + cw - 24.0 - bw - k as f32 * (bw + 10.0);
                     fill_rrect(&mut p, bx, by, bw, bh, theme::RADIUS_MD, if *primary { t.action_primary } else { t.surface_raised });
                     if !*primary {
@@ -787,7 +791,7 @@ impl Smallvil {
                     }
                 }
                 // Hint pill at the top.
-                let hint = "드래그해서 영역을 고르세요 · Esc 취소";
+                let hint = crate::i18n::tr("드래그해서 영역을 고르세요 · Esc 취소");
                 let hw = draw::text_width(&self.chrome.fonts.medium, hint, 13.0) + 28.0;
                 fill_rrect(&mut p, (w as f32 - hw) / 2.0, 48.0, hw, 30.0, theme::RADIUS_FULL, t.surface_material);
                 draw::draw_text(&mut p, &self.chrome.fonts.medium, hint, (w as f32 - hw) / 2.0 + 14.0, 68.0, 13.0, t.ink_primary);
@@ -823,8 +827,8 @@ impl Smallvil {
         let tx = xf + 56.0;
         if query.is_empty() {
             let ph_text = match style {
-                Style::Mac => "Redrob 검색",
-                Style::Windows => "앱, 설정 검색",
+                Style::Mac => crate::i18n::tr("레드롭 검색"),
+                Style::Windows => crate::i18n::tr("앱, 설정 검색"),
             };
             draw::draw_text(p, font, ph_text, tx, mid + 7.0, 19.0, t.ink_muted);
             fill_rect(p, tx - 1.0, mid - 12.0, 2.0, 24.0, t.action_primary);
@@ -844,10 +848,10 @@ impl Smallvil {
         // Results.
         let ly = y + FIELD_H + 1 + 6;
         if rows == 0 {
-            draw::draw_text(p, font, "결과 없음", xf + 24.0, ly as f32 + 30.0, 14.0, t.ink_muted);
+            draw::draw_text(p, font, crate::i18n::tr("결과 없음"), xf + 24.0, ly as f32 + 30.0, 14.0, t.ink_muted);
             return;
         }
-        let head = if query.is_empty() { "모든 앱" } else { "앱" };
+        let head = crate::i18n::tr(if query.is_empty() { "모든 앱" } else { "앱" });
         let _ = head;
         for (k, &ai) in matches.iter().skip(top).take(ROWS).enumerate() {
             let idx = top + k;
@@ -868,7 +872,7 @@ impl Smallvil {
             let name = draw::fit_text(&self.chrome.fonts.semibold, &app.name, 14.0, wf - 120.0);
             draw::draw_text(p, &self.chrome.fonts.semibold, &name, ix + 40.0, ry as f32 + 27.0, 14.0, ink);
             if selected {
-                let hint = "↵ 열기";
+                let hint = crate::i18n::tr("↵ 열기");
                 let hw = draw::text_width(&self.chrome.fonts.medium, hint, 12.0);
                 draw::draw_text(p, &self.chrome.fonts.medium, hint, xf + wf - 24.0 - hw, ry as f32 + 27.0, 12.0, Rgba(255, 255, 255, 200));
             }
@@ -923,8 +927,12 @@ impl Smallvil {
         fill_rect(p, 0.0, 0.0, w, h, Rgba(0, 0, 0, 90));
         let white = Rgba(248, 249, 251, 255);
         let now = chrono::Local::now();
-        let wd = ["월", "화", "수", "목", "금", "토", "일"][now.weekday().num_days_from_monday() as usize];
-        let date = format!("{}월 {}일 {wd}요일", now.month(), now.day());
+        let wd = crate::i18n::weekday_long(now.weekday().num_days_from_monday() as usize);
+        let date = if crate::i18n::ko() {
+            format!("{}월 {}일 {wd}", now.month(), now.day())
+        } else {
+            format!("{wd}, {} {}", crate::i18n::month_en(now.month(), true), now.day())
+        };
         let time = format!("{}:{:02}", now.hour(), now.minute());
         let f = &self.chrome.fonts.semibold;
         let dw = draw::text_width(f, &date, 20.0);
@@ -954,7 +962,7 @@ impl Smallvil {
         }
         let m = &self.chrome.fonts.medium;
         if input.is_empty() {
-            let hint = if busy { "확인 중…" } else { "암호 입력" };
+            let hint = crate::i18n::tr(if busy { "확인 중…" } else { "암호 입력" });
             let hw = draw::text_width(m, hint, 14.0);
             draw::draw_text(p, m, hint, (w - hw) / 2.0, py + 25.0, 14.0, with_alpha(white, 150));
         } else {
@@ -966,12 +974,12 @@ impl Smallvil {
         }
         self.chrome.icons.draw(p, ICON_LOCK, Some(with_alpha(white, 160)), px + 14.0, py + 12.0, 16.0);
         if crate::greeter::active() && crate::greeter::user_count() > 1 {
-            let hint = "Tab 키로 사용자 바꾸기";
+            let hint = crate::i18n::tr("Tab 키로 사용자 바꾸기");
             let hw = draw::text_width(m, hint, 13.0);
             draw::draw_text(p, m, hint, (w - hw) / 2.0, py + ph + 52.0, 13.0, with_alpha(white, 140));
         }
         if error {
-            let e = "암호가 맞지 않습니다";
+            let e = crate::i18n::tr("암호가 맞지 않아요");
             let ew = draw::text_width(m, e, 13.0);
             draw::draw_text(p, m, e, (w - ew) / 2.0, py + ph + 26.0, 13.0, t.danger);
         }
@@ -1017,7 +1025,7 @@ impl Smallvil {
             let maxw = tw - (tx - x) - 14.0;
             let app = draw::fit_text(&self.chrome.fonts.medium, &note.app, 12.0, maxw - 30.0);
             draw::draw_text(&mut p, &self.chrome.fonts.medium, &app, tx, y + 22.0, 12.0, t.ink_muted);
-            let now = "지금";
+            let now = crate::i18n::tr("지금");
             let nw = draw::text_width(&self.chrome.fonts.medium, now, 12.0);
             draw::draw_text(&mut p, &self.chrome.fonts.medium, now, x + tw - 14.0 - nw, y + 22.0, 12.0, t.ink_muted);
             let sum = draw::fit_text(&self.chrome.fonts.semibold, &note.summary, 14.0, maxw);
