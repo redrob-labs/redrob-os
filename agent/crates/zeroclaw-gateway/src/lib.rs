@@ -2542,15 +2542,21 @@ pub async fn run_gateway_with_plugin_webhooks(
                         match renewed {
                             Ok(true) => ::zeroclaw_log::record!(
                                 INFO,
-                                ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note),
+                                ::zeroclaw_log::Event::new(
+                                    module_path!(),
+                                    ::zeroclaw_log::Action::Note
+                                ),
                                 "Gateway TLS certificate renewed (same key)"
                             ),
                             Ok(false) => {}
                             Err(e) => ::zeroclaw_log::record!(
                                 WARN,
-                                ::zeroclaw_log::Event::new(module_path!(), ::zeroclaw_log::Action::Note)
-                                    .with_outcome(::zeroclaw_log::EventOutcome::Unknown)
-                                    .with_attrs(::serde_json::json!({"error": format!("{e:#}")})),
+                                ::zeroclaw_log::Event::new(
+                                    module_path!(),
+                                    ::zeroclaw_log::Action::Note
+                                )
+                                .with_outcome(::zeroclaw_log::EventOutcome::Unknown)
+                                .with_attrs(::serde_json::json!({"error": format!("{e:#}")})),
                                 "Gateway TLS certificate renewal failed; will retry tomorrow"
                             ),
                         }
