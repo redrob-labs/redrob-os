@@ -149,11 +149,9 @@ function PairingDialog({
   const isLocalhost = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(
     window.location.hostname,
   );
-  // The browser knows the gateway's real host:port (it is talking to it), so it
-  // can show the exact recovery command — including the alternate port that made
-  // the config-default `get-paircode` miss the running instance (#5266).
-  const gatewayPort = window.location.port;
-  const cliRecoveryCommand = `redrob-agent gateway get-paircode --new${gatewayPort ? ` --port ${gatewayPort}` : ""}`;
+  // Redrob OS wraps the agent CLI (it runs as its own system user) and also
+  // shows the new code with its QR on the device screen.
+  const cliRecoveryCommand = "redrob-paircode";
 
   // Fetch the current pairing code (public endpoint works in Docker too)
   useEffect(() => {

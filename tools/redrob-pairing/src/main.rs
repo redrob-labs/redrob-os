@@ -255,23 +255,11 @@ fn session_is_ko() -> bool {
 
 /// Body of the desktop notification shown while unpaired.
 pub fn notify_body(st: &PairingState, code: &str, ko: bool) -> String {
-    let uri = pairing_uri(&st.device, &st.host, code, st.fp.as_deref());
+    // The link itself is in the QR drawn under this text.
     if ko {
-        format!(
-            "같은 Wi-Fi에서 휴대폰 레드롭 앱의 'QR로 연결'로 찍거나 코드를 입력하세요.\n\
-             코드  {code}\n\
-             기기 주소  {host}\n\
-             또는 열기  {uri}",
-            host = st.host
-        )
+        format!("레드롭 앱으로 찍거나 코드를 입력하세요.\n코드  {code}\n기기 주소  {host}", host = st.host)
     } else {
-        format!(
-            "On the same Wi-Fi, scan this with \"Connect with QR\" in the Redrob app, or enter\n\
-             code  {code}\n\
-             device at  {host}\n\
-             or open  {uri}",
-            host = st.host
-        )
+        format!("Scan in the Redrob app, or enter:\ncode  {code}\ndevice at  {host}", host = st.host)
     }
 }
 
@@ -562,7 +550,11 @@ mod tests {
         assert_eq!(st.code.as_deref(), Some("XYZ"));
         let text = notify_body(&st, "XYZ", false);
         assert!(text.contains("code  XYZ"));
-        assert!(text.contains("redrob://pair?device=dev-1&host=192.168.1.9:42617&code=XYZ"));
+        assert!(text.contains("192.168.1.9:42617"));
+        assert_eq!(
+            pairing_uri(&st.device, &st.host, "XYZ", None),
+            "redrob://pair?device=dev-1&host=192.168.1.9:42617&code=XYZ"
+        );
 
         let paired = r#"{"device":"dev-1","hostname":"h","addresses":[],"port":42617,"code":null}"#;
         let st = parse_pairing_json(paired).unwrap();
