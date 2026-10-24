@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { t } from '@/lib/i18n';
 
 interface Device {
   id: string;
@@ -30,7 +31,7 @@ export function useDevices() {
         setError(`HTTP ${res.status}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : t('common.unknown_error'));
     } finally {
       setLoading(false);
     }
