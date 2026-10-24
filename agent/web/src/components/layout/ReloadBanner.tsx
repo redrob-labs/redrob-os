@@ -122,7 +122,7 @@ export default function ReloadBanner() {
         {!reloadAvailable && (
           <p className="text-xs mt-1 text-pc-text-muted">
             {t('reload_banner.remote_note_prefix')}{' '}
-            <code className="font-mono">redrob-agentctl reload</code>
+            <code className="font-mono">sudo systemctl restart redrob-agent</code>
             {t('reload_banner.remote_note_suffix')}
           </p>
         )}
