@@ -1,4 +1,4 @@
-//! Property helpers used by the `Configurable` derive macro and the `zeroclaw config` CLI.
+//! Property helpers used by the `Configurable` derive macro and the `redrob-agentctl config` CLI.
 
 use crate::traits::{ConfigTab, CredentialSurfaceClass, PropFieldInfo, PropKind};
 
@@ -67,7 +67,7 @@ pub fn route_double_hashmap_path<'a>(
 /// `prop_name_to_serde_field` in this module) for the specific property
 /// `name` the caller just tried. Namespace-sharing nested delegation sites
 /// (serde-flatten, `Option<T>`, dotted-key candidate loops) use it to tell
-/// "not one of mine — keep trying siblings" apart from a real value error
+/// "not one of mine - keep trying siblings" apart from a real value error
 /// on a confirmed path.
 ///
 /// Both constructors build the error as exactly `Unknown property

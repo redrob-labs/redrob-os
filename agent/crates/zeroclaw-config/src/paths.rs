@@ -14,7 +14,7 @@ use std::path::{Component, Path, PathBuf};
 /// constant.
 pub const MEMORY_SNAPSHOT_FILE: &str = "MEMORY_SNAPSHOT.md";
 
-/// Resolve `.` and `..` components lexically — never touches the
+/// Resolve `.` and `..` components lexically - never touches the
 /// filesystem. Sufficient for "stays inside `<root>`" reasoning where the
 /// path may not yet exist.
 #[must_use]

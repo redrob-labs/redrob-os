@@ -277,7 +277,7 @@ pub fn windows_std_cmd_shell_command(command: &str) -> std::process::Command {
     process
 }
 
-/// Native runtime — full access, runs on Mac/Linux/Windows/Docker/Raspberry Pi
+/// Native runtime - full access, runs on Mac/Linux/Windows/Docker/Raspberry Pi
 pub struct NativeRuntime {
     /// Shell binary to invoke for command execution.
     ///
@@ -286,7 +286,7 @@ pub struct NativeRuntime {
     /// `-NoProfile -NonInteractive -Command` on every supported desktop host.
     ///
     /// Windows: [`RuntimeAdapter::shell_dialect`] selects the invocation
-    /// convention — `cmd.exe /C` or PowerShell (`powershell`/`pwsh`).
+    /// convention - `cmd.exe /C` or PowerShell (`powershell`/`pwsh`).
     shell: String,
     /// Absolute launcher resolved by the TUI-aware runtime factory, when one
     /// was supplied. Ambient callers continue resolving at command build time.
@@ -311,7 +311,7 @@ impl NativeRuntime {
     /// `"/bin/zsh"`, `"/usr/bin/fish"`, or `"pwsh"`. PowerShell names use
     /// the PowerShell invocation convention; other names use `-c`.
     ///
-    /// Windows: `shell` selects the invocation convention — `powershell` or
+    /// Windows: `shell` selects the invocation convention - `powershell` or
     /// `pwsh` (bare name or absolute path) run through PowerShell; every other
     /// value runs through `cmd.exe /C`.
     pub fn with_shell(shell: String) -> Self {

@@ -1,6 +1,6 @@
-//! Curated sections surface — a flat ordered set of [`Section`]s the
+//! Curated sections surface - a flat ordered set of [`Section`]s the
 //! operator walks (new install) or scans (returning user) to configure
-//! a working ZeroClaw deployment.
+//! a working Redrob OS deployment.
 
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +31,7 @@ pub enum SectionShape {
 #[serde(rename_all = "snake_case")]
 pub enum SectionGroup {
     /// Quickstart-walked essentials: providers, profiles, channels,
-    /// agents — the most-edited sections, surfaced first.
+    /// agents - the most-edited sections, surfaced first.
     Foundation,
     /// Agent loop, scheduling, and orchestration tuning.
     Agent,
@@ -101,7 +101,7 @@ impl std::fmt::Display for SectionGroup {
 
 /// Canonical display order for section groups across every Config
 /// surface (dashboard sidebar, zerocode Config pane). "All sections"
-/// is not a group — a surface that offers a flat default view renders
+/// is not a group - a surface that offers a flat default view renders
 /// that view itself; this list orders the grouped presentation.
 pub const SECTION_GROUPS: &[SectionGroup] = &[
     SectionGroup::Foundation,
@@ -181,7 +181,7 @@ macro_rules! sections {
                 }
             }
 
-            /// Editor shape — the dashboard and the CLI both
+            /// Editor shape - the dashboard and the CLI both
             /// dispatch off this so the same component lights up for
             /// the same section in both surfaces.
             #[must_use]
@@ -198,7 +198,7 @@ macro_rules! sections {
                 }
             }
 
-            /// Per-section help blurb — single source of truth for
+            /// Per-section help blurb - single source of truth for
             /// the copy shown above the section's picker / form on
             /// every surface (CLI `ui.note(...)`, TUI heading,
             /// dashboard `SectionInfo.help`).
@@ -211,7 +211,7 @@ macro_rules! sections {
 
             /// Human-readable section label shown in every Config surface
             /// (gateway dashboard sidebar, zerocode Config pane, docs).
-            /// Single source of truth — derived from the canonical wire key
+            /// Single source of truth - derived from the canonical wire key
             /// so the gateway, runtime, and docs cannot disagree.
             #[must_use]
             pub fn label(self) -> String {
@@ -260,14 +260,14 @@ macro_rules! sections {
 }
 
 sections! {
-    // Tier 1 — Brain. An agent cannot think without a model provider.
+    // Tier 1 - Brain. An agent cannot think without a model provider.
     ModelProviders => {
         key:   "providers.models",
         shape: TypedFamilyMap,
         group: Foundation,
         help:  "Pick a model provider to configure (Anthropic, OpenAI, OpenRouter, \
                 Ollama, custom OpenAI-compatible gateways, etc.). Multiple aliases per \
-                provider are supported — e.g. anthropic.production and anthropic.dev \
+                provider are supported - e.g. anthropic.production and anthropic.dev \
                 can coexist.",
     },
 
@@ -335,7 +335,7 @@ sections! {
         key:   "skills",
         shape: DirectForm,
         group: Foundation,
-        help:  "Skills tool settings — where skill markdown lives on disk (defaults \
+        help:  "Skills tool settings - where skill markdown lives on disk (defaults \
                 to the data dir), and how the skills loader handles community \
                 repositories. Add skill BUNDLES under `skill-bundles` below.",
     },
@@ -360,7 +360,7 @@ sections! {
         help:  "Individual Model Context Protocol servers. Each entry binds a \
                 transport (stdio, http, sse), the command or URL to reach it, \
                 optional headers, and a `tool_timeout_secs` cap (≤ 600). Each \
-                server's `name` is its addressable key — rename via the section \
+                server's `name` is its addressable key - rename via the section \
                 page rather than editing the field directly. Group servers \
                 into bundles under `mcp_bundles` below.",
     },
@@ -403,7 +403,7 @@ sections! {
         key:   "channels",
         shape: TypedFamilyMap,
         group: Foundation,
-        help:  "Pick which chat platforms ZeroClaw should listen on. Global \
+        help:  "Pick which chat platforms Redrob OS should listen on. Global \
                 channel settings live on `[channels]`; each configured platform \
                 still gets its own alias.",
     },
@@ -467,7 +467,7 @@ sections! {
                 server you run (zerorelay): set the relay URL and account token and the \
                 device keeps a persistent outbound connection, so a paired phone can \
                 connect through the relay from anywhere. The relay is a blind forwarder \
-                — the client<->device mTLS terminates on the device, never on the relay. \
+                - the client<->device mTLS terminates on the device, never on the relay. \
                 Leave disabled for LAN-only access.",
     },
 
@@ -490,7 +490,7 @@ impl std::fmt::Display for Section {
 }
 
 /// Canonical-order index of `section` in [`QUICKSTART_SECTIONS`].
-/// Always `Some` for any valid `Section` variant — the const includes
+/// Always `Some` for any valid `Section` variant - the const includes
 /// every variant by construction. Returns `Option` for API symmetry
 /// with [`section_index_for_key`], which can fail on unknown keys.
 #[must_use]

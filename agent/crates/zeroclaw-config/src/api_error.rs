@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Stable error code consumed by HTTP / CLI / dashboard. Add codes here as new
-/// failure cases land — never invent codes ad-hoc at call sites.
+/// failure cases land - never invent codes ad-hoc at call sites.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
@@ -34,7 +34,7 @@ pub enum ConfigApiCode {
     /// A numeric field was out of its allowed range (zero, negative, or
     /// above an upper bound). Path identifies which one.
     InvalidNumericRange,
-    /// A string did not match its allowed format — invalid URL, bad
+    /// A string did not match its allowed format - invalid URL, bad
     /// scheme, invalid path prefix, characters outside the allowed set.
     InvalidFormat,
     /// An enum / discriminator field carried a value not in the allowed
@@ -86,7 +86,7 @@ impl ConfigApiCode {
     }
 }
 
-/// Structured error returned by the new HTTP CRUD endpoints and the `zeroclaw config`
+/// Structured error returned by the new HTTP CRUD endpoints and the `redrob-agentctl config`
 /// subcommands they share infrastructure with.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
