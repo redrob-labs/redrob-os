@@ -1,6 +1,7 @@
 //! UI language for the shell. Korean is the source text; English is the
 //! other language. The choice follows the session's `LANG` (set from the
 //! language picked in the installer), falling back to `/etc/locale.conf`.
+//! No language (C/POSIX) means Korean.
 //! `language = ko|en` in desktop.conf overrides both.
 
 use std::sync::OnceLock;
@@ -19,7 +20,7 @@ pub fn init(pref: &str) {
 fn system_is_ko() -> bool {
     for var in ["LC_ALL", "LC_MESSAGES", "LANG"] {
         if let Ok(v) = std::env::var(var) {
-            if !v.is_empty() {
+            if !v.is_empty() && !is_c(&v) {
                 return v.starts_with("ko");
             }
         }
@@ -27,8 +28,16 @@ fn system_is_ko() -> bool {
     // greetd starts the greeter without LANG; read the system default.
     std::fs::read_to_string("/etc/locale.conf")
         .ok()
-        .and_then(|t| t.lines().find_map(|l| l.strip_prefix("LANG=").map(|v| v.trim_matches('"').starts_with("ko"))))
+        .and_then(|t| t.lines().find_map(|l| l.strip_prefix("LANG=").map(|v| v.trim_matches('"').to_string())))
+        .filter(|v| !v.is_empty() && !is_c(v))
+        .map(|v| v.starts_with("ko"))
         .unwrap_or(true)
+}
+
+/// "C", "POSIX", "C.UTF-8": no language was picked, so Korean (the default).
+fn is_c(v: &str) -> bool {
+    let base = v.split(['.', '@']).next().unwrap_or("");
+    base == "C" || base == "POSIX"
 }
 
 /// True when the shell speaks Korean.

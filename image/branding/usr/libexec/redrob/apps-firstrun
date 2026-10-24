@@ -23,7 +23,7 @@ apps_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 
 # Korean or English, like the desktop (redrob-comp's i18n.rs).
 lang="${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}"
-case "${lang}" in ko*|"") ko=1 ;; *) ko=0 ;; esac
+case "${lang}" in ko*|""|C|C.*|POSIX|POSIX.*) ko=1 ;; *) ko=0 ;; esac
 t() { if [ "${ko}" = 1 ]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
 
 # id | Korean name | English name | ticked by default. The ids are Redrob

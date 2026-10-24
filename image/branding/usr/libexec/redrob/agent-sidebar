@@ -31,7 +31,7 @@ for c in "${HOME}/.local/bin/redrob-browser" \
 done
 if [ -z "${bro}" ]; then
   case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in
-    ko*|"") msg="Redrob Browser를 아직 설치하고 있어요. 잠시 뒤 사이드바를 다시 열어 주세요." ;;
+    ko*|""|C|C.*|POSIX|POSIX.*) msg="Redrob Browser를 아직 설치하고 있어요. 잠시 뒤 사이드바를 다시 열어 주세요." ;;
     *) msg="Redrob Browser is still installing. Open the sidebar again shortly." ;;
   esac
   notify-send "Redrob Agent" "${msg}" 2>/dev/null || true

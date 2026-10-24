@@ -244,7 +244,8 @@ pub fn parse_pairing_json(body: &str) -> Option<PairingState> {
 fn session_is_ko() -> bool {
     for var in ["LC_ALL", "LC_MESSAGES", "LANG"] {
         if let Ok(v) = std::env::var(var) {
-            if !v.is_empty() {
+            let base = v.split(['.', '@']).next().unwrap_or("");
+            if !v.is_empty() && base != "C" && base != "POSIX" {
                 return v.starts_with("ko");
             }
         }
