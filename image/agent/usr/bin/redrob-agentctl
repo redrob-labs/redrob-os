@@ -1,0 +1,11 @@
+#!/usr/bin/bash
+# redrob-agentctl -- run a redrob-agent command from the desktop, e.g.
+# `redrob-agentctl reload`. The agent runs as its own system user with its
+# own config and data dirs, so a plain `redrob-agent ...` from a login shell
+# reads the wrong config. Asks for the user's password once (sudo).
+# Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
+set -euo pipefail
+exec sudo -u redrob-agent env \
+  ZEROCLAW_CONFIG_DIR=/var/lib/redrob/agent \
+  ZEROCLAW_DATA_DIR=/var/lib/redrob/agent/data \
+  redrob-agent "$@"

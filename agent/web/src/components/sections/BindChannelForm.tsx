@@ -84,7 +84,7 @@ export default function BindChannelForm({
   // there; for WeChat/LINE the button is the bind surface.
   const cliCommand =
     channelType === "telegram" && identity.trim()
-      ? `zeroclaw channel bind-telegram ${identity.trim()}${
+      ? `redrob-agentctl channel bind-telegram ${identity.trim()}${
           alias === "default" ? "" : ` --alias ${alias}`
         }`
       : "";
