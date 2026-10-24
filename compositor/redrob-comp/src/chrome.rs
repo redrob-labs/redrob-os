@@ -582,7 +582,7 @@ impl Chrome {
         fill_rrect(&mut bar, x, py, search_w, ph, theme::RADIUS_FULL, t.surface_sunken);
         stroke_rrect(&mut bar, x + 0.5, py + 0.5, search_w - 1.0, ph - 1.0, ph / 2.0, t.border_subtle);
         self.icons.draw(&mut bar, ICON_SEARCH, Some(t.ink_secondary), x + 12.0, py + 8.0, 16.0);
-        draw::draw_text(&mut bar, &self.fonts.medium, "검색", x + 36.0, py + 21.0, 13.0, t.ink_muted);
+        draw::draw_text(&mut bar, &self.fonts.medium, crate::i18n::tr("검색"), x + 36.0, py + 21.0, 13.0, t.ink_muted);
         self.hits.push((Rectangle::new((x as i32, y0 + py as i32).into(), (search_w as i32, ph as i32).into()), Action::Start));
         x += search_w + gap;
 
@@ -743,8 +743,8 @@ fn sh(script: &str) -> Vec<String> {
 /// Install button. Override a command with REDROB_DOCK="name=cmd;...".
 fn default_launchers() -> Vec<Launcher> {
     let mut v = vec![
-        Launcher { name: "파일", tile: Tile::System(ICON_FOLDER), command: sh(FILES), child: None, group: false },
-        Launcher { name: "터미널", tile: Tile::System(ICON_TERMINAL), command: sh(TERMINAL), child: None, group: false },
+        Launcher { name: crate::i18n::tr("파일"), tile: Tile::System(ICON_FOLDER), command: sh(FILES), child: None, group: false },
+        Launcher { name: crate::i18n::tr("터미널"), tile: Tile::System(ICON_TERMINAL), command: sh(TERMINAL), child: None, group: false },
         Launcher {
             name: "Redrob Browser",
             tile: Tile::App(APP_BROWSER),
@@ -766,7 +766,7 @@ fn default_launchers() -> Vec<Launcher> {
             child: None,
             group: false,
         },
-        Launcher { name: "설정", tile: Tile::System(ICON_SETTINGS), command: vec![SETTINGS.into()], child: None, group: false },
+        Launcher { name: crate::i18n::tr("설정"), tile: Tile::System(ICON_SETTINGS), command: vec![SETTINGS.into()], child: None, group: false },
         Launcher { name: "Redrob Launcher", tile: Tile::App(APP_REDROB), command: vec!["redrob-launcher".into()], child: None, group: true },
     ];
     if let Ok(spec) = std::env::var("REDROB_DOCK") {
@@ -780,18 +780,24 @@ fn default_launchers() -> Vec<Launcher> {
     v
 }
 
-/// (time, date) in Korean: ("오후 9:10", "10월 21일 (화)").
+/// (time, date): ("오후 9:10", "10월 21일 (화)") or ("9:10 PM", "Tue Oct 21").
 fn clock_text() -> (String, String) {
     use chrono::{Datelike, Timelike};
     let now = chrono::Local::now();
     let (h, m) = (now.hour(), now.minute());
-    let ampm = if h < 12 { "오전" } else { "오후" };
+    let pm = h >= 12;
     let h12 = match h % 12 {
         0 => 12,
         x => x,
     };
-    let wd = ["월", "화", "수", "목", "금", "토", "일"][now.weekday().num_days_from_monday() as usize];
-    (format!("{ampm} {h12}:{m:02}"), format!("{}월 {}일 ({wd})", now.month(), now.day()))
+    let wd = crate::i18n::weekday_short(now.weekday().num_days_from_monday() as usize);
+    if crate::i18n::ko() {
+        let ampm = if pm { "오후" } else { "오전" };
+        (format!("{ampm} {h12}:{m:02}"), format!("{}월 {}일 ({wd})", now.month(), now.day()))
+    } else {
+        let ampm = if pm { "PM" } else { "AM" };
+        (format!("{h12}:{m:02} {ampm}"), format!("{wd} {} {}", crate::i18n::month_en(now.month(), false), now.day()))
+    }
 }
 
 fn vol_glyph(s: &crate::status::Status) -> &'static str {

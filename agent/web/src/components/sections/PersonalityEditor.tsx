@@ -441,12 +441,12 @@ export default function PersonalityEditor({ agent }: Props) {
               {charCount.toLocaleString()} / {maxChars.toLocaleString()} {t('personality.chars')}
               {overLimit && (
                 <span style={{ color: 'var(--color-status-error)' }}>
-                  {' '}— {t('personality.over_limit')}
+                  {' '}- {t('personality.over_limit')}
                 </span>
               )}
               {activeBuf?.truncated && (
                 <span style={{ color: 'var(--color-status-warn)' }}>
-                  {' '}— {t('personality.truncated_warning')}
+                  {' '}- {t('personality.truncated_warning')}
                 </span>
               )}
             </span>

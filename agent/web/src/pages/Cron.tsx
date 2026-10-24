@@ -744,7 +744,7 @@ export default function Cron() {
                   </div>
                   {/* Model / session-target / allowed-tools. patchCronJob does
                       NOT accept any of these, so on edit they render read-only
-                      (populated from the job) rather than being hidden — the
+                      (populated from the job) rather than being hidden - the
                       operator can see the current config even though it's fixed
                       after creation. */}
                   {isEditing ? (
@@ -941,7 +941,7 @@ export default function Cron() {
                         {boundChannels.map((ch) => (
                           <option key={ch.composite} value={ch.composite}>
                             {ch.composite}
-                            {ch.identity ? ` — ${ch.identity}` : ''}
+                            {ch.identity ? ` - ${ch.identity}` : ''}
                           </option>
                         ))}
                       </select>

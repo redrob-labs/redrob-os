@@ -666,7 +666,7 @@ export default function Config() {
                 instead of pinning to the bottom of the scroll area. */}
             {/* Config header: section title + breadcrumb trail (as the
                 description slot) + the page-level actions. ReloadDaemonButton
-                keeps its own confirm modal — only the surrounding chrome is
+                keeps its own confirm modal - only the surrounding chrome is
                 restyled. */}
             <PageHeader
               title={activeSection.label}

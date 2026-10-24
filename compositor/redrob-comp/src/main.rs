@@ -1,6 +1,7 @@
 #![allow(irrefutable_let_patterns)]
 
 mod apps;
+mod i18n;
 mod xwayland;
 mod greeter;
 mod display;
@@ -32,6 +33,7 @@ pub use state::Smallvil;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logging();
+    crate::i18n::init(&crate::config::Config::load().language);
 
     let mut event_loop: EventLoop<Smallvil> = EventLoop::try_new()?;
 

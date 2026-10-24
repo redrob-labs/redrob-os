@@ -56,7 +56,8 @@ pub fn save(img: Pixmap, region: Option<Rectangle<i32, Logical>>) -> Option<std:
         None => img,
     };
     let dir = pictures_dir().join("Screenshots");
-    let name = chrono::Local::now().format("스크린샷 %Y-%m-%d %H.%M.%S.png").to_string();
+    let pattern = if crate::i18n::ko() { "스크린샷 %Y-%m-%d %H.%M.%S.png" } else { "Screenshot %Y-%m-%d at %H.%M.%S.png" };
+    let name = chrono::Local::now().format(pattern).to_string();
     let path = dir.join(name);
     let p = path.clone();
     std::thread::spawn(move || {

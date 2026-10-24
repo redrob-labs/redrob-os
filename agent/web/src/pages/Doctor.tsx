@@ -352,7 +352,7 @@ export default function Doctor() {
 
       {/* Fix-in-place modal. Mounted once at the page root; opens when a
           finding with a parseable entity is actioned. Closing returns the
-          operator to the Doctor list as-is — no navigation, no re-run. */}
+          operator to the Doctor list as-is - no navigation, no re-run. */}
       <DoctorFixModal
         open={fixTarget !== null}
         prefix={fixTarget?.prefix ?? ''}

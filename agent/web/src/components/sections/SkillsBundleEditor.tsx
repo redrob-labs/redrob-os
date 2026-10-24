@@ -541,7 +541,7 @@ function TagsField({ tags, onTagsChange }: TagsFieldProps) {
           Slash command
         </span>
         <span className="text-xs" style={{ color: 'var(--pc-text-faint)' }}>
-          — expose this skill as a <code>/command</code> in Discord (adds the{' '}
+          - expose this skill as a <code>/command</code> in Discord (adds the{' '}
           <code>slash</code> tag)
         </span>
       </label>
