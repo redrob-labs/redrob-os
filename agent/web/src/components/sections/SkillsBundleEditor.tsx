@@ -491,7 +491,7 @@ function FrontmatterForm({ value, onChange, onTagsChange }: FrontmatterFormProps
         label={t('skills_bundle.category_label')}
         value={value.category ?? ''}
         onChange={(v) => onChange('category', v)}
-        placeholder="coding, ops, …"
+        placeholder={t('skills_bundle.category_placeholder')}
       />
       <TagsField tags={value.tags ?? []} onTagsChange={onTagsChange} />
     </div>
@@ -538,16 +538,15 @@ function TagsField({ tags, onTagsChange }: TagsFieldProps) {
           onChange={(e) => setSlash(e.target.checked)}
         />
         <span className="text-sm" style={{ color: 'var(--pc-text-secondary)' }}>
-          Slash command
+          {t('skills_bundle.slash_label')}
         </span>
         <span className="text-xs" style={{ color: 'var(--pc-text-faint)' }}>
-          - expose this skill as a <code>/command</code> in Discord (adds the{' '}
-          <code>slash</code> tag)
+          {t('skills_bundle.slash_hint')}
         </span>
       </label>
       <div className="flex flex-col gap-1">
         <label className="text-xs" style={{ color: 'var(--pc-text-muted)' }}>
-          Tags
+          {t('skills_bundle.tags')}
         </label>
         <div className="flex flex-wrap items-center gap-1.5">
           {editableTags.map((tag) => (
@@ -560,7 +559,7 @@ function TagsField({ tags, onTagsChange }: TagsFieldProps) {
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
-                aria-label={`Remove tag ${tag}`}
+                aria-label={t('skills_bundle.remove_tag').replace('{tag}', tag)}
                 className="leading-none"
                 style={{ color: 'var(--pc-text-muted)' }}
               >
@@ -571,7 +570,7 @@ function TagsField({ tags, onTagsChange }: TagsFieldProps) {
           {isOpenSkills && (
             <span
               className="inline-flex items-center text-xs px-2 py-0.5 rounded-md border opacity-60"
-              title="Loader-managed: community-synced skill (open-skills)"
+              title={t('skills_bundle.open_skills_title')}
               style={{ borderColor: 'var(--pc-border)', color: 'var(--pc-text-faint)' }}
             >
               open-skills
@@ -587,8 +586,8 @@ function TagsField({ tags, onTagsChange }: TagsFieldProps) {
                 addTag();
               }
             }}
-            placeholder="add tag…"
-            aria-label="Add tag"
+            placeholder={t('skills_bundle.add_tag_placeholder')}
+            aria-label={t('skills_bundle.add_tag')}
             className="text-xs bg-transparent border rounded-md px-2 py-0.5 w-24"
             style={{ borderColor: 'var(--pc-border)', color: 'var(--pc-text)' }}
           />
@@ -690,11 +689,10 @@ function SlashOptionsEditor({ options, onChange }: SlashOptionsEditorProps) {
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-sm" style={{ color: 'var(--pc-text-secondary)' }}>
-            Slash command options
+            {t('skills_bundle.options_title')}
           </span>
           <span className="text-xs" style={{ color: 'var(--pc-text-faint)' }}>
-            Typed parameters this <code>/command</code> accepts. With none, the
-            skill runs with a single free-text argument.
+            {t('skills_bundle.options_hint')}
           </span>
         </div>
         <button
@@ -703,13 +701,13 @@ function SlashOptionsEditor({ options, onChange }: SlashOptionsEditorProps) {
           disabled={kinds.length === 0}
           className="btn-secondary text-xs whitespace-nowrap disabled:opacity-40"
         >
-          + Add option
+          {t('skills_bundle.add_option')}
         </button>
       </div>
 
       {options.length === 0 ? (
         <p className="text-xs" style={{ color: 'var(--pc-text-muted)' }}>
-          No options yet.
+          {t('skills_bundle.no_options')}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -781,26 +779,26 @@ function SlashOptionCard({
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1 flex-1 min-w-[8rem]">
           <label className="text-xs" style={{ color: 'var(--pc-text-muted)' }}>
-            Name
+            {t('skills_bundle.option_name')}
           </label>
           <input
             type="text"
             value={option.name}
             onChange={(e) => onChange({ name: e.target.value })}
             placeholder="lowercase_name"
-            aria-label={`Option ${index + 1} name`}
+            aria-label={t('skills_bundle.option_name_aria').replace('{n}', String(index + 1))}
             className="rounded-md border bg-transparent px-2 py-1 text-sm"
             style={{ borderColor: 'var(--pc-border)' }}
           />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs" style={{ color: 'var(--pc-text-muted)' }}>
-            Type
+            {t('skills_bundle.option_type')}
           </label>
           <select
             value={option.type}
             onChange={(e) => onType(e.target.value)}
-            aria-label={`Option ${index + 1} type`}
+            aria-label={t('skills_bundle.option_type_aria').replace('{n}', String(index + 1))}
             className="rounded-md border bg-transparent px-2 py-1 text-sm"
             style={{ borderColor: 'var(--pc-border)', color: 'var(--pc-text)' }}
           >
@@ -822,7 +820,7 @@ function SlashOptionCard({
             onChange={(e) => onChange({ required: e.target.checked })}
           />
           <span className="text-xs" style={{ color: 'var(--pc-text-secondary)' }}>
-            Required
+            {t('skills_bundle.option_required')}
           </span>
         </label>
         <div className="flex-1" />
@@ -831,7 +829,7 @@ function SlashOptionCard({
             type="button"
             onClick={() => onMove(-1)}
             disabled={index === 0}
-            aria-label={`Move option ${index + 1} up`}
+            aria-label={t('skills_bundle.move_up').replace('{n}', String(index + 1))}
             className="text-xs px-1.5 py-0.5 rounded border disabled:opacity-30"
             style={{ borderColor: 'var(--pc-border)', color: 'var(--pc-text-muted)' }}
           >
@@ -841,7 +839,7 @@ function SlashOptionCard({
             type="button"
             onClick={() => onMove(1)}
             disabled={index === count - 1}
-            aria-label={`Move option ${index + 1} down`}
+            aria-label={t('skills_bundle.move_down').replace('{n}', String(index + 1))}
             className="text-xs px-1.5 py-0.5 rounded border disabled:opacity-30"
             style={{ borderColor: 'var(--pc-border)', color: 'var(--pc-text-muted)' }}
           >
@@ -850,7 +848,7 @@ function SlashOptionCard({
           <button
             type="button"
             onClick={onRemove}
-            aria-label="Remove option"
+            aria-label={t('skills_bundle.remove_option')}
             className="text-xs px-1.5 py-0.5 rounded border"
             style={{ borderColor: 'var(--pc-border)', color: '#f87171' }}
           >
@@ -861,14 +859,14 @@ function SlashOptionCard({
 
       <div className="flex flex-col gap-1">
         <label className="text-xs" style={{ color: 'var(--pc-text-muted)' }}>
-          Description
+          {t('skills_bundle.option_description')}
         </label>
         <input
           type="text"
           value={option.description}
           onChange={(e) => onChange({ description: e.target.value })}
-          placeholder="Shown to the user when picking this option"
-          aria-label={`Option ${index + 1} description`}
+          placeholder={t('skills_bundle.option_description_placeholder')}
+          aria-label={t('skills_bundle.option_description_aria').replace('{n}', String(index + 1))}
           className="rounded-md border bg-transparent px-2 py-1 text-sm"
           style={{ borderColor: 'var(--pc-border)' }}
         />
@@ -877,12 +875,12 @@ function SlashOptionCard({
       {isNumeric && (
         <div className="flex flex-wrap gap-2">
           <NumField
-            label="Min"
+            label={t('skills_bundle.min')}
             value={option.min}
             onChange={(v) => onChange({ min: v })}
           />
           <NumField
-            label="Max"
+            label={t('skills_bundle.max')}
             value={option.max}
             onChange={(v) => onChange({ max: v })}
           />
@@ -892,13 +890,13 @@ function SlashOptionCard({
       {isString && (
         <div className="flex flex-wrap gap-2">
           <NumField
-            label="Min length"
+            label={t('skills_bundle.min_length')}
             value={option.min_length}
             onChange={(v) => onChange({ min_length: clampLen(v) })}
             integer
           />
           <NumField
-            label="Max length"
+            label={t('skills_bundle.max_length')}
             value={option.max_length}
             onChange={(v) => onChange({ max_length: clampLen(v) })}
             integer
@@ -942,7 +940,7 @@ function ChoicesEditor({ choices, onChange }: ChoicesEditorProps) {
     >
       <div className="flex items-center justify-between">
         <label className="text-xs" style={{ color: 'var(--pc-text-muted)' }}>
-          Choices <span style={{ color: 'var(--pc-text-faint)' }}>(optional, a fixed dropdown)</span>
+          {t('skills_bundle.choices')} <span style={{ color: 'var(--pc-text-faint)' }}>{t('skills_bundle.choices_hint')}</span>
         </label>
         <button
           type="button"
@@ -950,7 +948,7 @@ function ChoicesEditor({ choices, onChange }: ChoicesEditorProps) {
           className="text-xs px-2 py-0.5 rounded border"
           style={{ borderColor: 'var(--pc-border)', color: 'var(--pc-text-muted)' }}
         >
-          + Choice
+          {t('skills_bundle.add_choice')}
         </button>
       </div>
       {choices.map((c, i) => (
@@ -959,8 +957,8 @@ function ChoicesEditor({ choices, onChange }: ChoicesEditorProps) {
             type="text"
             value={c.name}
             onChange={(e) => update(i, { name: e.target.value })}
-            placeholder="label"
-            aria-label={`Choice ${i + 1} label`}
+            placeholder={t('skills_bundle.choice_label_placeholder')}
+            aria-label={t('skills_bundle.choice_label_aria').replace('{n}', String(i + 1))}
             className="rounded-md border bg-transparent px-2 py-1 text-xs flex-1"
             style={{ borderColor: 'var(--pc-border)' }}
           />
@@ -971,15 +969,15 @@ function ChoicesEditor({ choices, onChange }: ChoicesEditorProps) {
             type="text"
             value={c.value}
             onChange={(e) => update(i, { value: e.target.value })}
-            placeholder="value"
-            aria-label={`Choice ${i + 1} value`}
+            placeholder={t('skills_bundle.choice_value_placeholder')}
+            aria-label={t('skills_bundle.choice_value_aria').replace('{n}', String(i + 1))}
             className="rounded-md border bg-transparent px-2 py-1 text-xs flex-1 font-mono"
             style={{ borderColor: 'var(--pc-border)' }}
           />
           <button
             type="button"
             onClick={() => remove(i)}
-            aria-label={`Remove choice ${i + 1}`}
+            aria-label={t('skills_bundle.remove_choice').replace('{n}', String(i + 1))}
             className="text-xs leading-none"
             style={{ color: 'var(--pc-text-muted)' }}
           >

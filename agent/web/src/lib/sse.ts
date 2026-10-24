@@ -1,4 +1,5 @@
 import type { SSEEvent } from '../types/api';
+import { t } from './i18n';
 import { getToken } from './auth';
 import { apiOrigin, basePath } from './basePath';
 
@@ -72,7 +73,7 @@ export class SSEClient {
           throw new Error(`SSE connection failed: ${response.status}`);
         }
         if (!response.body) {
-          throw new Error('SSE response has no body');
+          throw new Error(t('conn.sse_no_body'));
         }
 
         this.currentDelay = this.reconnectDelay;

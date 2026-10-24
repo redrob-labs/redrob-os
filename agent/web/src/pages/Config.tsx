@@ -270,7 +270,7 @@ export default function Config() {
       ) {
         channelExtraTabs.push({
           key: "bind",
-          label: "Bind identity",
+          label: t("bind.tab"),
           render: () => (
             <BindChannelForm
               key={`${reloadKey}-${typeParam}-${aliasParam}-bind`}
@@ -528,17 +528,17 @@ export default function Config() {
           tabs={[
             {
               key: "types",
-              label: "Channel types",
+              label: t("config.channel_types_tab"),
               render: () => sectionOverview,
             },
             {
               key: "global",
-              label: "Global settings",
+              label: t("config.channel_global_tab"),
               render: () => (
                 <FieldForm
                   key={`${reloadKey}-channels-global`}
                   prefix="channels"
-                  title="Global channel settings"
+                  title={t("config.channel_global_title")}
                   onSaved={fetchDrift}
                   drift={drifted}
                   includePath={isDirectChannelSetting}
@@ -548,7 +548,7 @@ export default function Config() {
             },
             {
               key: "bind",
-              label: "Bind identity",
+              label: t("bind.tab"),
               render: () => (
                 <BindChannelForm
                   key={`${reloadKey}-channels-bind`}
