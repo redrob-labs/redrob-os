@@ -107,7 +107,7 @@ pub const V3_CHANNEL_TYPES: &[&str] = &[
 
 impl V2Config {
     /// Returns a V3-shaped `toml::Value`. The caller deserializes it
-    /// into `Config` — that round-trip is the gate that catches any
+    /// into `Config` - that round-trip is the gate that catches any
     /// structural mismatch.
     pub fn migrate(self) -> anyhow::Result<toml::Value> {
         let V2Config {
@@ -472,8 +472,8 @@ impl V2Config {
 ///
 /// `[gateway]` rides through the V2→V3 step inside `passthrough`, so without
 /// this the migrated document keeps the retired `pairing_dashboard.code_length`
-/// — a key nothing reads — and never surfaces the policy that actually decides
-/// pairing-code strength. `zeroclaw config generate 3` emits that document
+/// - a key nothing reads - and never surfaces the policy that actually decides
+/// pairing-code strength. `redrob-agentctl config generate 3` emits that document
 /// verbatim, so a generated starting config would advertise the wrong setting.
 ///
 /// An operator who already hand-wrote `[gateway.pairing_code]` keeps it: the
@@ -1114,7 +1114,7 @@ fn source_identity_matches_inner(
 /// `llamacpp.default`. The rewrite only happens when the target `(family,
 /// alias)` slot has exactly one raw producer AND that slot's EFFECTIVE source
 /// identity (the actual endpoint/auth_mode/uri values after operator
-/// overrides) matches the reference's expected identity — see
+/// overrides) matches the reference's expected identity - see
 /// [`effective_source_identity_matches`]. That preserves raw-provider
 /// provenance: a bare or variant reference is never redirected to an alias
 /// supplied by a differently-named source, and a collided slot (e.g. `qwen`
@@ -2199,7 +2199,7 @@ fn extract_provider_timeout_secs(agent: &mut toml::Table) -> Option<toml::Value>
 }
 
 /// Insert (or merge) a profile entry at `passthrough.<section>.<alias>`.
-/// Existing keys win — `fields` only fills in missing slots.
+/// Existing keys win - `fields` only fills in missing slots.
 fn install_profile_entry(
     passthrough: &mut toml::Table,
     section: &str,
@@ -2868,7 +2868,7 @@ fn adapt_storage_provider_config(mut config: toml::Table) -> (String, toml::Tabl
 }
 
 /// Merge `fields` into `storage_table.<backend>.default`, creating the
-/// nested tables if missing. Existing keys win — `fields` only fills gaps.
+/// nested tables if missing. Existing keys win - `fields` only fills gaps.
 fn merge_storage_default(storage_table: &mut toml::Table, backend_type: &str, fields: toml::Table) {
     let backend_entry = storage_table
         .entry(backend_type.to_string())
@@ -3002,7 +3002,7 @@ fn merge_into_profile_default(profiles: &mut toml::Table, fields: toml::Table) {
 
 /// Rename top-level keys inside a `toml::Value::Table` according to a list of
 /// `(old, new)` pairs. Non-tables are returned unchanged. Existing values at
-/// the new key are not overwritten — the rename is best-effort.
+/// the new key are not overwritten - the rename is best-effort.
 fn rename_table_keys(value: toml::Value, renames: &[(&str, &str)]) -> toml::Value {
     let mut table = match value {
         toml::Value::Table(t) => t,

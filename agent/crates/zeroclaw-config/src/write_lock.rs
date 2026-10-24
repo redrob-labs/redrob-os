@@ -8,7 +8,7 @@ use std::sync::{Arc, OnceLock};
 /// config, mutates a copy, saves the whole snapshot to `config.toml`, then
 /// publishes the result back to the shared handle. `Config::save` syncs the
 /// serialized snapshot onto the existing document and drops keys the snapshot
-/// does not carry, so two writers whose transactions interleave do not merge —
+/// does not carry, so two writers whose transactions interleave do not merge -
 /// the later save writes the earlier writer's state back over the newer one,
 /// and the change is lost on disk even when memory still holds it.
 ///

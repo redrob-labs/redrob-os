@@ -624,7 +624,7 @@ fn deepest_forbidden_depth(
 /// is at least as deep as the most specific allowing prefix, so an explicit
 /// forbidden path nested under an allowed root takes effect, while a broad
 /// default forbidden root (e.g. `/home`) does not override an operator's more
-/// specific `allowed_roots` entry. A tie resolves to deny — an explicit "no"
+/// specific `allowed_roots` entry. A tie resolves to deny - an explicit "no"
 /// at the same boundary as the allow should hold.
 fn forbidden_overrides_allow(forbidden_depth: Option<usize>, allow_depth: Option<usize>) -> bool {
     match (forbidden_depth, allow_depth) {
@@ -818,7 +818,7 @@ fn expand_user_path(path: &str) -> PathBuf {
 /// Unlike [`Path::canonicalize`] this does NOT require the target to exist, so a
 /// path whose leaf is about to be created (`touch link/new.txt`) still resolves,
 /// while a symlinked component is followed to its target even when that target
-/// does not exist yet (a *dangling* symlink `link -> /outside/new` — the write
+/// does not exist yet (a *dangling* symlink `link -> /outside/new` - the write
 /// would still land outside, so it must be resolved and blocked, exactly as
 /// `file_write` blocks writing through a symlink leaf). Lexical `.`/`..` are
 /// applied without touching the filesystem. Symlink chains are bounded to guard
@@ -2097,7 +2097,7 @@ fn contains_unsafe_output_redirect_for_shell(command: &str, dialect: ShellDialec
     contains_unquoted_char(&safe, '>', dialect)
 }
 
-/// POSIX-dialect convenience wrapper for tests — the conservative default that
+/// POSIX-dialect convenience wrapper for tests - the conservative default that
 /// production reaches when it has no effective shell context. Production shell
 /// tools call the `_for_shell` form with the runtime's actual dialect.
 #[cfg(test)]
@@ -2411,7 +2411,7 @@ fn shell_path_tokens_equal(left: &str, right: &str, dialect: ShellDialect) -> bo
 /// Compare two path tokens with the host filesystem's case semantics after `~`
 /// expansion: case-insensitive on Windows, exact on case-sensitive Unix. An
 /// explicit path is a trust anchor, so folding case on Unix would authorize a
-/// differently cased — and potentially different — file.
+/// differently cased - and potentially different - file.
 fn host_path_tokens_equal(left: &str, right: &str) -> bool {
     let left = expand_user_path(left);
     let right = expand_user_path(right);
@@ -3665,7 +3665,7 @@ impl SecurityPolicy {
     /// Scan `command` for forbidden path arguments against a specific shell
     /// dialect. The dialect gates which redirect targets count as safe devices
     /// (the Windows `nul` null device is only a safe device under `cmd.exe`) and
-    /// which relative forms are recognized as paths — Windows-relative paths are
+    /// which relative forms are recognized as paths - Windows-relative paths are
     /// understood for both cmd.exe and PowerShell, including cross-platform
     /// PowerShell runtimes.
     pub fn forbidden_path_argument_for_shell(
@@ -4242,9 +4242,9 @@ impl SecurityPolicy {
     /// the policy prefixes live in, exactly as the internal readability and
     /// allowlist checks do before they compare.
     ///
-    /// Every accessor that takes a `resolved` path — `is_resolved_path_readable`,
+    /// Every accessor that takes a `resolved` path - `is_resolved_path_readable`,
     /// `is_resolved_path_allowed`, `approved_read_root`, `approved_read_roots`,
-    /// `approved_write_roots` — assumes its input is already canonical. Callers
+    /// `approved_write_roots` - assumes its input is already canonical. Callers
     /// that authorize a request and then bind the granted operation to a root
     /// MUST resolve the request once through this accessor and carry the
     /// returned target into both the check and the operation. Feeding the raw

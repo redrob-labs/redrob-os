@@ -100,7 +100,7 @@ pub enum CronJobClaim<'a> {
     Contested(Vec<&'a str>),
 }
 
-/// Top-level ZeroClaw configuration, loaded from `config.toml`.
+/// Top-level Redrob OS configuration, loaded from `config.toml`.
 ///
 /// Resolution order: `ZEROCLAW_CONFIG_DIR` env → `ZEROCLAW_WORKSPACE` env → `~/.zeroclaw/config.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
@@ -142,7 +142,7 @@ pub struct Config {
     /// Security-critical sections the resilient loader reset to `Default`
     /// because the on-disk block was malformed. Non-empty = posture may be
     /// weaker than intended; exposure gating should refuse to trust the
-    /// instance until repaired. Never serialized — a load-time signal.
+    /// instance until repaired. Never serialized - a load-time signal.
     #[serde(skip)]
     pub degraded_security: Vec<String>,
     /// Non-security sections the resilient loader reset to `Default`
@@ -162,7 +162,7 @@ pub struct Config {
     /// CLI surfaces upgrade guidance without retaining the retired secret.
     #[serde(skip)]
     pub retired_node_transport_config: bool,
-    /// The config file this value was populated from — set by
+    /// The config file this value was populated from - set by
     /// `load_or_init` (both the existing-file read and the fresh-init
     /// write) and by loaders that re-read a config file before mutating.
     /// `Default`/programmatic construction leaves it `None`, and `save()`
@@ -171,7 +171,7 @@ pub struct Config {
     /// `force_save()` is the explicit intentional-overwrite path. Binding
     /// provenance to the path (not a boolean) also refuses a value loaded
     /// from file A that is later repointed at a different existing file B.
-    /// Never serialized — a load-time signal.
+    /// Never serialized - a load-time signal.
     #[serde(skip)]
     pub loaded_from: Option<PathBuf>,
     /// Config file schema version.
@@ -188,7 +188,7 @@ pub struct Config {
     #[nested]
     pub providers: crate::providers::Providers,
 
-    /// Model-routing rules — route `hint:<name>` to specific
+    /// Model-routing rules - route `hint:<name>` to specific
     /// model_provider + model combos.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[nested]
@@ -196,7 +196,7 @@ pub struct Config {
     #[group = "Foundation"]
     pub model_routes: Vec<ModelRouteConfig>,
 
-    /// Embedding-routing rules — route `hint:<name>` to specific
+    /// Embedding-routing rules - route `hint:<name>` to specific
     /// model_provider + model combos for embedding requests.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[nested]
@@ -242,7 +242,7 @@ pub struct Config {
 
     /// Conversational AI agent builder configuration (`[conversational_ai]`).
     ///
-    /// Experimental / future feature — not yet wired into the agent runtime.
+    /// Experimental / future feature - not yet wired into the agent runtime.
     /// Omitted from generated config files when disabled (the default).
     /// Existing configs that already contain this section will continue to
     /// deserialize correctly thanks to `#[serde(default)]`.
@@ -275,7 +275,7 @@ pub struct Config {
     #[group = "Agent"]
     pub scheduler: SchedulerConfig,
 
-    /// Agent evaluation harness (`[eval]`) — surfaced via `zeroclaw eval`.
+    /// Agent evaluation harness (`[eval]`) - surfaced via `redrob-agentctl eval`.
     /// Distinct from `[agent.eval]`, which is the in-loop response-quality scorer.
     #[serde(default)]
     #[nested]
@@ -299,7 +299,7 @@ pub struct Config {
     #[group = "Agent"]
     pub pipeline: PipelineConfig,
 
-    /// Automatic query classification — maps user messages to model hints.
+    /// Automatic query classification - maps user messages to model hints.
     #[serde(default)]
     #[nested]
     #[group = "Agent"]
@@ -415,15 +415,15 @@ pub struct Config {
     /// sessions survive across invocations.
     ///
     /// Fields:
-    /// - `enabled` (`bool`, default `false`) — enable the browser delegation tool.
-    /// - `cli_binary` (`String`, default `"claude"`) — CLI binary to spawn for browser tasks.
-    /// - `chrome_profile_dir` (`String`, default `""`) — Chrome user-data directory for
+    /// - `enabled` (`bool`, default `false`) - enable the browser delegation tool.
+    /// - `cli_binary` (`String`, default `"claude"`) - CLI binary to spawn for browser tasks.
+    /// - `chrome_profile_dir` (`String`, default `""`) - Chrome user-data directory for
     ///   persistent SSO sessions. When empty, a fresh profile is used each invocation.
-    /// - `allowed_domains` (`Vec<String>`, default `[]`) — allowlist of domains the browser
+    /// - `allowed_domains` (`Vec<String>`, default `[]`) - allowlist of domains the browser
     ///   may navigate to. Empty means all non-blocked domains are permitted.
-    /// - `blocked_domains` (`Vec<String>`, default `[]`) — denylist of domains. Blocked
+    /// - `blocked_domains` (`Vec<String>`, default `[]`) - denylist of domains. Blocked
     ///   domains take precedence over allowed domains.
-    /// - `task_timeout_secs` (`u64`, default `120`) — per-task timeout in seconds.
+    /// - `task_timeout_secs` (`u64`, default `120`) - per-task timeout in seconds.
     ///
     /// Compatibility: additive and disabled by default; existing configs remain valid when omitted.
     /// Rollback/migration: remove `[browser_delegate]` or keep `enabled = false` to disable.
@@ -754,7 +754,7 @@ pub struct Config {
 #[allow(clippy::struct_excessive_bools)]
 /// Opaque state the Quickstart flow writes so it can tell, on a
 /// re-run, which sections the user has already walked through at least
-/// once — which lets it offer "Reconfigure? [y/N]" skip gates instead of
+/// once - which lets it offer "Reconfigure? [y/N]" skip gates instead of
 /// forcing users through every field again.
 ///
 /// This is meta-state about the Quickstart flow, not user-facing config.
@@ -780,7 +780,7 @@ pub struct OnboardStateConfig {
 
 /// Used by `#[serde(skip_serializing_if)]` on plain `bool` fields to omit
 /// them from TOML output when they carry their struct-level default (`false`).
-/// Keeps fresh model_provider entries clean — a default-constructed
+/// Keeps fresh model_provider entries clean - a default-constructed
 /// `ModelProviderConfig` for one model_provider family shouldn't write flag fields
 /// that only apply to a different family.
 fn is_false(value: &bool) -> bool {
@@ -788,7 +788,7 @@ fn is_false(value: &bool) -> bool {
 }
 
 /// One trait per family-endpoint enum. Returns the URI template for the chosen
-/// variant — a literal URL for fixed endpoints (`https://api.openai.com/v1`),
+/// variant - a literal URL for fixed endpoints (`https://api.openai.com/v1`),
 /// or a substitution template for computed endpoints (Azure's
 /// `https://{resource}.openai.azure.com/...`). Substitution happens family-side
 /// in the runtime constructor; for non-templated families the return value is
@@ -804,7 +804,7 @@ pub trait ModelEndpoint {
 /// Implemented by every `*ModelProviderConfig`. Multi-region families
 /// override to return `Some(self.endpoint.uri())`; single-endpoint families
 /// inherit the `None` default. Drives `ModelProviders::resolved_endpoint_uri`,
-/// which is itself driven by the `for_each_model_provider_slot!` macro — so
+/// which is itself driven by the `for_each_model_provider_slot!` macro - so
 /// adding a new family without an impl is a compile error.
 pub trait FamilyEndpoint {
     fn endpoint_uri(&self) -> Option<&'static str> {
@@ -869,7 +869,7 @@ pub enum AuthMode {
     /// Standard API key authentication via the `api_key` field.
     #[default]
     ApiKey,
-    /// OAuth flow — credential resolution defers to the family runtime impl
+    /// OAuth flow - credential resolution defers to the family runtime impl
     /// (typically reading a vendor-specific token cache or env var).
     OAuth,
 }
@@ -964,7 +964,7 @@ pub struct ModelProviderConfig {
     #[tab(Advanced)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wire_api: Option<WireApi>,
-    /// When true, the client pulls credentials from ZeroClaw's stored `openai-codex` auth profile instead of the `api_key` field above. Import an existing Codex CLI login with `zeroclaw auth login --model-provider openai-codex --import ~/.codex/auth.json`, or run `zeroclaw auth login --model-provider openai-codex`. Turn on only for the OpenAI Codex model_provider; leave off for standard API-key model_providers.
+    /// When true, the client pulls credentials from Redrob OS's stored `openai-codex` auth profile instead of the `api_key` field above. Import an existing Codex CLI login with `redrob-agentctl auth login --model-provider openai-codex --import ~/.codex/auth.json`, or run `redrob-agentctl auth login --model-provider openai-codex`. Turn on only for the OpenAI Codex model_provider; leave off for standard API-key model_providers.
     #[tab(Connection)]
     #[serde(default, skip_serializing_if = "is_false")]
     #[credential_class = "external_auth_store"]
@@ -1167,7 +1167,7 @@ pub struct ModelProviderConfig {
 
 // ── OpenAI ──
 
-/// OpenAI canonical endpoint. Single variant — OpenAI publishes one base URL.
+/// OpenAI canonical endpoint. Single variant - OpenAI publishes one base URL.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, zeroclaw_macros::ConfigEnum,
 )]
@@ -1203,9 +1203,9 @@ impl ModelEndpoint for OpenAIEndpoint {
 /// legacy chat-completions wire for backward compatibility:
 /// - Existing persisted configs that omit `wire_api` deserialize as `None`, and
 ///   the factory falls back to chat-completions.
-/// - Implicit dispatch with no config entry at all — a bare
+/// - Implicit dispatch with no config entry at all - a bare
 ///   `model_provider = "openai"` reference or a dotted ref to a nonexistent
-///   alias — is built from a chat-anchored fallback config (see
+///   alias - is built from a chat-anchored fallback config (see
 ///   `openai_missing_entry_fallback_config` in `zeroclaw-providers`), not this
 ///   `Default`, and stays on the chat wire so existing bare-ref installs don't
 ///   flip wire + tool-calling mode on upgrade.
@@ -1257,7 +1257,7 @@ impl ModelEndpoint for AzureEndpoint {
 }
 
 /// Azure OpenAI model model_provider config. Carries the Azure-specific connection
-/// fields (`resource`, `deployment`, `api_version`) — the URI template
+/// fields (`resource`, `deployment`, `api_version`) - the URI template
 /// substitutes `{resource}` and `{deployment}` at runtime. Operators can
 /// still override the entire endpoint via `base.uri`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
@@ -1311,7 +1311,7 @@ impl ModelEndpoint for AnthropicEndpoint {
     }
 }
 
-/// Anthropic model model_provider config. No family-specific extras yet — typed
+/// Anthropic model model_provider config. No family-specific extras yet - typed
 /// slot reserved for future Anthropic-only knobs (cache_control, beta
 /// headers) so they land cleanly without another schema rework.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
@@ -1329,7 +1329,7 @@ pub struct AnthropicModelProviderConfig {
     /// targets for it (e.g. `claude-fable-5` → `["claude-opus-4-8"]`; a
     /// non-permitted entry is rejected by the API). Applies to non-streaming
     /// requests only. Distinct from the generic `fallback_models`, which
-    /// ZeroClaw itself retries client-side after an error. Empty (the default)
+    /// Redrob OS itself retries client-side after an error. Empty (the default)
     /// sends no fallback parameter and no beta value.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub server_fallback_models: Vec<String>,
@@ -1367,7 +1367,7 @@ impl ModelEndpoint for MoonshotEndpoint {
 }
 
 /// Moonshot model model_provider config. The `endpoint` field is required (no
-/// implicit default) — operators must pick a region explicitly. Migration
+/// implicit default) - operators must pick a region explicitly. Migration
 /// fills it in from collapsed `moonshot-cn` / `moonshot-intl` outer keys.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -1672,7 +1672,7 @@ pub enum CrusoeEndpoint {
 }
 
 impl CrusoeEndpoint {
-    /// Canonical Crusoe Managed Inference endpoint. Single source of truth —
+    /// Canonical Crusoe Managed Inference endpoint. Single source of truth -
     /// `CompatFamilySpec::DEFAULT_URL` for `CrusoeModelProviderConfig` references
     /// this const so the schema and factory surfaces never drift.
     pub const DEFAULT_URI: &'static str = "https://api.inference.crusoecloud.com/v1";
@@ -2975,8 +2975,8 @@ pub struct GeminiModelProviderConfig {
     /// OAuth-cache integration instead of the `api_key` field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub auth_mode: Option<AuthMode>,
-    /// Google OAuth app `client_id`, used when this alias drives ZeroClaw's
-    /// own browser/device-code login flow (`zeroclaw auth login
+    /// Google OAuth app `client_id`, used when this alias drives Redrob OS's
+    /// own browser/device-code login flow (`redrob-agentctl auth login
     /// --model-provider gemini --profile <alias>`). Operators relying on
     /// the upstream `gemini login` tool don't need this; that tool writes
     /// its own client_id / client_secret into `~/.gemini/oauth_creds.json`.
@@ -3041,7 +3041,7 @@ pub struct GrokCliModelProviderConfig {
     /// Project-scoped Grok config is resolved relative to this path.
     pub working_directory: String,
     /// Extra environment variable names inherited by the `grok`
-    /// subprocess. Values are resolved from the ZeroClaw process environment
+    /// subprocess. Values are resolved from the Redrob OS process environment
     /// at spawn time. The default is empty so unrelated daemon secrets remain
     /// blocked. `XAI_API_KEY` is the sole supported provider-owned name and
     /// enables API-key authentication when explicitly listed and non-empty;
@@ -3052,7 +3052,7 @@ pub struct GrokCliModelProviderConfig {
     /// Extra global Grok long flags inserted before `agent stdio`. Known
     /// options may put their value in the next token; other value-taking
     /// options use `--flag=value`. Positional and short arguments are rejected.
-    /// ZeroClaw defaults to `--sandbox strict`, `--permission-mode dontAsk`,
+    /// Redrob OS defaults to `--sandbox strict`, `--permission-mode dontAsk`,
     /// and an empty built-in tool set. Providing the corresponding flags here
     /// is an explicit per-alias opt-in to relax those defaults. ACP transport,
     /// prompt/model/session, cwd, debug-file, and update-policy flags are
@@ -3060,7 +3060,7 @@ pub struct GrokCliModelProviderConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extra_args: Vec<String>,
     /// Maximum cumulative stdout bytes accepted from `grok agent stdio` for
-    /// one ACP request. When unset, ZeroClaw uses 4 MiB. Values must be
+    /// one ACP request. When unset, Redrob OS uses 4 MiB. Values must be
     /// between 1 MiB and 64 MiB; the provider rejects invalid values when it
     /// is constructed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3569,13 +3569,13 @@ impl FamilyEndpoint for KiloModelProviderConfig {
 // ── ZeroRouter (LLM gateway — OpenAI-compatible; hosted or self-hosted) ──
 
 /// ZeroRouter endpoint. The single variant points at the public hosted
-/// deployment, `https://zerorouter.ai` (currently in beta) — the endpoint a
+/// deployment, `https://zerorouter.ai` (currently in beta) - the endpoint a
 /// user who names this provider without further configuration expects, and
 /// the one that works out of the box: its `/v1/models` listing is public, so
 /// discovery succeeds before any key is configured. ZeroRouter is also
-/// self-hostable (AGPL); operators running their own router — locally
+/// self-hostable (AGPL); operators running their own router - locally
 /// (`ZEROROUTER_BIND=0.0.0.0:8080`, so `http://localhost:8080/v1`) or
-/// anywhere else — set `base.uri` to reach it. A localhost default was
+/// anywhere else - set `base.uri` to reach it. A localhost default was
 /// considered and rejected: it made the zero-config path a connection
 /// refusal, or worse, a silent partial catalog from a stray dev instance.
 /// [`ZEROROUTER_DEFAULT_URL`] is the canonical default consumed by both
@@ -3612,7 +3612,7 @@ pub struct ZerorouterModelProviderConfig {
 // ── Custom (user-supplied URL, no canonical default) ──
 
 /// Custom catch-all for operator-defined endpoints. The endpoint variant has
-/// no canonical URL — operators must always set `base.uri`. The trait return
+/// no canonical URL - operators must always set `base.uri`. The trait return
 /// is a sentinel string; the runtime constructor must verify `base.uri` is
 /// set for `custom` entries and fail with a clear error if not.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -3664,7 +3664,7 @@ impl ModelEndpoint for BedrockEndpoint {
 
 /// AWS Bedrock model model_provider config. Carries the AWS region (the URI
 /// template substitutes `{region}` from this field). Bedrock auth is
-/// SigV4 — credentials come from the standard AWS credential chain
+/// SigV4 - credentials come from the standard AWS credential chain
 /// (env vars, instance metadata, profile), not from `api_key`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -3816,7 +3816,7 @@ pub struct ResolvedRuntime {
     /// `Some(0)` disables proactive token-budget trimming.
     /// NOT the provider `max_tokens` output limit.
     pub max_context_tokens: Option<usize>,
-    /// Model's context window (max input tokens) — from provider config.
+    /// Model's context window (max input tokens) - from provider config.
     pub model_context_window: usize,
     /// Whether `model_context_window` came from the selected provider profile
     /// or from the compatibility fallback for unknown/unconfigured capacity.
@@ -3844,8 +3844,8 @@ pub struct ResolvedRuntime {
 /// Historical proactive context budget used when an operator sets neither an
 /// absolute budget nor the opt-in model-relative ratio.
 ///
-/// Shares its value with [`UNCONFIGURED_CONTEXT_WINDOW_FALLBACK`] — the legacy
-/// default budget was exactly the unconfigured-window stub — but is a distinct
+/// Shares its value with [`UNCONFIGURED_CONTEXT_WINDOW_FALLBACK`] - the legacy
+/// default budget was exactly the unconfigured-window stub - but is a distinct
 /// concept: this is a proactive-trim budget default, not a model-capacity
 /// fallback. Kept as a named alias so the two never drift and each call site
 /// reads as the concept it means.
@@ -4591,7 +4591,7 @@ impl Config {
     /// `context_compression.summary_provider` → `None` (the caller then reuses
     /// the agent's own provider+model, optionally via the deprecated
     /// `summary_model` swap). Unlike the inert agent-inline tunables below, the
-    /// agent-level override IS consulted — it's an explicit per-agent choice,
+    /// agent-level override IS consulted - it's an explicit per-agent choice,
     /// mirroring `classifier_provider`'s "empty = inherit" semantics.
     #[must_use]
     pub fn effective_summary_provider(
@@ -4942,8 +4942,8 @@ impl Config {
     /// explicit runtime-profile override when set, otherwise inherit the global
     /// `[skills] prompt_injection_mode` value.
     ///
-    /// Keyed on the resolved runtime profile — the sanctioned surface for
-    /// per-agent runtime tunables — so agent-inline knobs stay inert.
+    /// Keyed on the resolved runtime profile - the sanctioned surface for
+    /// per-agent runtime tunables - so agent-inline knobs stay inert.
     /// Centralizing the fallback here keeps the system-prompt builder and the
     /// `read_skill` tool-registration gate in lockstep on one effective mode,
     /// so a compact prompt is never paired with a missing `read_skill` tool
@@ -4962,7 +4962,7 @@ impl Config {
     ///
     /// This is the lookup the orchestrator uses to build per-agent
     /// model_provider runtime options via explicit `<type>.<alias>`
-    /// resolution — there is no concept of a "first" or "default"
+    /// resolution - there is no concept of a "first" or "default"
     /// provider. The matching split logic lives in
     /// `crates/zeroclaw-runtime/src/tools/delegate.rs::resolve_brain` for
     /// the delegation path; this helper exposes the same contract for the
@@ -4996,7 +4996,7 @@ impl Config {
 
     /// Reverse-lookup the agent alias that owns a configured channel
     /// (`<type>.<alias>`). Returns the first agent listing the channel in
-    /// its `channels` field. `None` when no agent owns the channel —
+    /// its `channels` field. `None` when no agent owns the channel -
     /// orphaned channels are a config error the orchestrator surfaces at
     /// startup.
     #[must_use]
@@ -5216,7 +5216,7 @@ impl Config {
             .collect()
     }
 
-    /// `<install>/shared/` — directory shared across every agent on this
+    /// `<install>/shared/` - directory shared across every agent on this
     /// host. Holds skills, skill bundles, knowledge bundles, and any
     /// other content not scoped to a single agent's workspace. Distinct
     /// from `agent_workspace_dir(alias)` (per-agent state) and
@@ -5373,7 +5373,7 @@ pub const TEMPERATURE_RANGE: std::ops::RangeInclusive<f64> = 0.0..=2.0;
 /// Context window assumed when no provider profile declares one.
 ///
 /// Deliberately conservative: it has to be safe for any model, which means it
-/// is almost always *wrong* for the model actually in use — a 1M-context model
+/// is almost always *wrong* for the model actually in use - a 1M-context model
 /// on a profile that omits `context_window` runs against this number. It exists
 /// so budget arithmetic has an operand, not because it describes any model.
 ///
@@ -5432,9 +5432,9 @@ pub const DEFAULT_REPLY_QUEUE_DEPTH: u16 = 16;
 /// Bounds growth when a bot legitimately serves many thousands of distinct
 /// peers. Eviction only reclaims idle rows (no queued sends, no running
 /// worker, no in-flight dispatch), so under a pathological all-active burst
-/// the row count can temporarily exceed this target until rows become idle —
+/// the row count can temporarily exceed this target until rows become idle -
 /// it is not an unconditional hard bound. Each recipient's queue depth stays
-/// bounded regardless. Not exposed in config — promote to a schema field if
+/// bounded regardless. Not exposed in config - promote to a schema field if
 /// an operator reports hitting it.
 pub const PACING_RECIPIENT_CAP: usize = 1024;
 
@@ -5486,7 +5486,7 @@ where
 /// `None`. Used by `JiraConfig::email` so a config that round-tripped
 /// `email = ""` to disk (the legacy `email: String` had no
 /// `skip_serializing_if`) doesn't deserialize as `Some("")` and silently
-/// break Basic auth — the email-required validation was removed when
+/// break Basic auth - the email-required validation was removed when
 /// Server/DC Bearer-token support landed, so this is the last line of
 /// defense.
 fn deserialize_optional_email_skip_empty<'de, D>(
@@ -5530,13 +5530,13 @@ impl std::fmt::Display for HardwareTransport {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[prefix = "hardware"]
 pub struct HardwareConfig {
-    /// Opt in to direct physical-hardware control — GPIO pins, USB-tethered microcontrollers (Arduino, ESP32, Nucleo), or SWD/JTAG debug probes. Leave off for software-only use; turning it on without the right transport configured does nothing.
+    /// Opt in to direct physical-hardware control - GPIO pins, USB-tethered microcontrollers (Arduino, ESP32, Nucleo), or SWD/JTAG debug probes. Leave off for software-only use; turning it on without the right transport configured does nothing.
     #[serde(default)]
     pub enabled: bool,
-    /// How ZeroClaw reaches the hardware: `native` = Linux SBC with direct GPIO access (Raspberry Pi, Orange Pi); `serial` = USB-tethered microcontroller speaking over a TTY; `probe` = SWD/JTAG debug probe driving a target chip via probe-rs; `none` = disabled.
+    /// How Redrob OS reaches the hardware: `native` = Linux SBC with direct GPIO access (Raspberry Pi, Orange Pi); `serial` = USB-tethered microcontroller speaking over a TTY; `probe` = SWD/JTAG debug probe driving a target chip via probe-rs; `none` = disabled.
     #[serde(default)]
     pub transport: HardwareTransport,
-    /// TTY path for the `serial` transport — e.g. `/dev/ttyACM0` on Linux, `/dev/tty.usbmodem1` on macOS, `COM3` on Windows. Ignored for other transports.
+    /// TTY path for the `serial` transport - e.g. `/dev/ttyACM0` on Linux, `/dev/tty.usbmodem1` on macOS, `COM3` on Windows. Ignored for other transports.
     #[serde(default)]
     pub serial_port: Option<String>,
     /// Baud rate negotiated on the serial link. 115200 matches the common Arduino / ESP32 bootloader default; bump to 230400+ when your firmware explicitly supports faster rates and you need the throughput.
@@ -5549,7 +5549,7 @@ pub struct HardwareConfig {
     /// a local RAG store, so the agent can look up pin assignments and
     /// electrical specs inline when you ask hardware questions. PDFs are not
     /// parsed as text; download or convert them to `.md`/`.txt` first. Off by
-    /// default — turn on once the workspace has relevant text datasheets.
+    /// default - turn on once the workspace has relevant text datasheets.
     #[serde(default)]
     pub workspace_datasheets: bool,
 }
@@ -5914,14 +5914,14 @@ impl Default for McpConfig {
 /// Verifiable Intent (VI) credential issuance and constraint checking
 /// (`[verifiable_intent]` section).
 ///
-/// ZeroClaw implements issuance, crypto, types and constraint checking, but not
+/// Redrob OS implements issuance, crypto, types and constraint checking, but not
 /// a credential chain verifier. Until one exists the `vi_verify` tool is
 /// withheld from the model-visible registry, so neither key below enables
 /// verification of a credential. The library paths are unaffected.
 ///
 /// Enabling the section reports that gap two ways. The runtime traces it at
 /// each config application, which needs log persistence to be on to reach a
-/// sink. `zeroclaw doctor` and the config API also report it as the
+/// sink. `redrob-agentctl doctor` and the config API also report it as the
 /// `verifiable_intent_tool_withheld` validation warning, which stays available
 /// when persistence is off.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
@@ -6102,7 +6102,7 @@ impl Default for TtsConfig {
 
 /// Per-instance TTS model_provider configuration (`[tts_providers.<type>.<alias>]`).
 ///
-/// Mirrors `ModelProviderConfig` in shape — one struct holds the union of
+/// Mirrors `ModelProviderConfig` in shape - one struct holds the union of
 /// fields across backends. Only the fields relevant to the selected backend
 /// (determined by the outer `<type>` map key) are read at runtime; others
 /// are quietly ignored.
@@ -6139,7 +6139,7 @@ pub struct TtsProviderConfig {
     pub response_format: Option<String>,
     /// Endpoint URI for HTTP-based backends. Overrides the family default
     /// when pointing at a compatible third-party API (Groq, Azure, self-hosted
-    /// proxies). Set to the **full** URL — there is no separate path-suffix
+    /// proxies). Set to the **full** URL - there is no separate path-suffix
     /// field. Renamed from `api_url` for parity with `ModelProviderConfig.uri`.
     #[serde(alias = "api_url")]
     pub uri: Option<String>,
@@ -6243,7 +6243,7 @@ pub struct GoogleTtsProviderConfig {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum EdgeTtsEndpoint {
-    /// Subprocess — no remote endpoint. Sentinel for trait conformity.
+    /// Subprocess - no remote endpoint. Sentinel for trait conformity.
     #[default]
     LocalSubprocess,
 }
@@ -6462,7 +6462,7 @@ pub struct GoogleTranscriptionProviderConfig {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum LocalWhisperTranscriptionEndpoint {
-    /// Self-hosted endpoint — no remote URL. Sentinel for trait conformity.
+    /// Self-hosted endpoint - no remote URL. Sentinel for trait conformity.
     /// The actual URL lives on `LocalWhisperTranscriptionProviderConfig.uri`.
     #[default]
     SelfHosted,
@@ -6554,7 +6554,7 @@ pub enum ToolFilterGroupMode {
 ///
 /// Classification is by origin, not name shape: only tools that actually came
 /// from the MCP registry are subject to these groups. Built-in tools AND skill
-/// tools — which share the `<x>__<y>` naming convention (`{skill}__{tool}`) —
+/// tools - which share the `<x>__<y>` naming convention (`{skill}__{tool}`) -
 /// always pass through and are never affected by `tool_filter_groups`.
 ///
 /// Under `[mcp] deferred_loading = true`, `mode = "always"` entries are
@@ -6666,7 +6666,7 @@ pub struct LocalWhisperConfig {
     #[cfg_attr(feature = "schema-export", schemars(extend("x-secret" = true)))]
     pub bearer_token: Option<String>,
     /// Maximum audio file size in bytes accepted by this endpoint.
-    /// Defaults to 25 MB — matching the cloud API cap for a safe out-of-the-box
+    /// Defaults to 25 MB - matching the cloud API cap for a safe out-of-the-box
     /// experience. Self-hosted endpoints can accept much larger files; raise this
     /// as needed, but note that each transcription call clones the audio buffer
     /// into a multipart payload, so peak memory per request is ~2× this value.
@@ -6769,7 +6769,7 @@ fn default_max_system_prompt_chars() -> usize {
 /// Pacing controls for slow/local LLM workloads (`[pacing]` section).
 ///
 /// All fields are optional and default to values that preserve existing
-/// behavior. When set, they extend — not replace — the existing timeout
+/// behavior. When set, they extend - not replace - the existing timeout
 /// and loop-detection subsystems.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -6819,7 +6819,7 @@ pub struct PacingConfig {
 
     /// Number of same-tool calls with differing arguments but byte-identical
     /// results before the first no-progress escalation (Warning). This pattern
-    /// caps at Block — it never terminates the turn. Defaults to 5.
+    /// caps at Block - it never terminates the turn. Defaults to 5.
     #[serde(default = "default_loop_detection_no_progress_min_calls")]
     pub loop_detection_no_progress_min_calls: usize,
 }
@@ -6871,7 +6871,7 @@ pub enum SkillsPromptInjectionMode {
     Compact,
 }
 
-/// An external, user-configured skill registry ZeroClaw can install from.
+/// An external, user-configured skill registry Redrob OS can install from.
 ///
 /// Reuses the same git-clone mechanism as the default `zeroclaw-skills`
 /// registry. Install a skill from it with `registry:<name>/<skill>`.
@@ -7231,7 +7231,7 @@ pub struct MultimodalConfig {
     /// Tool-result images are already managed by the stale-tool-result
     /// mechanism and are not affected by this setting.
     ///
-    /// `0` (the default) disables age-based trimming entirely — images are
+    /// `0` (the default) disables age-based trimming entirely - images are
     /// only evicted by the `max_images` count cap.
     #[serde(default)]
     pub max_image_turns: usize,
@@ -7310,7 +7310,7 @@ pub struct MediaPipelineConfig {
     #[serde(default = "default_true")]
     pub describe_images: bool,
 
-    /// Summarize video attachments (placeholder — requires external API).
+    /// Summarize video attachments (placeholder - requires external API).
     #[serde(default = "default_true")]
     pub summarize_video: bool,
 }
@@ -7487,20 +7487,20 @@ fn default_track_per_agent() -> bool {
     true
 }
 
-/// `[cost.rates]` — top-level rate-sheet namespace. Mirrors the
+/// `[cost.rates]` - top-level rate-sheet namespace. Mirrors the
 /// `[providers.*]` shape so each subsection here points at the same
 /// kind of resource its `[providers.*]` counterpart configures.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[prefix = "cost.rates"]
 pub struct CostRatesConfig {
-    /// `[cost.rates.providers.*]` — rates for everything under
+    /// `[cost.rates.providers.*]` - rates for everything under
     /// `[providers.*]` (models, TTS, transcription, …).
     #[serde(default)]
     #[nested]
     pub providers: ProviderCostRates,
 
-    /// `[cost.rates.tools.<name>]` — per-call rates for tools that
+    /// `[cost.rates.tools.<name>]` - per-call rates for tools that
     /// hit paid APIs. Keyed by the tool's registered name.
     #[serde(default)]
     #[nested]
@@ -7510,7 +7510,7 @@ pub struct CostRatesConfig {
 
 impl CostRatesConfig {
     /// Lookup model token rates by `(provider_type, model)`. Dispatch
-    /// lives on the typed wrapper — see [`crate::providers::ModelCostRatesByProvider`].
+    /// lives on the typed wrapper - see [`crate::providers::ModelCostRatesByProvider`].
     #[must_use]
     pub fn model_rates(&self, provider_type: &str, model: &str) -> Option<&ModelCostRates> {
         self.providers.models.get(provider_type, model)
@@ -7601,7 +7601,7 @@ impl CostRatesConfig {
     }
 }
 
-/// `[cost.rates.providers.*]` — provider-shaped rate sheets. Each field
+/// `[cost.rates.providers.*]` - provider-shaped rate sheets. Each field
 /// here mirrors a corresponding field on `[providers.*]` with the
 /// trailing alias segment replaced by the resource the rate prices.
 /// The inner typed wrappers carry the per-provider-type slot layout
@@ -7657,11 +7657,11 @@ pub struct ModelCostRates {
     /// Output tokens (USD per 1M).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output_per_mtok: Option<f64>,
-    /// Cached input tokens (USD per 1M). Optional — leave unset on
+    /// Cached input tokens (USD per 1M). Optional - leave unset on
     /// providers that don't charge separately for prompt cache hits.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cached_input_per_mtok: Option<f64>,
-    /// Cache-write tokens (USD per 1M). Optional — the premium providers
+    /// Cache-write tokens (USD per 1M). Optional - the premium providers
     /// charge to write prompt data into their cache (Anthropic bills 1.25x
     /// the input rate for the 5-minute TTL and 2x for the 1-hour TTL).
     /// Leave unset to keep pricing cache writes at the plain input rate.
@@ -7804,7 +7804,7 @@ pub struct GatewayConfig {
     /// otherwise localhost-only. Currently this gates `POST /admin/reload`.
     /// When false (default), those endpoints reject any non-loopback peer.
     /// When true, a non-loopback request is accepted only if it also passes
-    /// pairing authentication — which requires `require_pairing = true`; with
+    /// pairing authentication - which requires `require_pairing = true`; with
     /// pairing off a remote caller cannot be authenticated and is rejected, so
     /// this flag never exposes an anonymous remote reload. `/admin/shutdown`
     /// and the pairing-code endpoints stay localhost-only regardless.
@@ -7920,7 +7920,7 @@ pub struct GatewayConfig {
     #[serde(default = "default_true")]
     pub check_updates: bool,
 
-    /// Allow triggering a self-upgrade (binary swap via `zeroclaw update`) from
+    /// Allow triggering a self-upgrade (binary swap via `redrob-agentctl update`) from
     /// the dashboard. This is a remote-code-execution-adjacent surface: any
     /// authenticated dashboard user could replace the running binary. Keep off
     /// unless you trust every paired client. (default: false)
@@ -8021,7 +8021,7 @@ impl Default for GatewayConfig {
 /// Code length and character family are **not** configured here. The
 /// dashboard pairing flow issues its codes through the same
 /// [`PairingGuard`](crate::pairing::PairingGuard) as startup pairing and
-/// `zeroclaw gateway get-paircode`, so it consumes
+/// `redrob-agentctl gateway get-paircode`, so it consumes
 /// [`gateway.pairing_code`](crate::pairing::PairingCodePolicy) rather than
 /// carrying a second, dashboard-only setting.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
@@ -8664,10 +8664,10 @@ pub struct BrowserConfig {
     /// Exact and subdomain matches are supported; `["*"]` permits **all** private/local
     /// hosts (RFC 1918, loopback, link-local, `.local`). Default: empty (deny).
     /// Listed hosts also bypass `allowed_domains`. Both the `browser` tool and
-    /// `browser_open` accept `http://` for listed hosts — internal services
+    /// `browser_open` accept `http://` for listed hosts - internal services
     /// frequently lack a public TLS cert.
     /// Warning: `["*"]` also reaches link-local addresses, including the cloud metadata
-    /// endpoint (`169.254.169.254`) — list specific hosts unless you accept that exposure.
+    /// endpoint (`169.254.169.254`) - list specific hosts unless you accept that exposure.
     #[serde(default)]
     pub allowed_private_hosts: Vec<String>,
 }
@@ -8687,7 +8687,7 @@ fn default_browser_webdriver_url() -> String {
 impl BrowserConfig {
     /// Status source for the `#[integration(status_method = ...)]`
     /// descriptor: the "Browser" integration is Active when the runtime
-    /// registers *either* of the tools this section gates — `browser_open`
+    /// registers *either* of the tools this section gates - `browser_open`
     /// (`enabled`) or the full `browser` automation tool
     /// (`automation_enabled`). Reading only one flag would misreport half
     /// the combinations: a default config would claim Chrome/Chromium
@@ -8821,7 +8821,7 @@ pub struct WebFetchConfig {
     /// (IP literal, localhost, .local) listed here also bypasses `allowed_domains`.
     /// The `*` wildcard permits any literal private/local host and lets a name
     /// already in `allowed_domains` resolve to a private IP, but it does NOT widen
-    /// `allowed_domains` — a non-private host (matched explicitly or via `*`) still
+    /// `allowed_domains` - a non-private host (matched explicitly or via `*`) still
     /// needs `allowed_domains`, so `*` cannot reach an arbitrary public host.
     /// The standard `web_fetch` request requires direct transport for DNS pinning:
     /// environment proxy discovery is disabled, and an enabled `environment` scope
@@ -8855,7 +8855,7 @@ pub enum FirecrawlMode {
     Scrape,
     /// Reserved for future multi-page crawl support. Accepted in config
     /// deserialization to avoid breaking existing files, but not yet
-    /// implemented — `fetch_via_firecrawl` always uses the `/scrape` endpoint.
+    /// implemented - `fetch_via_firecrawl` always uses the `/scrape` endpoint.
     Crawl,
 }
 
@@ -9023,7 +9023,7 @@ impl Default for TextBrowserConfig {
 /// Shell tool configuration (`[shell_tool]` section).
 ///
 /// Controls the behaviour of the `shell` execution tool. The main
-/// tunable is `timeout_secs` — the maximum wall-clock time a single
+/// tunable is `timeout_secs` - the maximum wall-clock time a single
 /// shell command may run before it is killed.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -9554,7 +9554,7 @@ impl KnowledgeConfig {
     ///
     /// A `~` anywhere else in the path is left intact, so Windows 8.3 short
     /// names such as `ADMINI~1` survive resolution. This is the single source
-    /// of truth for the knowledge database location. Pure — performs no
+    /// of truth for the knowledge database location. Pure - performs no
     /// filesystem I/O.
     #[must_use]
     pub fn resolved_db_path(&self) -> PathBuf {
@@ -9625,12 +9625,12 @@ pub struct PluginEntryConfig {
     #[cfg_attr(feature = "schema-export", schemars(extend("x-secret" = true)))]
     pub config: HashMap<String, String>,
     /// Destinations this plugin instance may reach. Default: empty,
-    /// which means **no network reach at all** — a transport permission such as
+    /// which means **no network reach at all** - a transport permission such as
     /// `http_client` grants the surface, this field grants the destinations.
     ///
     /// Entries are exact hosts (`api.example.com`, `10.0.0.5`) or explicit
     /// suffix patterns (`*.example.com`, which matches subdomains but **not**
-    /// the apex — list the apex separately if it is needed). A bare domain
+    /// the apex - list the apex separately if it is needed). A bare domain
     /// never implies its subdomains, and there is no `*` meaning "anywhere".
     /// Ports are not part of an entry: granting a host grants every port on it.
     ///
@@ -9643,8 +9643,8 @@ pub struct PluginEntryConfig {
     /// loopback, or link-local address (a self-hosted Gitea, a LAN Nextcloud).
     /// Mirrors the `allowed_private_hosts` semantics the host tools already use.
     ///
-    /// This relaxes the *address class* only. It never widens `egress_hosts` —
-    /// a host listed here but not there is still denied — and cloud metadata
+    /// This relaxes the *address class* only. It never widens `egress_hosts` -
+    /// a host listed here but not there is still denied - and cloud metadata
     /// addresses stay refused regardless of what is listed, including through a
     /// configured `security.nat64_prefixes` translation. Unlike the tool-layer
     /// field, `*` is not accepted here.
@@ -9786,8 +9786,8 @@ impl PluginsConfig {
     ///
     /// This is the single source of truth for the plugin directory: the CLI,
     /// runtime tool/skill discovery, and the gateway all resolve through it so
-    /// that `zeroclaw plugin install` and the agent agree on one location.
-    /// Pure — performs no filesystem I/O.
+    /// that `redrob-agentctl plugin install` and the agent agree on one location.
+    /// Pure - performs no filesystem I/O.
     #[must_use]
     pub fn resolved_plugins_dir(&self) -> PathBuf {
         expand_tilde_path(&self.plugins_dir)
@@ -10422,7 +10422,7 @@ pub struct FileDownloadConfig {
     #[serde(default)]
     pub allowed_private_hosts: Vec<String>,
 
-    /// Static HTTP headers attached to every download request — typically an
+    /// Static HTTP headers attached to every download request - typically an
     /// `Authorization: Bearer …` token for the upstream endpoint. Same shape as
     /// `[mcp.servers.*.headers]`.
     #[serde(default)]
@@ -10456,7 +10456,7 @@ impl Default for FileDownloadConfig {
 /// Claude Code CLI tool configuration (`[claude_code]` section).
 ///
 /// Delegates coding tasks to the `claude -p` CLI. Authentication uses the
-/// binary's own OAuth session (Max subscription) by default — no API key
+/// binary's own OAuth session (Max subscription) by default - no API key
 /// needed unless `env_passthrough` includes `ANTHROPIC_API_KEY`.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -10513,7 +10513,7 @@ impl Default for ClaudeCodeConfig {
 /// Claude Code task runner configuration (`[claude_code_runner]` section).
 ///
 /// Spawns Claude Code in a tmux session with HTTP hooks that POST tool
-/// execution events back to ZeroClaw's gateway, updating a Slack message
+/// execution events back to Redrob OS's gateway, updating a Slack message
 /// in-place with progress plus an SSH handoff link.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -10557,7 +10557,7 @@ impl Default for ClaudeCodeRunnerConfig {
 /// Codex CLI tool configuration (`[codex_cli]` section).
 ///
 /// Delegates coding tasks to the `codex exec` CLI. Authentication uses the
-/// binary's own session by default — no API key needed unless
+/// binary's own session by default - no API key needed unless
 /// `env_passthrough` includes `OPENAI_API_KEY`.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -10595,7 +10595,7 @@ pub struct CodexCliConfig {
 }
 
 impl CodexCliConfig {
-    /// Returns the configured arguments exactly as ZeroClaw forwards them to
+    /// Returns the configured arguments exactly as Redrob OS forwards them to
     /// `codex exec`, paired with their original config indices.
     ///
     /// Trimming and empty-entry removal live here so subprocess construction
@@ -10887,7 +10887,7 @@ impl Default for CodexCliConfig {
 /// Gemini CLI tool configuration (`[gemini_cli]` section).
 ///
 /// Delegates coding tasks to the `gemini -p` CLI. Authentication uses the
-/// binary's own session by default — no API key needed unless
+/// binary's own session by default - no API key needed unless
 /// `env_passthrough` includes `GOOGLE_API_KEY`.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -10932,7 +10932,7 @@ impl Default for GeminiCliConfig {
 /// OpenCode CLI tool configuration (`[opencode_cli]` section).
 ///
 /// Delegates coding tasks to the `opencode run` CLI. Authentication uses the
-/// binary's own session by default — no API key needed unless
+/// binary's own session by default - no API key needed unless
 /// `env_passthrough` includes provider-specific keys.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -10974,7 +10974,7 @@ impl Default for OpenCodeCliConfig {
 
 // ── Proxy ───────────────────────────────────────────────────────
 
-/// Proxy application scope — determines which outbound traffic uses the proxy.
+/// Proxy application scope - determines which outbound traffic uses the proxy.
 #[derive(
     Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq, zeroclaw_macros::ConfigEnum,
 )]
@@ -10983,7 +10983,7 @@ impl Default for OpenCodeCliConfig {
 pub enum ProxyScope {
     /// Use system environment proxy variables only.
     Environment,
-    /// Apply proxy to all ZeroClaw-managed HTTP traffic (default).
+    /// Apply proxy to all Redrob OS-managed HTTP traffic (default).
     #[default]
     Zeroclaw,
     /// Apply proxy only to explicitly listed service selectors.
@@ -12627,7 +12627,7 @@ pub struct MemoryConfig {
     /// disable persistence entirely.
     #[serde(default = "default_memory_backend")]
     pub backend: String,
-    /// Auto-save what *you* tell ZeroClaw into memory as conversation history — the agent's own replies are not saved. Turn off if you want memory to only hold things you explicitly record via the memory tool.
+    /// Auto-save what *you* tell Redrob OS into memory as conversation history - the agent's own replies are not saved. Turn off if you want memory to only hold things you explicitly record via the memory tool.
     #[serde(default = "default_auto_save")]
     pub auto_save: bool,
     /// Run the periodic hygiene pass that archives stale daily/session files and enforces retention windows. Leave on unless you want to manage cleanup yourself.
@@ -12657,16 +12657,16 @@ pub struct MemoryConfig {
     /// Source of embedding vectors for semantic search. `none` = keyword-only retrieval (no API calls, no vector cost); `openai` = OpenAI's embedding API; `custom:URL` = any OpenAI-compatible embedding endpoint (LiteLLM, local gateway, etc.).
     #[serde(default = "default_embedding_provider")]
     pub embedding_provider: String,
-    /// Embedding model identifier — must match a model your chosen embedding model_provider serves (e.g. `text-embedding-3-small` for OpenAI). Changing this invalidates existing embeddings: the change is detected at startup and stale vectors are cleared automatically; run `zeroclaw memory reindex` to re-embed (or set `auto_reindex_on_identity_change`).
+    /// Embedding model identifier - must match a model your chosen embedding model_provider serves (e.g. `text-embedding-3-small` for OpenAI). Changing this invalidates existing embeddings: the change is detected at startup and stale vectors are cleared automatically; run `redrob-agentctl memory reindex` to re-embed (or set `auto_reindex_on_identity_change`).
     #[serde(default = "default_embedding_model")]
     pub embedding_model: String,
-    /// Vector width produced by the embedding model — must match the model's native dimension or vectors won't store correctly. Look up the number on the model_provider's model page.
+    /// Vector width produced by the embedding model - must match the model's native dimension or vectors won't store correctly. Look up the number on the model_provider's model page.
     #[serde(default = "default_embedding_dims")]
     pub embedding_dimensions: usize,
-    /// Automatically re-embed all memories in the background when a change of embedding provider/model/dimensions is detected at startup (after the stale vectors have been cleared). Costs one embedding API call per memory, so it's off by default — leave it off for large stores and run `zeroclaw memory reindex` explicitly instead.
+    /// Automatically re-embed all memories in the background when a change of embedding provider/model/dimensions is detected at startup (after the stale vectors have been cleared). Costs one embedding API call per memory, so it's off by default - leave it off for large stores and run `redrob-agentctl memory reindex` explicitly instead.
     #[serde(default)]
     pub auto_reindex_on_identity_change: bool,
-    /// Optional API key for the embedding endpoint. When set, embedding calls use this key instead of inheriting one from the seed model provider — decoupling embeddings from the chat model. Use it when the chat model runs on a provider that carries no usable embedding credential (e.g. an OAuth-only provider) while embeddings keep hitting an `openai`/`custom:` endpoint with their own key. Leave unset to inherit the seed provider's key (backward-compatible default).
+    /// Optional API key for the embedding endpoint. When set, embedding calls use this key instead of inheriting one from the seed model provider - decoupling embeddings from the chat model. Use it when the chat model runs on a provider that carries no usable embedding credential (e.g. an OAuth-only provider) while embeddings keep hitting an `openai`/`custom:` endpoint with their own key. Leave unset to inherit the seed provider's key (backward-compatible default).
     #[secret]
     #[credential_class = "encrypted_secret"]
     #[cfg_attr(feature = "schema-export", schemars(extend("x-secret" = true)))]
@@ -13037,7 +13037,7 @@ pub fn validate_memory_semantics(
 ///
 /// `self_chat_mode` is read only by the Web transport inside its
 /// `mode == Personal` block, so under `mode = "business"` it validates cleanly
-/// and has no effect. `mode` selects ZeroClaw's policy posture, not a WhatsApp
+/// and has no effect. `mode` selects Redrob OS's policy posture, not a WhatsApp
 /// account type: both modes drive the same linked-device session, and the
 /// self-chat affordance is scoped to the personal branch by design.
 ///
@@ -13322,7 +13322,7 @@ pub enum LogPersistence {
     #[default]
     Rolling,
     Full,
-    /// Persist all events, but with ZeroClaw-managed archive rotation: the
+    /// Persist all events, but with Redrob OS-managed archive rotation: the
     /// active file is rotated to a timestamped archive on a size and/or daily
     /// boundary, and old archives are pruned by count and/or age. Unlike
     /// `rolling` (entry-count trim of the active file), rotated events are
@@ -13499,7 +13499,7 @@ pub struct ObservabilityConfig {
 
     /// Maximum number of log entries (non-empty JSONL lines) per segment file
     /// when `log_persistence = "rotating"`. When the active file's line count
-    /// reaches this cap, it is rotated to an archive (an O(1) rename — no
+    /// reaches this cap, it is rotated to an archive (an O(1) rename - no
     /// content is rewritten), the same mechanism as
     /// `log_persistence_max_bytes`, so each archive produced by this trigger
     /// holds exactly this many entries in steady state; an existing active
@@ -14131,7 +14131,7 @@ impl Config {
     /// resolver cannot assume its input was validated. Running exactly these
     /// checks again at compile/replace time guarantees that duplicate uids or
     /// effective principal ids, invalid issuers, and dangling profile
-    /// references can never be installed as a serving policy — without making
+    /// references can never be installed as a serving policy - without making
     /// auth activation contingent on every unrelated config field being valid.
     /// Keys are sorted so the first error reported is deterministic.
     pub fn validate_auth(&self) -> Result<()> {
@@ -14573,7 +14573,7 @@ pub struct RiskProfileConfig {
     /// authorization constraint (unrestricted). A non-empty list is an
     /// explicit closed set for built-ins and MCP; skill tools remain
     /// registered unless listed in `excluded_tools`. For an explicit
-    /// deny-all gate, set [`Self::deny_all_tools`] — an empty list does
+    /// deny-all gate, set [`Self::deny_all_tools`] - an empty list does
     /// NOT mean deny-all.
     ///
     /// MCP exception: when the list is non-empty, runtime-discovered MCP
@@ -14592,7 +14592,7 @@ pub struct RiskProfileConfig {
     ///
     pub allowed_tools: Vec<String>,
     /// Explicit deny-all for this profile: no tool may be invoked under it
-    /// (built-ins, MCP tools, and skill-defined tools alike — there is no
+    /// (built-ins, MCP tools, and skill-defined tools alike - there is no
     /// `__` auto-admit under deny-all). `allowed_tools = []` remains
     /// legacy-unrestricted; setting both `deny_all_tools = true` and a
     /// non-empty `allowed_tools` is a configuration error rejected by
@@ -14668,7 +14668,7 @@ pub struct RuntimeProfileConfig {
     /// Maximum aggregate loop iterations for one execution tree. Omitted disables it.
     pub max_execution_tree_iterations: Option<usize>,
     // ── Budget caps (enforced with subagent parent-subset discipline) ──
-    /// Maximum actions allowed per hour. `0` is a hard zero budget — the
+    /// Maximum actions allowed per hour. `0` is a hard zero budget - the
     /// per-sender rate tracker treats a max of 0 as always exhausted
     /// (`PerSenderTracker::is_exhausted`), blocking every action. For an
     /// effectively-unlimited budget use a high value (e.g. `u32::MAX`), not 0.
@@ -14905,7 +14905,7 @@ pub struct RuntimeConfig {
     /// The value is validated when the native runtime is constructed, so a bad
     /// value is reported up front rather than failing on the first shell
     /// command. Rejected: empty/whitespace; a relative path with separators
-    /// (e.g. `"./sh"`, `"bin/sh"` — use a bare `PATH` name or an absolute path
+    /// (e.g. `"./sh"`, `"bin/sh"` - use a bare `PATH` name or an absolute path
     /// instead); a bare name not found on `PATH`; and a path that does not
     /// exist or is not executable.
     ///
@@ -15200,7 +15200,7 @@ pub struct ModelRouteConfig {
 
 // ── Model cache (shared between CLI refresh and channel reader) ──
 
-/// Canonical on-disk model cache schema. Written by `zeroclaw models refresh`
+/// Canonical on-disk model cache schema. Written by `redrob-agentctl models refresh`
 /// and read by the channel `/model` command. Both sides MUST use this type
 /// to prevent schema drift (single-source-of-truth rule).
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
@@ -15261,7 +15261,7 @@ pub struct EmbeddingRouteConfig {
 
 // ── Query Classification ─────────────────────────────────────────
 
-/// Automatic query classification — classifies user messages by keyword/pattern
+/// Automatic query classification - classifies user messages by keyword/pattern
 /// and routes to the appropriate model hint. Disabled by default.
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -15307,7 +15307,7 @@ pub struct ClassificationRule {
 #[allow(clippy::struct_excessive_bools)]
 pub struct HeartbeatConfig {
     /// Enable periodic heartbeat pings. Default: `false`. When enabled,
-    /// `agent` must name a configured agent — there is no default agent
+    /// `agent` must name a configured agent - there is no default agent
     /// for heartbeat to fall through to.
     #[serde(default)]
     pub enabled: bool,
@@ -15363,7 +15363,7 @@ pub struct HeartbeatConfig {
     ///
     /// When `true`, the session file for the configured `target`/`to` is passed
     /// to the agent as `session_state_file`, giving it access to the recent
-    /// conversation history — just as if the user had sent a message.
+    /// conversation history - just as if the user had sent a message.
     #[serde(default)]
     pub load_session_context: bool,
     /// Maximum wall-clock seconds allowed for a single agent invocation
@@ -15475,9 +15475,9 @@ pub struct CronJobDecl {
     ///   `status=... / stdout: / stderr:` envelope.
     /// - `"raw"`: returns trimmed stdout when the process exits zero. A
     ///   non-zero process exit still gets the wrapped status/stdout/stderr
-    ///   envelope for diagnosis. Failures that never reach a process exit —
+    ///   envelope for diagnosis. Failures that never reach a process exit -
     ///   a security-policy denial, a shell setup/spawn failure, or a
-    ///   timeout — return a plain error string in either format.
+    ///   timeout - return a plain error string in either format.
     #[serde(default)]
     pub shell_output_format: CronShellOutputFormat,
 }
@@ -15780,7 +15780,7 @@ impl Default for OpenVpnTunnelConfig {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[prefix = "tunnel.pinggy"]
 pub struct PinggyTunnelConfig {
-    /// Pinggy access token (optional — free tier works without one).
+    /// Pinggy access token (optional - free tier works without one).
     #[serde(default)]
     #[secret]
     #[credential_class = "encrypted_secret"]
@@ -16035,7 +16035,7 @@ impl ChannelsConfig {
     /// Returns metadata and configuration status for every known channel type.
     ///
     /// Always returns the full set of channel types regardless of compile-time
-    /// feature flags — the `configured` flag reflects whether the operator has
+    /// feature flags - the `configured` flag reflects whether the operator has
     /// populated that channel's config section. For a list restricted to only
     /// the channels compiled into this binary use
     /// `zeroclaw_channels::listing::compiled_channels` instead.
@@ -16299,7 +16299,7 @@ impl ChannelsConfig {
 
     /// Returns `true` when at least one channel entry across all channel types
     /// has `enabled = true`. Used by the daemon to decide whether the channels
-    /// supervisor should be started — a config with only `enabled = false`
+    /// supervisor should be started - a config with only `enabled = false`
     /// entries (e.g. partially-configured or disabled bots) must not start the
     /// supervisor, otherwise it exits immediately and restarts in a tight loop.
     pub fn has_any_enabled(&self) -> bool {
@@ -16489,7 +16489,7 @@ impl Default for ChannelsConfig {
 ///
 /// This declaration is the complete operator-facing surface for a logical
 /// channel instance: it names the installed package and whether the binding may
-/// be admitted. It deliberately carries no plugin values — those stay in the
+/// be admitted. It deliberately carries no plugin values - those stay in the
 /// instance-keyed `plugins.entries` store so one plugin's secrets are never
 /// reachable from another instance's declaration.
 #[derive(Debug, Clone, Serialize, Deserialize, Configurable)]
@@ -16532,7 +16532,7 @@ pub enum StreamMode {
     /// On Telegram, narration streamed for a text-default peer is delivered as
     /// separate, permanent text messages. A per-turn voice route
     /// (`send_via(modality = "voice")`) therefore applies to the final reply
-    /// only — it does not convert or retract narration already sent this turn.
+    /// only - it does not convert or retract narration already sent this turn.
     #[serde(rename = "multi_message")]
     MultiMessage,
 }
@@ -16580,7 +16580,7 @@ pub enum StreamReasoningMode {
 pub enum StreamToolArgumentBase {
     /// Do not display any arguments unless a per-tool rule includes them.
     None,
-    /// Use ZeroClaw's conservative per-tool recommendations.
+    /// Use Redrob OS's conservative per-tool recommendations.
     #[default]
     Safe,
     /// Display every argument except runtime-internal fields, after leak scrubbing.
@@ -17269,7 +17269,7 @@ fn resolve_slack_token(configured: Option<&str>, kind: &str) -> Option<String> {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum MattermostListenMode {
-    /// Poll REST API every 3 seconds. The default — all existing configs
+    /// Poll REST API every 3 seconds. The default - all existing configs
     /// continue to work without changes.
     #[default]
     Polling,
@@ -17404,7 +17404,7 @@ pub struct MattermostConfig {
     /// default permission schemes is every channel member, and the text reaches
     /// the system prompt. Those editors can therefore steer the agent in that
     /// room, including with text that reads as an instruction, and they need
-    /// not be authorized ZeroClaw peers.
+    /// not be authorized Redrob OS peers.
     ///
     /// What that steering cannot do is exceed the agent's existing permissions:
     /// prompt text grants no tool, widens no peer group, and changes no
@@ -17691,7 +17691,7 @@ pub struct MatrixConfig {
     #[serde(default)]
     pub mention_only: bool,
     /// Optional Matrix recovery key for automatic E2EE key backup restore.
-    /// When set, ZeroClaw recovers room keys and cross-signing secrets on startup.
+    /// When set, Redrob OS recovers room keys and cross-signing secrets on startup.
     #[secret]
     #[credential_class = "encrypted_secret"]
     #[tab(Connection)]
@@ -18823,7 +18823,7 @@ fn default_filesystem_max_content_bytes() -> Option<usize> {
 /// Subscribes to an exchange via routing keys and lifts each delivery into an
 /// inbound `ChannelMessage`. The mapping from a JSON delivery body to message
 /// fields is config-driven (`content_template`, `thread_id_field`) so a new
-/// source — Anitya, an internal bus, anything publishing JSON — is onboarded by
+/// source - Anitya, an internal bus, anything publishing JSON - is onboarded by
 /// configuration rather than code.
 /// Where a fan-in delivery is routed once consumed. Used by AMQP, which carries
 /// this field to choose between the agent loop, the SOP engine, or both.
@@ -19081,7 +19081,7 @@ pub struct TwitchConfig {
     #[tab(Behavior)]
     #[serde(default)]
     pub enabled: bool,
-    /// Twitch login name of the bot account (case-insensitive — lowercased
+    /// Twitch login name of the bot account (case-insensitive - lowercased
     /// before send).
     #[tab(Connection)]
     pub bot_username: String,
@@ -19118,10 +19118,10 @@ fn default_irc_port() -> u16 {
     6697
 }
 
-/// How ZeroClaw receives events from Feishu / Lark.
+/// How Redrob OS receives events from Feishu / Lark.
 ///
-/// - `websocket` (default) — persistent WSS long-connection; no public URL required.
-/// - `webhook` — HTTP callback server; requires a public HTTPS endpoint.
+/// - `websocket` (default) - persistent WSS long-connection; no public URL required.
+/// - `webhook` - HTTP callback server; requires a public HTTPS endpoint.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default, zeroclaw_macros::ConfigEnum)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[serde(rename_all = "lowercase")]
@@ -19229,7 +19229,7 @@ pub struct LarkConfig {
     /// response through `send()`; `partial` opens a Feishu interactive
     /// card and edits it incrementally via `update_draft` /
     /// `finalize_draft`; `multi_message` is rejected for Lark (Feishu has
-    /// no equivalent surface — falls back to `off` with a warning).
+    /// no equivalent surface - falls back to `off` with a warning).
     #[tab(Behavior)]
     #[serde(default)]
     pub stream_mode: StreamMode,
@@ -19275,7 +19275,7 @@ pub enum LineDmPolicy {
     /// Respond to every DM regardless of who sent it.
     Open,
     /// Require a one-time `/bind <code>` handshake before responding (default).
-    /// ZeroClaw prints the bind code on startup; send it once to unlock access.
+    /// Redrob OS prints the bind code on startup; send it once to unlock access.
     #[default]
     Pairing,
     /// Respond only to LINE user IDs listed in `allowed_users`.
@@ -19404,8 +19404,8 @@ pub struct SecurityConfig {
     /// part of the validation boundary for `http_request`, `web_fetch`, and
     /// `text_browser`.
     ///
-    /// Each entry is `<ipv6>/<length>` with one of RFC 6052 §2.2's lengths —
-    /// 32, 40, 48, 56, 64, or 96 — and no bits set beyond that length. A
+    /// Each entry is `<ipv6>/<length>` with one of RFC 6052 §2.2's lengths -
+    /// 32, 40, 48, 56, 64, or 96 - and no bits set beyond that length. A
     /// malformed entry fails construction of the tools that read this list
     /// rather than being skipped, so a typo cannot silently narrow the
     /// boundary.
@@ -19442,7 +19442,7 @@ pub struct SecurityConfig {
     /// Default `true`: the operator who runs the daemon (and owns its
     /// config file) retains local authority, which is also what makes
     /// local-only lockout recovery possible. Set `false` to require every
-    /// local peer — including the daemon's own uid — to map through
+    /// local peer - including the daemon's own uid - to map through
     /// `[users.<name>].uid` or present a credential.
     #[serde(default = "default_true")]
     pub trust_daemon_uid: bool,
@@ -19516,7 +19516,7 @@ impl Default for SecurityConfig {
 /// Accept a legacy `[security.nevis]` table so old configs keep loading, but
 /// discard every value it carries. Only a content-free presence marker
 /// (`Some(Value::Null)`) is returned, so validation can warn once while the
-/// removed integration's fields — including any plaintext `client_secret` —
+/// removed integration's fields - including any plaintext `client_secret` -
 /// are never retained in the loaded configuration, and so never reach
 /// `GET /api/config` or the next on-disk save. (The value is materialized
 /// transiently to be discarded; this is not zeroization.)
@@ -20733,7 +20733,7 @@ impl Default for NotionConfig {
 ///
 /// ## Defaults
 /// - `enabled`: `false`
-/// - `allowed_actions`: `["get_ticket"]` — read-only by default.
+/// - `allowed_actions`: `["get_ticket"]` - read-only by default.
 ///   Add `"search_tickets"` or `"comment_ticket"` to unlock them.
 /// - `timeout_secs`: `30`
 ///
@@ -21218,7 +21218,7 @@ fn default_config_dir() -> Result<PathBuf> {
 }
 
 /// Canonical on-disk directory for a locale's runtime/zerocode FTL catalogues:
-/// `<config_dir>/data/ftl/<locale>/`. This is where `zeroclaw locales fetch`
+/// `<config_dir>/data/ftl/<locale>/`. This is where `redrob-agentctl locales fetch`
 /// writes downloaded translations and where the runtime i18n loader reads them.
 /// `<config_dir>` honors `ZEROCLAW_CONFIG_DIR` and otherwise defaults to
 /// `~/.zeroclaw`. The zerocode binary mirrors this path inline (it carries no
@@ -21229,10 +21229,10 @@ pub fn ftl_locale_dir(locale: &str) -> Result<PathBuf> {
         .join(locale))
 }
 
-/// The FTL catalogues that `zeroclaw locales fetch` / the daemon's
+/// The FTL catalogues that `redrob-agentctl locales fetch` / the daemon's
 /// `locales/fetch` RPC can download, as `(name, upstream-path-template,
 /// output-filename)`. `{locale}` is substituted per request. This is the single
-/// source of truth — a caller supplies only a catalog *name* matched against
+/// source of truth - a caller supplies only a catalog *name* matched against
 /// this table, never a path.
 pub const FTL_CATALOGS: &[(&str, &str, &str)] = &[
     (
@@ -21257,13 +21257,13 @@ pub const FTL_CATALOGS: &[(&str, &str, &str)] = &[
 /// (`/home/<user>/.zeroclaw/<relative>` on Linux,
 /// `C:\Users\<user>\.zeroclaw\<relative>` on Windows, etc.) instead of a
 /// literal `~/...` token that doesn't expand on Windows. Falls back to
-/// `~/.zeroclaw/<relative>` if the platform dir can't be resolved (rare —
+/// `~/.zeroclaw/<relative>` if the platform dir can't be resolved (rare -
 /// e.g. no HOME and `directories::UserDirs` returns None); the runtime's
 /// `expand_tilde_path()` handles that literal at use-time.
 ///
 /// Switching to platform-native config locations (`~/Library/Application
 /// Support/zeroclaw/` on macOS, `%APPDATA%\zeroclaw\` on Windows) is the
-/// schema-v3 follow-up tracked in — that needs a migration to move
+/// schema-v3 follow-up tracked in - that needs a migration to move
 /// existing users' configs.
 fn default_path_under_config_dir(relative: &str) -> String {
     match default_config_dir() {
@@ -21418,11 +21418,11 @@ fn paths_equal_lexically(a: &Path, b: &Path) -> bool {
 /// Returns the legacy plugin directories that still hold installed plugins not
 /// visible to the runtime, which now scans [`PluginsConfig::resolved_plugins_dir`].
 ///
-/// Historically `zeroclaw plugin install` wrote to `<data_dir>/plugins` (and,
+/// Historically `redrob-agentctl plugin install` wrote to `<data_dir>/plugins` (and,
 /// before the data-dir rename, `<install_root>/workspace/plugins`). A directory
 /// is reported only when it differs from the configured plugins dir and contains
 /// at least one plugin (a subdirectory with a `manifest.toml`). Used to surface a
-/// migration hint and to drive `zeroclaw plugin migrate`.
+/// migration hint and to drive `redrob-agentctl plugin migrate`.
 #[must_use]
 pub fn legacy_plugin_dirs_with_entries(config: &Config) -> Vec<PathBuf> {
     let target = config.plugins.resolved_plugins_dir();
@@ -21449,7 +21449,7 @@ fn dir_has_plugin(dir: &Path) -> bool {
 /// Detect if an executable path lives under a macOS Homebrew prefix and return
 /// the Homebrew-managed config directory.
 ///
-/// Homebrew can execute ZeroClaw from `<prefix>/Cellar/zeroclaw/<version>/bin/`,
+/// Homebrew can execute Redrob OS from `<prefix>/Cellar/zeroclaw/<version>/bin/`,
 /// `<prefix>/bin/`, or `<prefix>/opt/zeroclaw/bin/`.
 async fn try_resolve_macos_homebrew_config_dir(exe: &Path) -> Option<PathBuf> {
     let parts = exe.iter().collect::<Vec<_>>();
@@ -21613,7 +21613,7 @@ fn config_dir_creation_error(path: &Path) -> String {
 
 /// Top-level keys that must always appear in the saved config even
 /// when their value equals the default. `schema_version` is the
-/// migration detector's anchor — dropping it from a freshly-saved
+/// migration detector's anchor - dropping it from a freshly-saved
 /// config would make the next load mis-detect the file as V1 (no
 /// version key = V1).
 const SAVE_PRESERVE_KEYS: &[&str] = &["schema_version"];
@@ -21969,7 +21969,7 @@ pub fn peer_policy_admits(
 
 /// Classification of a `peer_groups.<name>.channel` reference against the
 /// configured `[channels.*]` blocks. This is the single source of truth for
-/// resolving a raw `channel` string — `Config::validate()` consumes it for
+/// resolving a raw `channel` string - `Config::validate()` consumes it for
 /// its hard-error checks, and `Config::collect_peer_groups_warnings`
 /// consumes it for the non-fatal dangling-alias warning. Do not duplicate
 /// this resolution logic elsewhere; classify the ref once and match on the
@@ -22004,8 +22004,8 @@ enum PeerGroupChannelRef {
 /// Test-only coordination for the config save's post-atomic-rename
 /// visibility window (see the pause call inside the save path). `arm(target)`
 /// returns a handle whose `wait_paused` resolves once a save of that exact
-/// config path is holding inside the window — after the new config is visible
-/// on disk, before permission hardening and directory sync finish — and whose
+/// config path is holding inside the window - after the new config is visible
+/// on disk, before permission hardening and directory sync finish - and whose
 /// `release` lets that save proceed and disarms the gate. Path-scoping keeps
 /// parallel tests (each with its own config root) from consuming each other's
 /// gates. Dropping the handle disarms. Compiled only under
@@ -22280,7 +22280,7 @@ impl Config {
     /// iteration order.
     ///
     /// This is the live-resolve counterpart of `channel_external_peers`,
-    /// filtered to one output modality. No cache — single source of truth
+    /// filtered to one output modality. No cache - single source of truth
     /// is `self.peer_groups`.
     pub fn channel_modality_peers(
         &self,
@@ -22351,7 +22351,7 @@ impl Config {
     /// (type-wide or dotted), its `admin_for_agent_scope = true`, and its
     /// `agents` list (if non-empty) contains `agent_alias`. Returns
     /// deduped and sorted. Live-resolve against the `Config` this method
-    /// is called on — no internal cache. Edits to `peer_groups` take
+    /// is called on - no internal cache. Edits to `peer_groups` take
     /// effect at the next `Config::channel_agent_scope_admins` call; the
     /// orchestrator gate reads through a snapshot of this `Config`, so
     /// operator edits become visible after the runtime context is rebuilt
@@ -22422,7 +22422,7 @@ impl Config {
     ///
     /// Keys present in `Config::default()` serialization pass immediately.
     /// Remaining keys are probed: the key is deserialized in isolation and
-    /// the result compared to the default — a changed output means serde
+    /// the result compared to the default - a changed output means serde
     /// consumed it (covers `Option<T>` fields and `#[serde(alias)]` names).
     /// V1 legacy keys (consumed by migration) are also accepted.
     pub fn unknown_keys(raw_toml: &str) -> Vec<String> {
@@ -23023,9 +23023,9 @@ impl Config {
     ///
     /// This is the preparation step for config migration (see the
     /// gateway's migrate endpoint): the candidate must be fully hydrated
-    /// — strict parse into the current schema, computed paths attached,
+    /// - strict parse into the current schema, computed paths attached,
     /// secrets decrypted through the install's store, env overrides
-    /// applied with their save-masking snapshots captured — and must pass
+    /// applied with their save-masking snapshots captured - and must pass
     /// strict validation *before* the migrated file is allowed to replace
     /// the live one. Any failure (parse, secret, unresolvable env path,
     /// validation) refuses the migration with the original config file
@@ -23085,11 +23085,11 @@ impl Config {
     /// The runtime already traces this at config load. That trace reaches a
     /// sink only when log persistence is on, so under
     /// `observability.log_persistence = "none"` it is delivered nowhere. This
-    /// warning is the channel that survives: `zeroclaw doctor` prints the
+    /// warning is the channel that survives: `redrob-agentctl doctor` prints the
     /// structured list to stdout and the config API returns it in its
     /// response, neither of which depends on the log writer.
     ///
-    /// Same class as `memory_config_knob_inert` — a knob that is set, accepted,
+    /// Same class as `memory_config_knob_inert` - a knob that is set, accepted,
     /// and currently has no runtime consumer.
     ///
     /// The change that re-registers `vi_verify` must delete this check and the
@@ -23112,7 +23112,7 @@ impl Config {
         ));
     }
 
-    /// Collect non-fatal validation warnings — config that loads and
+    /// Collect non-fatal validation warnings - config that loads and
     /// validates successfully (`validate()` returns `Ok(())`) but will fail
     /// at runtime because of a logical inconsistency the schema cannot
     /// enforce structurally.
@@ -23405,9 +23405,9 @@ impl Config {
     /// config-shape detail as a more specific companion for the same line. The
     /// deprecated
     /// `runtime_profiles.<p>.context_compression.summary_model` is a bare
-    /// model id that names no provider of its own — it would need to be
+    /// model id that names no provider of its own - it would need to be
     /// resolved onto each consuming agent's OWN provider were the field ever
-    /// read again — so when a single profile is shared by agents resolving
+    /// read again - so when a single profile is shared by agents resolving
     /// to MORE THAN ONE distinct provider, that one bare id is ambiguous for
     /// at least one of them. A `summary_provider` supplies provider identity
     /// for this narrower diagnostic and excludes the corresponding value from
@@ -23496,15 +23496,15 @@ impl Config {
     /// Surface every non-default `context_compression` knob as inert: the
     /// runtime context compressor was removed and nothing in the
     /// workspace reads `context_compression` at runtime anymore, so the whole
-    /// struct — `enabled`, thresholds, protected counts, summarizer limits,
-    /// provider selection, tool-result retrimming — has no effect. Mirrors
+    /// struct - `enabled`, thresholds, protected counts, summarizer limits,
+    /// provider selection, tool-result retrimming - has no effect. Mirrors
     /// `validate_memory_semantics`: one warning per non-default field, so a
     /// user sees exactly which of their authored knobs are dead. A field
     /// explicitly written at its default value is indistinguishable from an
     /// omitted one post-deserialization and stays silent (same limitation as
     /// `validate_memory_semantics`).
     ///
-    /// Only `[runtime_profiles.<alias>.context_compression]` is checked —
+    /// Only `[runtime_profiles.<alias>.context_compression]` is checked -
     /// `AliasedAgentConfig` (`[agents.<alias>]`) has no `context_compression`
     /// field of its own, and the legacy pre-V3 `[agent.context_compression]`
     /// top-level table (folded into `[runtime_profiles.default]` by the V2→V3
@@ -23622,7 +23622,7 @@ impl Config {
 
     /// Surface non-fatal issues in per-alias `fallback` chains: dangling refs
     /// (a fallback naming an alias that is not configured) and cycles (a
-    /// fallback path that loops back onto itself). Both are warn-and-skip — the
+    /// fallback path that loops back onto itself). Both are warn-and-skip - the
     /// chain still loads and runs with the offending edge pruned at build time.
     fn collect_fallback_warnings(
         &self,
@@ -23850,7 +23850,7 @@ impl Config {
     }
 
     /// Surface a `peer_groups.<name>.channel` dotted reference that does not
-    /// resolve to any configured `[channels.<type>.<alias>]` block —
+    /// resolve to any configured `[channels.<type>.<alias>]` block -
     /// typically a typo (`telegram.alert` vs. configured `telegram.alerts`)
     /// that silently authorizes nobody instead of failing loudly. This is a
     /// non-fatal companion to the `DanglingReference` hard error
@@ -25882,7 +25882,7 @@ impl Config {
     /// secret, or a `set_prop` parse error) are the caller's to contain. The
     /// RPC `config_set` path does so by mutating a cloned `Config` and only
     /// committing it on full success, so a discarded attempt drops the alias
-    /// with the clone — no tracked-tuple mirror of config transaction state is
+    /// with the clone - no tracked-tuple mirror of config transaction state is
     /// exposed to the runtime.
     ///
     /// `#[resource_key]` sections are excluded. Their keys are values drawn from
@@ -25901,7 +25901,7 @@ impl Config {
     /// keyed list section (`plugins.entries`, `mcp.servers`, `model_routes`,
     /// `embedding_routes`), addressed by its natural key.
     ///
-    /// Only the local `zeroclaw config patch` command uses this. The operator
+    /// Only the local `redrob-agentctl config patch` command uses this. The operator
     /// running it can already edit the config file directly, so creating a
     /// row there adds no authority; a plugin with no config row otherwise has
     /// no command that can create one, and `plugin list` needs a repair it can
@@ -26085,7 +26085,7 @@ impl Config {
     /// value was loaded from that exact file (`loaded_from`), so a default,
     /// programmatically built, or repointed `Config` cannot replace an
     /// operator's config with a near-empty snapshot. Creating a
-    /// missing file (first run) always succeeds — a value that never read
+    /// missing file (first run) always succeeds - a value that never read
     /// a file gets exactly one create and must then reload or use
     /// `force_save()`; `force_save()` is the explicit overwrite path.
     pub async fn save(&self) -> Result<()> {
@@ -26669,7 +26669,7 @@ struct NaturalKeySection {
 /// That is deliberate and mirrors the in-memory routing macro's
 /// `section_path == expected` check in
 /// `crates/zeroclaw-macros/src/lib.rs` (the `get_map_keys` /
-/// `route_vec_path` arms) — making either side dash-tolerant in
+/// `route_vec_path` arms) - making either side dash-tolerant in
 /// isolation would let the dispatcher and the writer disagree on
 /// which call participates in this branch, which is exactly the
 /// memory-vs-disk divergence this PR exists to eliminate. If a
@@ -26678,7 +26678,7 @@ struct NaturalKeySection {
 /// together (the macro arm and this match).
 ///
 /// Plain `Kind::List` Vec sections without `#[natural_key]` (their
-/// `natural_key` is `None`) are intentionally excluded — those use the
+/// `natural_key` is `None`) are intentionally excluded - those use the
 /// legacy whole-array `ObjectArray` save path and don't need the
 /// array-of-tables walker.
 fn find_natural_key_section_for_path(dotted: &str) -> Option<NaturalKeySection> {
@@ -26728,18 +26728,18 @@ fn find_natural_key_section_for_path(dotted: &str) -> Option<NaturalKeySection> 
 ///
 /// Three shapes show up in practice:
 ///
-///   1. `<section>.<alias>.<inner>` — per-field edit (the dashboard /
+///   1. `<section>.<alias>.<inner>` - per-field edit (the dashboard /
 ///      TUI editor). Locate the in-memory element whose natural-key
 ///      field equals `<alias>` and reconcile its `<inner>` sub-path
 ///      against the doc's matching `[[<section>]]` table.
 ///
-///   2. `<section>.<alias>` with the element still in memory — the
+///   2. `<section>.<alias>` with the element still in memory - the
 ///      whole-element write the rename path emits for the *new* alias.
 ///      Reseed the matching doc entry from the in-memory serialization
 ///      so a rename `fs` → `filesystem` updates the entire
 ///      `[[mcp.servers]]` table (in particular its `name` field).
 ///
-///   3. `<section>.<alias>` with the element gone from memory — the
+///   3. `<section>.<alias>` with the element gone from memory - the
 ///      delete path the rename emits for the *old* alias, and what
 ///      `delete_map_key` plus an explicit `mark_dirty` would produce.
 ///      Drop the matching doc entry.
@@ -26753,16 +26753,16 @@ fn find_natural_key_section_for_path(dotted: &str) -> Option<NaturalKeySection> 
 ///
 /// **Order-independence invariant.** `Config::dirty_paths` is a
 /// `HashSet<String>`, so the three shapes above can apply in any
-/// interleaving within a single `save_dirty` batch — in particular,
+/// interleaving within a single `save_dirty` batch - in particular,
 /// a rename emits both the old and new aliases dirty without an
 /// ordering guarantee, and a create-then-edit sequence may walk the
 /// per-field path before the whole-element write. Convergence under
 /// every ordering is load-bearing here and works only because every
 /// branch derives its write from the current in-memory state and the
 /// case-1 delete fires only on mem-absence (not on default
-/// equivalence). Future edits — e.g. an early-exit that assumes
+/// equivalence). Future edits - e.g. an early-exit that assumes
 /// whole-element writes run before per-field ones, or a "skip if
-/// already written" optimization keyed on the doc shape — would
+/// already written" optimization keyed on the doc shape - would
 /// break this. Preserve commutativity across the three shapes for
 /// any single (section, alias) tuple.
 fn apply_dirty_natural_key_path(
@@ -26967,16 +26967,16 @@ fn find_map_key_section_for_path(dotted: &str) -> Option<crate::traits::MapKeySe
 /// Apply a dirty path of the form `<section_path>.<key>[.<inner_suffix>...]`
 /// against a `HashMap<String, T>` section. `<key>` is the literal map key
 /// and, for `#[resource_key]` sections (a model id, tool name, … rather
-/// than an operator-chosen alias), may itself contain dots — e.g. `gpt-4.1`
+/// than an operator-chosen alias), may itself contain dots - e.g. `gpt-4.1`
 /// in `cost.rates.providers.models.openai.gpt-4.1.input_per_mtok`.
 ///
 /// Longest-match `<key>` against the union of keys live in `full_table`
 /// (the in-memory state) and in the doc (`root`), so a key that only
-/// survives on one side — the delete half of a rename, or a fresh
-/// alias not yet flushed — still resolves. This mirrors
+/// survives on one side - the delete half of a rename, or a fresh
+/// alias not yet flushed - still resolves. This mirrors
 /// `apply_dirty_natural_key_path`'s two-sided lookup for `mcp.servers`.
 ///
-/// A whole-entry write (no inner suffix — `<section_path>.<key>` addresses
+/// A whole-entry write (no inner suffix - `<section_path>.<key>` addresses
 /// the map value itself, e.g. the create-map-key path) is the case where
 /// `<key>` consumes the entire remainder; that always wins over any
 /// shorter prefix-plus-dot match into the same key space, so it's checked
@@ -26984,7 +26984,7 @@ fn find_map_key_section_for_path(dotted: &str) -> Option<crate::traits::MapKeySe
 ///
 /// Once `<key>` is resolved, the rest of the path reuses the exact
 /// mem-vs-default comparison and doc write/delete the generic Table-shaped
-/// walker in `apply_dirty_path` uses — the dotted key is just folded into
+/// walker in `apply_dirty_path` uses - the dotted key is just folded into
 /// one opaque segment instead of being split on '.' with everything else.
 fn apply_dirty_map_key_path(
     root: &mut toml_edit::Table,
@@ -27056,7 +27056,7 @@ fn apply_dirty_map_key_path(
 }
 
 /// Shared tail of the generic and map-key dirty-path walkers: reconcile
-/// the resolved `segs` against the doc — delete the leaf when the
+/// the resolved `segs` against the doc - delete the leaf when the
 /// in-memory value is absent or equals the schema default, otherwise
 /// write the pruned in-memory value. One copy so a future fix to the
 /// delete-vs-write rule cannot land in one walker only.
@@ -27086,22 +27086,22 @@ fn write_or_delete_leaf(
 
 /// Emit a single `WARN` event when a natural-key writer (ensure /
 /// find / delete) bails because the on-disk node has the wrong shape
-/// — for example an operator hand-edited `mcp.servers = "foo"`, or
+/// - for example an operator hand-edited `mcp.servers = "foo"`, or
 /// wrote `servers = [{ name = "fs", ... }]` (an inline array of
 /// tables, which `toml_edit` parses as `Item::Value(Value::Array)`
 /// rather than the `Item::ArrayOfTables` this writer produces).
 ///
 /// Without this, `config/set` returns success, the in-memory mutation
 /// and the dashboard/TUI both reflect the new value, and the on-disk
-/// file silently stays stale — the exact symptom the underlying
+/// file silently stays stale - the exact symptom the underlying
 /// natural-key persistence bug ( fix) exists to eliminate. The
 /// `WARN` shape mirrors the 0600-permissions fallback below: same
 /// `Action::Note` / `EventOutcome::Unknown` / module path, so log
 /// scrapers that already understand the schema warnings will surface
 /// these the same way.
 ///
-/// `op` is `"ensure"`, `"find"`, or `"delete"` — which writer bailed.
-/// `kind` is `"parent_segment"` or `"array_key"` — which node was
+/// `op` is `"ensure"`, `"find"`, or `"delete"` - which writer bailed.
+/// `kind` is `"parent_segment"` or `"array_key"` - which node was
 /// wrong-shaped. `which` is the specific seg/key name involved.
 fn warn_natural_key_doc_kind_mismatch(
     parent_segs: &[&str],
@@ -27154,7 +27154,7 @@ fn warn_natural_key_doc_kind_mismatch(
 /// case we refuse to clobber the hand-edit and let the save bail
 /// rather than data-loss the user's file. A `WARN`-level event is
 /// emitted on every wrong-kind bail so the divergence between memory
-/// and disk is observable in logs — silent bails were what let the
+/// and disk is observable in logs - silent bails were what let the
 /// underlying bug ship.
 fn ensure_array_of_tables_entry<'a>(
     root: &'a mut toml_edit::Table,
@@ -27222,8 +27222,8 @@ fn ensure_array_of_tables_entry<'a>(
 /// the delete path: never creates a missing array or entry, just
 /// locates one if present. Returning `None` on a miss lets the caller
 /// skip the doc-mutation step entirely. Distinguishes "node doesn't
-/// exist" (silent no-op — the legitimate fresh-alias case) from "node
-/// exists but has the wrong kind" (a `WARN`-logged bail — the
+/// exist" (silent no-op - the legitimate fresh-alias case) from "node
+/// exists but has the wrong kind" (a `WARN`-logged bail - the
 /// hand-edited inline-array hazard).
 fn find_array_of_tables_entry_mut<'a>(
     root: &'a mut toml_edit::Table,
@@ -27432,8 +27432,8 @@ fn lookup_path_in_table<'a>(root: &'a toml::Table, segs: &[&str]) -> Option<&'a 
 /// Read-only walk to the table-like node at `segs`, or `None` if any
 /// segment is missing or not table-shaped on disk. Used to read a map-key
 /// section's live on-disk keys without mutating the doc. `TableLike`
-/// rather than `Table` because ZeroClaw loads (though never writes)
-/// hand-edited inline tables — `openai = { "gpt-4.1" = { ... } }` parses
+/// rather than `Table` because Redrob OS loads (though never writes)
+/// hand-edited inline tables - `openai = { "gpt-4.1" = { ... } }` parses
 /// as `Item::Value(Value::InlineTable)`, which `as_table()` rejects; a
 /// key living only in such a section must still resolve here or the
 /// unresolvable-key bail in `apply_dirty_map_key_path` aborts the whole
@@ -27449,12 +27449,12 @@ fn lookup_table_in_doc<'a>(
     Some(cursor)
 }
 
-/// `TableLike` rather than `Table` for the traversal cursor — same reason
+/// `TableLike` rather than `Table` for the traversal cursor - same reason
 /// as `lookup_table_in_doc` above: a map-key section may live inside a
 /// hand-edited inline table (`openai = { "gpt-4.1" = { ... } }`), which
 /// parses as `Item::Value(Value::InlineTable)`. `as_table_mut()` returns
 /// `None` for that shape, so a `Table`-only cursor would silently return
-/// without removing anything — `save_dirty` reports success while the key
+/// without removing anything - `save_dirty` reports success while the key
 /// stays on disk. `as_table_like_mut()` descends into both `Table` and
 /// `InlineTable`, and `TableLike::remove` deletes from either.
 fn delete_path_in_doc(root: &mut toml_edit::Table, segs: &[&str]) {
@@ -27613,7 +27613,7 @@ pub struct SopConfig {
     /// Directory containing SOP definitions (subdirs with SOP.toml + SOP.md).
     /// A relative value resolves against the install root (matching the
     /// `skill-bundles` convention), so the documented `shared/sops` loads from
-    /// `<install>/shared/sops` — the same directory the web/RPC SOP author writes
+    /// `<install>/shared/sops` - the same directory the web/RPC SOP author writes
     /// to. An absolute or `~`-prefixed value is used as-is. Unset by default;
     /// SOP runtime behavior activates only when this is set to a non-empty
     /// value, so leaving it unset (or an explicit empty value) keeps SOP
@@ -27825,7 +27825,7 @@ impl SopConfig {
     /// directory: a non-empty `sops_dir` enables it; an unset or explicit empty
     /// string keeps it disabled (the default is unset, so SOP runtime is off
     /// until an operator opts in). This is the single source of truth for
-    /// activation, so callers must not re-derive it from `sops_dir.is_some()` —
+    /// activation, so callers must not re-derive it from `sops_dir.is_some()` -
     /// that treats an empty string as enabled and would break the disable path.
     #[must_use]
     pub fn runtime_enabled(&self) -> bool {
@@ -33231,7 +33231,7 @@ auto_approve = ["my_custom_tool", "another_tool"]
 
     /// Security guard: the full `browser` automation tool drives a real
     /// Chrome/Chromium session that may already be logged in, so it must
-    /// never be silently auto-approved — a prompt-injected message would
+    /// never be silently auto-approved - a prompt-injected message would
     /// otherwise act as the operator with no approval prompt.
     /// `browser_open` (hand a URL to the system browser, no scraping or
     /// interaction) stays on the list.
@@ -39277,7 +39277,7 @@ group_policy = "disabled"
     /// `d06ed25` shipped the natural-key arm, in-memory edits succeed
     /// (the TUI / dashboard show the new value) but `save_dirty` is
     /// silently a no-op because `apply_dirty_path` walks the serialized
-    /// TOML as if every segment is a `Table` — `mcp.servers` is an
+    /// TOML as if every segment is a `Table` - `mcp.servers` is an
     /// array of tables, so `lookup_path_in_table` returns `None` at the
     /// natural-key segment, the path is misclassified as
     /// `should_delete`, and `delete_path_in_doc` bails when it hits the
@@ -39476,7 +39476,7 @@ group_policy = "disabled"
     }
 
     /// `cost.rates.providers.models.<type>` is a
-    /// `#[resource_key]` `HashMap<String, ModelCostRates>` — its key is a
+    /// `#[resource_key]` `HashMap<String, ModelCostRates>` - its key is a
     /// model id, not an operator-chosen alias, and may contain dots
     /// (`gpt-4.1`). Before the map-key-section branch landed,
     /// `apply_dirty_path` blindly split the dirty path on `.`, fragmenting
@@ -39618,7 +39618,7 @@ group_policy = "disabled"
 
     /// Control for `save_dirty_persists_dotted_map_key_field`: a dot-free
     /// resource key must keep working through the same map-key-section
-    /// branch (it's no longer special-cased out — every `HashMap<String,
+    /// branch (it's no longer special-cased out - every `HashMap<String,
     /// T>` write now routes through `apply_dirty_map_key_path`).
     #[test]
     async fn save_dirty_persists_dot_free_map_key_field() {
@@ -39705,14 +39705,14 @@ group_policy = "disabled"
         );
     }
 
-    /// ZeroClaw never writes inline tables but loads hand-edited ones
+    /// Redrob OS never writes inline tables but loads hand-edited ones
     /// fine, so a map-key section shaped `openai = { "gpt-4.1" = { ... } }`
-    /// parses as `Item::Value(Value::InlineTable)` — invisible to a
+    /// parses as `Item::Value(Value::InlineTable)` - invisible to a
     /// `Table`-only doc walk. Both halves must go through `TableLike`:
     /// resolving the key (read side) so the batch doesn't abort, and
     /// actually removing it from the inline table (write side) so the
     /// deletion isn't reported as successful while the key survives on
-    /// disk — a mutable traversal that only understood `Table` would
+    /// disk - a mutable traversal that only understood `Table` would
     /// resolve the key, then silently return without deleting anything.
     #[test]
     async fn save_dirty_resolves_map_key_from_inline_table_on_disk() {
@@ -39836,7 +39836,7 @@ group_policy = "disabled"
     /// Loud-failure guard: a dirty path that resolves to a
     /// map-key section but whose key exists in neither the in-memory
     /// config nor the on-disk doc must fail `save_dirty` instead of
-    /// silently no-op-ing (the original bug's symptom — reported success,
+    /// silently no-op-ing (the original bug's symptom - reported success,
     /// nothing written).
     #[test]
     async fn save_dirty_errors_on_unresolvable_map_key_path() {
@@ -39874,7 +39874,7 @@ group_policy = "disabled"
 
     /// A dynamic secret map (`#[secret] HashMap<String, String>`, e.g.
     /// `extra_headers`) treats its whole non-empty suffix as ONE opaque
-    /// key — `set_prop` stores the literal `"X-Foo.bar"`. The dirty
+    /// key - `set_prop` stores the literal `"X-Foo.bar"`. The dirty
     /// writer must not re-split that key at dots into `X-Foo` → `bar`,
     /// or `write_or_delete_leaf` finds nothing, takes the delete branch,
     /// and `save_dirty` returns `Ok(())` having written nothing: the
@@ -39988,7 +39988,7 @@ group_policy = "disabled"
     }
 
     /// `create_map_key("mcp.servers", "new")` followed by per-field
-    /// edits must produce a complete `[[mcp.servers]]` table on disk —
+    /// edits must produce a complete `[[mcp.servers]]` table on disk -
     /// including the seeded natural-key field. This is the path the
     /// dashboard's `+ Add MCP server` affordance walks: insert, then
     /// edit `command` / `transport` etc.
@@ -40209,7 +40209,7 @@ group_policy = "disabled"
     /// entirely. A vestigial empty `[[mcp.servers]]` header would
     /// reparse as a single default-shaped element with an empty
     /// natural-key field, which the validator then rejects on next
-    /// load — actively breaking the file the writer just produced.
+    /// load - actively breaking the file the writer just produced.
     #[test]
     async fn save_dirty_drops_array_header_when_last_mcp_server_removed() {
         let tmp = tempfile::TempDir::new().unwrap();
@@ -40287,7 +40287,7 @@ group_policy = "disabled"
     }
 
     /// `model_routes` and `embedding_routes` are `#[nested]` Vec fields
-    /// with `#[natural_key = "hint"]` — they must surface in
+    /// with `#[natural_key = "hint"]` - they must surface in
     /// `map_key_sections()` as `List` entries so the dashboard and the
     /// incremental TOML writer can address individual route entries.
     #[tokio::test]
@@ -40327,7 +40327,7 @@ group_policy = "disabled"
     /// A dirty path with a kebab-shaped inner field (e.g.
     /// `mcp.servers.fs.tool-timeout-secs`) must resolve through the
     /// shared `resolve_dirty_segments` helper inside the natural-key
-    /// branch the same way the top-level Table walker does — landing
+    /// branch the same way the top-level Table walker does - landing
     /// on the snake `tool_timeout_secs` field on disk. This pins the
     /// dash-aware resolution that's load-bearing for any future
     /// natural-key struct field whose snake_case name is multi-word.
@@ -40393,14 +40393,14 @@ group_policy = "disabled"
     /// An explicit per-field unset (the in-memory field reverts to
     /// `None`, but the dirty path still names that specific inner
     /// field rather than the whole element) must drive the case-1
-    /// `mem missing → delete` branch — removing the field from the
+    /// `mem missing → delete` branch - removing the field from the
     /// `[[mcp.servers]]` entry on disk without touching its siblings.
     /// The pre-existing whole-element delete test covers a different
     /// path (the rename source / `delete_map_key`); this one pins
     /// the per-field delete branch independently. Without it, a
     /// future refactor that collapses case-1's `None` branch into
     /// the whole-element path would silently break "clear this field"
-    /// edits — the field would survive on disk while showing as
+    /// edits - the field would survive on disk while showing as
     /// unset in the UI.
     #[test]
     async fn save_dirty_unset_per_field_drops_field_from_mcp_server_entry() {
@@ -40465,10 +40465,10 @@ group_policy = "disabled"
     }
 
     /// When the on-disk node at `mcp.servers` exists but has the
-    /// wrong kind — e.g. a hand-edited `mcp.servers = "foo"`, or an
+    /// wrong kind - e.g. a hand-edited `mcp.servers = "foo"`, or an
     /// inline-array-of-tables literal `servers = [{ ... }]` that
     /// `toml_edit` parses as `Item::Value(Value::Array)` rather than
-    /// `Item::ArrayOfTables` — the writer must refuse to clobber
+    /// `Item::ArrayOfTables` - the writer must refuse to clobber
     /// rather than data-loss the user's hand-edit. The bail is
     /// observable (a `WARN`-level log event), but here we just pin
     /// the don't-clobber behavior at the disk level: the original
@@ -40652,7 +40652,7 @@ enabled = false
 
     /// Opting in produces the structured warning. This is the delivery path
     /// that survives `observability.log_persistence = "none"`, since
-    /// `zeroclaw doctor` prints this list to stdout and the config API returns
+    /// `redrob-agentctl doctor` prints this list to stdout and the config API returns
     /// it, neither of which goes through the log writer.
     #[test]
     async fn verifiable_intent_enabled_warns_that_the_tool_is_withheld() {
@@ -45200,8 +45200,8 @@ allowed_users = []
         );
     }
 
-    /// Regression: a bare `zeroclaw config init` (no
-    /// section — `init_defaults(None)`) must produce a config.toml that
+    /// Regression: a bare `redrob-agentctl config init` (no
+    /// section - `init_defaults(None)`) must produce a config.toml that
     /// strictly reloads. Before the fix, `init_defaults` unconditionally
     /// scaffolded every `#[nested] Option<T>` field from
     /// `T::default()`, including structs with a required non-defaulted
@@ -45210,8 +45210,8 @@ allowed_users = []
     /// Those leaves default to `""`, which `prune_empty_leaves` strips
     /// on save, leaving a partial sub-table (kept alive by a non-empty
     /// sibling like `enabled`/`max_audio_bytes`/`connect_timeout_secs`)
-    /// that fails strict deserialization with `missing field ...` — the
-    /// exact failure `zeroclaw config migrate` hits and exits 1 on.
+    /// that fails strict deserialization with `missing field ...` - the
+    /// exact failure `redrob-agentctl config migrate` hits and exits 1 on.
     ///
     /// Mirrors the production boundary of
     /// `local_whisper_config_init_preserves_transcription_section`
@@ -45288,7 +45288,7 @@ allowed_users = []
     }
 
     /// The gate's other side: explicitly targeting a required-field
-    /// section (as `zeroclaw config init <section>` and the dashboard
+    /// section (as `redrob-agentctl config init <section>` and the dashboard
     /// section picker both do) must still scaffold it so the operator can
     /// fill in the required fields. `transcription.local_whisper` already
     /// has this coverage via the channels-crate test
@@ -45447,7 +45447,7 @@ allowed_users = []
     }
 
     /// Audit gate: every path emitted by `prop_fields()` must round-trip
-    /// through `get_prop`. The CLI (`zeroclaw config get/set`), the TUI
+    /// through `get_prop`. The CLI (`redrob-agentctl config get/set`), the TUI
     /// Quickstart prompts (`prompt_field`), the gateway list endpoint
     /// (`/api/config/list`), and the dashboard form all derive from
     /// `prop_fields()`; if a path appears here but `get_prop` rejects
@@ -45851,10 +45851,10 @@ allowed_users = []
     }
 
     /// Audit gate: every non-secret scalar prop round-trips through
-    /// `set_prop(get_prop(p))`. The CLI's `zeroclaw config set` and the
+    /// `set_prop(get_prop(p))`. The CLI's `redrob-agentctl config set` and the
     /// dashboard's PATCH op both rely on this being true so an operator
     /// can read a value, edit it locally, and write it back. Vec /
-    /// object-array fields are skipped — they pass through serde-JSON
+    /// object-array fields are skipped - they pass through serde-JSON
     /// rather than scalar string parsing.
     #[test]
     async fn every_scalar_prop_round_trips_through_set_prop() {
@@ -47116,7 +47116,7 @@ allowed_users = []
     }
 
     /// Each modality resolves to its own groups' members only, and
-    /// `channel_voice_peers` — the resolver proactive delivery consults — sees
+    /// `channel_voice_peers` - the resolver proactive delivery consults - sees
     /// nothing but the `voice` group.
     #[test]
     async fn channel_modality_peers_filters_by_modality() {

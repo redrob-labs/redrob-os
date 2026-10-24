@@ -249,9 +249,9 @@ impl ModelProviders {
     /// order: slot order (as declared by `for_each_model_provider_slot!`)
     /// first, then alias order within each slot. The alias maps are
     /// `HashMap`s whose iteration order is seeded per process, so the
-    /// sort is what keeps "first entry" consumers — the gateway boot
+    /// sort is what keeps "first entry" consumers - the gateway boot
     /// default provider/model, first-run agent defaults, the
-    /// ACP-advertised default model — stable across restarts.
+    /// ACP-advertised default model - stable across restarts.
     pub fn iter_entries(&self) -> impl Iterator<Item = (&'static str, &str, &ModelProviderConfig)> {
         let mut out: Vec<(&'static str, &str, &ModelProviderConfig)> = Vec::new();
         macro_rules! emit_iter {
@@ -294,8 +294,8 @@ impl ModelProviders {
 
     /// First entry across every typed slot that declares a non-empty `model`,
     /// in the existing `iter_entries` order. An entry without a `model`
-    /// cannot serve as an install-wide default — there is no model string to
-    /// pair with the provider — so entries without one are skipped instead of
+    /// cannot serve as an install-wide default - there is no model string to
+    /// pair with the provider - so entries without one are skipped instead of
     /// seeding a provider/model mismatch at the consumer.
     #[must_use]
     pub fn first_entry_with_model(&self) -> Option<(&'static str, &str, &ModelProviderConfig)> {
@@ -466,7 +466,7 @@ impl ModelProviders {
     }
 }
 
-/// Typed TTS-provider container — one slot per TTS family. Mirrors
+/// Typed TTS-provider container - one slot per TTS family. Mirrors
 /// `ModelProviders` but smaller (TTS has a closed set of 5 families:
 /// openai, elevenlabs, google, edge, piper). No catch-all needed.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
@@ -566,7 +566,7 @@ impl TtsProviders {
     }
 }
 
-/// Typed transcription-provider container — one slot per STT family.
+/// Typed transcription-provider container - one slot per STT family.
 /// Mirrors `ModelProviders` / `TtsProviders`. Closed set of 6 families:
 /// groq, openai, deepgram, assemblyai, google, local_whisper.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
@@ -836,17 +836,17 @@ mod tests {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[prefix = "providers"]
 pub struct Providers {
-    /// Model providers — `[providers.models.<type>.<alias>]`.
+    /// Model providers - `[providers.models.<type>.<alias>]`.
     #[serde(default)]
     #[nested]
     pub models: ModelProviders,
 
-    /// Text-to-speech providers — `[providers.tts.<type>.<alias>]`.
+    /// Text-to-speech providers - `[providers.tts.<type>.<alias>]`.
     #[serde(default)]
     #[nested]
     pub tts: TtsProviders,
 
-    /// Transcription / speech-to-text providers — `[providers.transcription.<type>.<alias>]`.
+    /// Transcription / speech-to-text providers - `[providers.transcription.<type>.<alias>]`.
     #[serde(default)]
     #[nested]
     pub transcription: TranscriptionProviders,
@@ -854,7 +854,7 @@ pub struct Providers {
 
 macro_rules! emit_model_cost_rates_struct {
     ($(($field:ident, $type_str:literal, $cfg_ty:ty)),+ $(,)?) => {
-        /// `[cost.rates.providers.models.<type>.<model>]` — token-cost rates
+        /// `[cost.rates.providers.models.<type>.<model>]` - token-cost rates
         /// per (provider type, model). One slot per provider type; each
         /// slot is a `HashMap<model_id, ModelCostRates>`. The slot list
         /// matches `ModelProviders` byte-for-byte (same source macro).
@@ -912,7 +912,7 @@ macro_rules! emit_model_cost_rates_struct {
 for_each_model_provider_slot!(emit_model_cost_rates_struct);
 
 /// Slot list for TTS providers. Single source of truth shared between
-/// the typed-provider wrapper and the cost-rates wrapper — adding a TTS
+/// the typed-provider wrapper and the cost-rates wrapper - adding a TTS
 /// family is a one-line edit here.
 #[macro_export]
 macro_rules! for_each_tts_provider_slot {
@@ -975,7 +975,7 @@ impl TranscriptionProviders {
 }
 
 /// Emit a `<Family>CostRatesByProvider` struct from a slot list. Used
-/// by both the TTS and transcription cost-rate wrappers — every field,
+/// by both the TTS and transcription cost-rate wrappers - every field,
 /// every dispatch arm, every iter row expands from one slot list. No
 /// hand-typed `match "openai" => self.openai` tables anywhere.
 macro_rules! emit_simple_cost_rates_struct {
@@ -987,7 +987,7 @@ macro_rules! emit_simple_cost_rates_struct {
         $(($field:ident, $type_str:literal)),+ $(,)?
     ) => {
         #[doc = concat!("`", $prefix, ".<type>.<", $resource_doc, ">`")]
-        ///  — per-(provider type, resource) cost rates.
+        ///  - per-(provider type, resource) cost rates.
         #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
         #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
         #[prefix = $prefix]

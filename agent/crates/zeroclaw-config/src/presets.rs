@@ -156,7 +156,7 @@ pub const DEFAULT_RUNTIME_PRESET_NAME: &str = "unbounded";
 pub const LOCAL_SMALL_RUNTIME_PRESET_NAME: &str = "local_small";
 
 /// One row in the Runtime preset table. Same shape and contract as
-/// [`RiskPreset`] — see its docs for the per-field semantics.
+/// [`RiskPreset`] - see its docs for the per-field semantics.
 #[derive(Debug, Clone, Copy, serde::Serialize)]
 pub struct RuntimePreset {
     /// Alias key written to `runtime-profiles.<preset_name>`. Doubles
@@ -361,7 +361,7 @@ pub struct ChannelQuickStart {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 pub struct AgentIdentity {
-    /// Agent alias — also the key written to `agents.<name>`. Must
+    /// Agent alias - also the key written to `agents.<name>`. Must
     /// not collide with an existing agent alias; runtime validation
     /// rejects collisions before apply.
     pub name: String,
@@ -398,7 +398,7 @@ pub struct QuickstartPersonalityFile {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 pub struct BuilderSubmission {
     /// Model provider step submission. Always a `Create new` shape
-    /// in this initial cut — `Use existing` is represented by
+    /// in this initial cut - `Use existing` is represented by
     /// [`SelectorChoice::Existing`] in the wrapper enum below.
     pub model_provider: SelectorChoice<ModelProviderChoice>,
     /// Risk profile preset key from [`RISK_PRESETS`], or the alias
@@ -420,7 +420,7 @@ pub struct BuilderSubmission {
     /// channel ref. Empty list = no peer-group rows written.
     #[serde(default)]
     pub peer_groups: Vec<QuickstartPeerGroup>,
-    /// Agent identity (always create-new — there's no reuse path).
+    /// Agent identity (always create-new - there's no reuse path).
     pub agent: AgentIdentity,
 }
 
@@ -450,7 +450,7 @@ pub struct QuickstartPeerGroup {
 #[serde(rename_all = "snake_case", tag = "mode", content = "value")]
 pub enum SelectorChoice<T> {
     /// Use an already-configured alias under the corresponding
-    /// section. Carries only the alias key — the runtime resolves
+    /// section. Carries only the alias key - the runtime resolves
     /// against the live config at apply time.
     Existing(String),
     /// Create a new entry from the carried value.

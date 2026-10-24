@@ -15,7 +15,7 @@ pub fn is_unset_display_value(value: &str) -> bool {
 pub struct SecretFieldInfo {
     /// Full dotted name (e.g. `channels.matrix.access-token`)
     pub name: &'static str,
-    /// Category for grouping in `zeroclaw config list`
+    /// Category for grouping in `redrob-agentctl config list`
     pub category: &'static str,
     /// Whether this field currently has a non-empty value
     pub is_set: bool,
@@ -269,7 +269,7 @@ pub enum CredentialSurfaceClass {
 )]
 pub enum ConfigTab {
     #[default]
-    /// No tab grouping — field appears in a flat list.
+    /// No tab grouping - field appears in a flat list.
     None,
 
     // ── Shared (providers + channels) ──
@@ -355,7 +355,7 @@ pub struct PropFieldInfo {
     /// Full dotted name (e.g. `channels.telegram.draft-update-interval-ms`).
     /// Owned so the `HashMap<String, T>` branch of the derive can inject the
     /// runtime map key into the path (`model_providers.anthropic.api-key`)
-    /// — `&'static str` can't carry user-supplied keys.
+    /// - `&'static str` can't carry user-supplied keys.
     pub name: String,
     /// Category for grouping in property listings
     pub category: &'static str,
@@ -789,7 +789,7 @@ impl SecretField for Option<std::collections::HashMap<String, String>> {
     }
 }
 
-/// Stable wire-form for an addable section — a `HashMap<String, T>` (Map) or
+/// Stable wire-form for an addable section - a `HashMap<String, T>` (Map) or
 /// `Vec<T>` (List) field whose value type implements `Configurable`. The
 /// dashboard / CLI use this to surface `+ Add` affordances without
 /// hardcoding the section list. Auto-discovered by the `Configurable` derive.
@@ -797,9 +797,9 @@ impl SecretField for Option<std::collections::HashMap<String, String>> {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum MapKeyKind {
-    /// `HashMap<String, T>` — key is user-supplied; new value is default.
+    /// `HashMap<String, T>` - key is user-supplied; new value is default.
     Map,
-    /// `Vec<T>` — entries are appended; the user-supplied "key" is stored
+    /// `Vec<T>` - entries are appended; the user-supplied "key" is stored
     /// in the value type's natural identifier field (e.g. `name`, `hint`).
     List,
 }
@@ -818,7 +818,7 @@ pub struct MapKeySection {
     pub description: &'static str,
     /// Optional natural key used to address entries in list-backed sections.
     pub natural_key: Option<&'static str>,
-    /// Whether this section's map key is a `#[resource_key]` — a value
+    /// Whether this section's map key is a `#[resource_key]` - a value
     /// drawn from another domain (a model id, tool name, …) that may
     /// itself contain dots, rather than a short operator-chosen alias
     /// validated by `validate_alias_key`. Consumers that split a dotted

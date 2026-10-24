@@ -11,7 +11,7 @@ const SEP: &str = "__";
 /// `[todotracker]` was a daemon schema section in v0.8.3 only; TodoWrite
 /// display config now lives in ZeroCode's `zerocode-config.toml`. Removing the
 /// schema section would make these previously valid env vars unresolved, and
-/// an unresolved path is a hard error — so a working deployment would stop
+/// an unresolved path is a hard error - so a working deployment would stop
 /// starting after an upgrade. Recognized legacy fields are therefore accepted
 /// and ignored (with a migration warning) instead of failing startup.
 ///

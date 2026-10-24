@@ -4,20 +4,20 @@
 //!
 //! ```text
 //! <bundle>/
-//!   zeroclaw-agent.toml   — manifest (format version, root alias, provenance,
+//!   zeroclaw-agent.toml - manifest (format version, root alias, provenance,
 //!                            required secrets, carried skill bundles,
 //!                            dropped refs, risk flags)
-//!   config.toml           — the config closure this agent needs
-//!   workspace/            — the agent's workspace tree
-//!   skills/<alias>/       — content of each referenced skill bundle, which
+//!   config.toml - the config closure this agent needs
+//!   workspace/ - the agent's workspace tree
+//!   skills/<alias>/ - content of each referenced skill bundle, which
 //!                            lives outside the workspace on the source host
 //! ```
 //!
 //! This module owns the *planning* half: given a live [`Config`] and an agent
 //! alias, it computes the transitive config closure, strips credentials and
 //! host-specific state, and reports what an operator on the receiving end
-//! would be accepting. It performs no I/O — materializing the plan onto disk
-//! is the caller's job — which keeps the security-relevant logic unit-testable
+//! would be accepting. It performs no I/O - materializing the plan onto disk
+//! is the caller's job - which keeps the security-relevant logic unit-testable
 //! without a filesystem.
 //!
 //! The closure is deliberately narrow. An agent entry references providers,
@@ -57,7 +57,7 @@ pub const WORKSPACE_DIR: &str = "workspace";
 pub const SKILLS_DIR: &str = "skills";
 
 /// Workspace subdirectory holding the agent's private memory store. Never
-/// carried by bundle format 1 — see [`plan_export`].
+/// carried by bundle format 1 - see [`plan_export`].
 pub const WORKSPACE_MEMORY_DIR: &str = "memory";
 
 /// The memory snapshot at the workspace root, excluded alongside the store.
@@ -115,7 +115,7 @@ pub struct DroppedRef {
 /// A capability in the bundle that widens the target install's trust boundary.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RiskKind {
-    /// Risk profile runs at `level = "full"` — no per-operation approval gate.
+    /// Risk profile runs at `level = "full"` - no per-operation approval gate.
     FullAutonomy,
     /// The agent may read or write outside its workspace.
     FilesystemEscape,
@@ -171,7 +171,7 @@ pub struct RiskFlag {
 /// stays a pure function of the config.
 #[derive(Debug, Clone)]
 pub struct Provenance {
-    /// Version of the ZeroClaw binary that produced the bundle.
+    /// Version of the Redrob OS binary that produced the bundle.
     pub zeroclaw_version: String,
     /// RFC 3339 timestamp of the export.
     pub exported_at: String,
@@ -212,7 +212,7 @@ pub struct SkillBundleSource {
 /// install passes the comparison while moving the source out of the subtree
 /// its contract names, and the object the check resolved is not necessarily
 /// the object a later by-path open finds. The install root itself is the
-/// operator's configured location — like the config file it holds — so
+/// operator's configured location - like the config file it holds - so
 /// symlinks above it are the operator's own and are followed.
 #[derive(Debug, Clone)]
 pub struct SourceBoundaries {
@@ -283,8 +283,8 @@ pub enum ExportError {
 /// Compute the export closure for `alias`.
 ///
 /// Fails only on an unknown alias or a serialization fault. A source config
-/// with dangling references plans without complaint — the unresolvable
-/// entries are simply absent from the closure — and is caught when the
+/// with dangling references plans without complaint - the unresolvable
+/// entries are simply absent from the closure - and is caught when the
 /// closure is rendered, which is the last point at which its final content is
 /// known. See [`render_config_toml`].
 pub fn plan_export(config: &Config, alias: &str) -> Result<ExportPlan, ExportError> {
@@ -1378,7 +1378,7 @@ fn remove_unresolved_provider_fallbacks(
 /// The masked table for one MCP server, matched by natural key.
 ///
 /// Falls back to serializing the resolved entry when the masked array has no
-/// element with this name — which cannot happen for a config that round-trips,
+/// element with this name - which cannot happen for a config that round-trips,
 /// but must not panic if it does.
 fn masked_server_table(
     masked_root: &toml::Table,
@@ -1484,7 +1484,7 @@ fn dedup(values: &[String]) -> Vec<String> {
 }
 
 /// Split a dotted `<family>.<alias>` provider reference. Returns `None` for an
-/// empty or malformed reference — `Config::validate()` owns reporting those.
+/// empty or malformed reference - `Config::validate()` owns reporting those.
 fn split_provider_ref(reference: &str) -> Option<(&str, &str)> {
     let (family, entry) = reference.split_once('.')?;
     (!family.is_empty() && !entry.is_empty()).then_some((family, entry))
@@ -1494,7 +1494,7 @@ fn split_provider_ref(reference: &str) -> Option<(&str, &str)> {
 ///
 /// Array elements carrying a `name` are addressed by that natural key
 /// (`mcp.servers.github.env.TOKEN`) so reported paths match the ones
-/// `zeroclaw config set` accepts. That addressing is only unambiguous while
+/// `redrob-agentctl config set` accepts. That addressing is only unambiguous while
 /// names are unique within the array; `mcp.servers` is the only array the
 /// closure carries, and the invariant that keeps it so is recorded where it is
 /// built in [`plan_export`].
@@ -1594,7 +1594,7 @@ pub fn render_config_toml(plan: &ExportPlan) -> Result<String, ExportError> {
 /// starts from a config holding none of the source install's entries, so
 /// every reference the closure carries has to resolve inside it. `carry`
 /// copies a referenced entry only when the source config has one, which
-/// leaves the agent pointing at nothing — a shape this code really is handed,
+/// leaves the agent pointing at nothing - a shape this code really is handed,
 /// because `Config::load_or_init` reports validation errors and boots anyway
 /// so an operator is never locked out of the CLI that repairs them. The
 /// exporter is one of the commands that stays reachable.
@@ -1880,7 +1880,7 @@ mod tests {
     }
 
     /// `required_secrets` promises paths that can be pasted into
-    /// `zeroclaw config set`, which holds only while a server name addresses
+    /// `redrob-agentctl config set`, which holds only while a server name addresses
     /// one entry. `Config::validate` rejects duplicate names, so this pins what
     /// the exporter does on its own with a config that reached it hand-edited.
     #[test]
