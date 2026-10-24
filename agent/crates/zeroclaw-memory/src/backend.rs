@@ -22,7 +22,7 @@ pub struct MemoryBackendProfile {
 
 const SQLITE_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
     key: "sqlite",
-    label: "SQLite with Vector Search (recommended) — fast, hybrid search, embeddings",
+    label: "SQLite with Vector Search (recommended) - fast, hybrid search, embeddings",
     auto_save_default: true,
     uses_sqlite_hygiene: true,
     sqlite_based: true,
@@ -31,7 +31,7 @@ const SQLITE_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
 
 const LUCID_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
     key: "lucid",
-    label: "Lucid Memory bridge — sync with local lucid-memory CLI, keep SQLite fallback",
+    label: "Lucid Memory bridge - sync with local lucid-memory CLI, keep SQLite fallback",
     auto_save_default: true,
     uses_sqlite_hygiene: true,
     sqlite_based: true,
@@ -40,7 +40,7 @@ const LUCID_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
 
 const MARKDOWN_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
     key: "markdown",
-    label: "Markdown Files — simple, human-readable, no dependencies",
+    label: "Markdown Files - simple, human-readable, no dependencies",
     auto_save_default: true,
     uses_sqlite_hygiene: false,
     sqlite_based: false,
@@ -49,7 +49,7 @@ const MARKDOWN_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
 
 const POSTGRES_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
     key: "postgres",
-    label: "PostgreSQL — remote durable storage via [storage.model_provider.config]",
+    label: "PostgreSQL - remote durable storage via [storage.model_provider.config]",
     auto_save_default: true,
     uses_sqlite_hygiene: false,
     sqlite_based: false,
@@ -58,7 +58,7 @@ const POSTGRES_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
 
 const QDRANT_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
     key: "qdrant",
-    label: "Qdrant — vector database for semantic search via [memory.qdrant]",
+    label: "Qdrant - vector database for semantic search via [memory.qdrant]",
     auto_save_default: true,
     uses_sqlite_hygiene: false,
     sqlite_based: false,
@@ -67,7 +67,7 @@ const QDRANT_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
 
 const NONE_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
     key: "none",
-    label: "None — disable persistent memory",
+    label: "None - disable persistent memory",
     auto_save_default: false,
     uses_sqlite_hygiene: false,
     sqlite_based: false,
@@ -76,7 +76,7 @@ const NONE_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
 
 const CUSTOM_PROFILE: MemoryBackendProfile = MemoryBackendProfile {
     key: "custom",
-    label: "Custom backend — extension point",
+    label: "Custom backend - extension point",
     auto_save_default: true,
     uses_sqlite_hygiene: false,
     sqlite_based: false,

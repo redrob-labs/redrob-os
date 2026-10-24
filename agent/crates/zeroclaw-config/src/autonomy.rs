@@ -54,7 +54,7 @@ pub struct DelegationPolicy {
 
 impl DelegationPolicy {
     /// Whether this profile may delegate. The set of reachable targets is
-    /// determined by shared risk profile at the call site — this only gates
+    /// determined by shared risk profile at the call site - this only gates
     /// whether delegation is permitted at all.
     pub fn permits(&self) -> bool {
         matches!(self.mode, DelegationMode::Allow)
@@ -85,7 +85,7 @@ fn default_approval_timeout_secs() -> u64 {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 pub struct ApprovalRoute {
-    /// A registered channel name (NOT the originator) — the distinct-approver hop.
+    /// A registered channel name (NOT the originator) - the distinct-approver hop.
     pub approver_channel: String,
     /// The recipient on the approver channel. Blank or absent means unavailable.
     #[serde(default)]

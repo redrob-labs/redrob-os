@@ -17,6 +17,7 @@ import type {
 import type { components } from "./api-generated";
 import { clearToken, getToken, setToken } from "./auth";
 import { apiOrigin, basePath } from "./basePath";
+import { loadSchemaText, trSchema } from "./schemaText";
 
 // ---------------------------------------------------------------------------
 // Base fetch wrapper
@@ -1020,9 +1021,12 @@ let configSchemaCache: Promise<JsonSchema> | null = null;
 
 export function fetchConfigSchema(): Promise<JsonSchema> {
   if (!configSchemaCache) {
-    configSchemaCache = apiFetch<JsonSchema>("/api/config", {
-      method: "OPTIONS",
-    }).catch(() => undefined);
+    configSchemaCache = Promise.all([
+      apiFetch<JsonSchema>("/api/config", { method: "OPTIONS" }),
+      loadSchemaText(),
+    ])
+      .then(([schema]) => schema)
+      .catch(() => undefined);
   }
   return configSchemaCache;
 }
@@ -1166,7 +1170,7 @@ export function objectArrayElementProps(
       key: snakeKey,
       label: snakeKey.replace(/_/g, " "),
       kind,
-      description: desc,
+      description: trSchema(desc),
       enumVariants,
       optional: isOptional,
     });
@@ -1239,13 +1243,13 @@ export function descriptionForPath(
   // Wrapper carries the field's own `///` doc comment; the resolved
   // type's description is a fallback for fields that ref a typed config.
   const wrapDesc = (last as { description?: unknown } | null)?.description;
-  if (typeof wrapDesc === "string" && wrapDesc.length > 0) return wrapDesc;
+  if (typeof wrapDesc === "string" && wrapDesc.length > 0) return trSchema(wrapDesc);
   const resolved = resolveAndUnwrap(last, schema) as {
     description?: unknown;
   } | null;
   const innerDesc = resolved?.description;
   return typeof innerDesc === "string" && innerDesc.length > 0
-    ? innerDesc
+    ? trSchema(innerDesc)
     : null;
 }
 
@@ -1270,8 +1274,18 @@ export interface TemplatesResponse {
   templates: TemplateEntry[];
 }
 
-export function getTemplates(): Promise<TemplatesResponse> {
-  return apiFetch<TemplatesResponse>("/api/config/templates");
+export async function getTemplates(): Promise<TemplatesResponse> {
+  const [res] = await Promise.all([
+    apiFetch<TemplatesResponse>("/api/config/templates"),
+    loadSchemaText(),
+  ]);
+  return {
+    ...res,
+    templates: res.templates.map((x) => ({
+      ...x,
+      description: trSchema(x.description),
+    })),
+  };
 }
 
 export interface MapKeyResponse {
@@ -1494,8 +1508,21 @@ export interface SectionsResponse {
   sections: SectionInfo[];
 }
 
-export function getSections(): Promise<SectionsResponse> {
-  return apiFetch<SectionsResponse>("/api/config/sections");
+export async function getSections(): Promise<SectionsResponse> {
+  const [res] = await Promise.all([
+    apiFetch<SectionsResponse>("/api/config/sections"),
+    loadSchemaText(),
+  ]);
+  // `group` stays English: it is matched against GROUP_ORDER. Pass it
+  // through `trSchema` only when displaying it.
+  return {
+    ...res,
+    sections: res.sections.map((x) => ({
+      ...x,
+      label: trSchema(x.label),
+      help: trSchema(x.help),
+    })),
+  };
 }
 
 export interface SectionStatusResponse {
@@ -1573,10 +1600,24 @@ export interface PickerResponse {
   help: string;
 }
 
-export function getSectionPicker(section: string): Promise<PickerResponse> {
-  return apiFetch<PickerResponse>(
-    `/api/config/sections/${encodeURIComponent(section)}`,
-  );
+export async function getSectionPicker(
+  section: string,
+): Promise<PickerResponse> {
+  const [res] = await Promise.all([
+    apiFetch<PickerResponse>(
+      `/api/config/sections/${encodeURIComponent(section)}`,
+    ),
+    loadSchemaText(),
+  ]);
+  return {
+    ...res,
+    help: trSchema(res.help),
+    items: res.items.map((x) => ({
+      ...x,
+      label: trSchema(x.label),
+      description: trSchema(x.description),
+    })),
+  };
 }
 
 export interface SelectItemResponse {
@@ -1663,8 +1704,18 @@ export interface QuickstartPreset {
   help: string;
 }
 
-export function getQuickstartState(): Promise<QuickstartState> {
-  return apiFetch<QuickstartState>("/api/quickstart/state");
+export async function getQuickstartState(): Promise<QuickstartState> {
+  const [res] = await Promise.all([
+    apiFetch<QuickstartState>("/api/quickstart/state"),
+    loadSchemaText(),
+  ]);
+  const tr = (rows: QuickstartPreset[]) =>
+    rows?.map((x) => ({ ...x, label: trSchema(x.label), help: trSchema(x.help) }));
+  return {
+    ...res,
+    risk_presets: tr(res.risk_presets),
+    runtime_presets: tr(res.runtime_presets),
+  };
 }
 
 export interface QuickstartError {

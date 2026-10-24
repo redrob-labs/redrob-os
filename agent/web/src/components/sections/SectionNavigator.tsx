@@ -29,6 +29,7 @@ import {
 } from "../../lib/api";
 import { fuzzyFilter } from "../../lib/fuzzy";
 import { t } from "@/lib/i18n";
+import { trSchema } from "@/lib/schemaText";
 import { badgeIsGood } from "./SectionPicker";
 
 // One selectable entity under a section. `url` is the entity's existing
@@ -428,7 +429,7 @@ export default function SectionNavigator({
                     >
                       <span className="truncate">{h.section.label}</span>
                       <span className="text-[10px] uppercase tracking-wider text-pc-text-faint flex-shrink-0">
-                        {h.section.group}
+                        {trSchema(h.section.group)}
                       </span>
                     </button>
                   );
@@ -468,9 +469,9 @@ export default function SectionNavigator({
         ) : (
           // Grouped collapsible mode.
           grouped.map(({ groupName, items }) => (
-            <div key={groupName} role="group" aria-label={groupName} className="mb-1">
+            <div key={groupName} role="group" aria-label={trSchema(groupName)} className="mb-1">
               <div className="px-3 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-pc-text-faint">
-                {groupName}
+                {trSchema(groupName)}
               </div>
               {items.map((s) => {
                 const active = s.key === activeSectionKey;

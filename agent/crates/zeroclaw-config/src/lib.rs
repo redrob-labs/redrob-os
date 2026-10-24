@@ -1,4 +1,4 @@
-//! Configuration schema, secrets, and related types for ZeroClaw.
+//! Configuration schema, secrets, and related types for Redrob OS.
 
 // `to_string()` inside `record!` `format!` args is the deliberate pattern
 // for crossing a Serialize→string boundary; clippy can't tell those from

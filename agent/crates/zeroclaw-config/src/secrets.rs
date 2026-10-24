@@ -77,7 +77,7 @@ pub trait KeySource: Debug + Send + Sync {
     /// Human-readable label for diagnostic messages.
     fn backend_name(&self) -> &'static str;
 
-    /// Local-only provisioning check — MUST NOT run scripts or
+    /// Local-only provisioning check - MUST NOT run scripts or
     /// prompt for user input.
     fn provisioning_state(&self) -> ProvisioningState;
 
@@ -193,7 +193,7 @@ impl SecretStore {
     }
 
     /// Obtain the master key through the trait callback contract.
-    /// Enforces exactly-once invocation — a backend that returns
+    /// Enforces exactly-once invocation - a backend that returns
     /// `Ok(())` without calling the closure, or that calls it more
     /// than once, gets an error instead of a panic.
     fn get_key<R>(&self, f: impl FnOnce(&[u8; 32]) -> Result<R>) -> Result<R> {
@@ -535,7 +535,7 @@ const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
 ///
 /// On Windows we test the reparse-point attribute rather than
 /// `FileType::is_symlink()`, which only recognises symlinks and would miss
-/// junctions / mount points — matching the read-path check in `open_no_follow`
+/// junctions / mount points - matching the read-path check in `open_no_follow`
 /// so both paths reject the same set of objects.
 #[cfg(unix)]
 fn is_symlink_like(path: &Path) -> bool {
@@ -560,7 +560,7 @@ fn is_symlink_like(path: &Path) -> bool {
 }
 
 /// Open `key_path` with platform no-follow / reparse-point semantics so that
-/// validation and reading are bound to the *same* object — no check-then-follow
+/// validation and reading are bound to the *same* object - no check-then-follow
 /// window.
 // NOTE: do NOT add a module-level `use std::io::Read;` — production code already
 // has a function-scoped `use std::io::Read;` (resolve_onepassword_ref); a second
@@ -625,7 +625,7 @@ fn open_no_follow(_key_path: &Path) -> std::io::Result<std::fs::File> {
 /// Read the key file from a no-follow / reparse-point-verified handle.
 ///
 /// Opening with `open_no_follow` binds the "not a symlink" check to the same
-/// object we read from — there is no check-then-follow window.
+/// object we read from - there is no check-then-follow window.
 fn read_key_file_no_follow(key_path: &Path) -> std::io::Result<String> {
     use std::io::Read; // function-scoped — avoids redundant module import
     let mut file = open_no_follow(key_path)?;
@@ -782,7 +782,7 @@ fn sync_parent_dir(file_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Write `key` as hex to `key_path` — thin wrapper around
+/// Write `key` as hex to `key_path` - thin wrapper around
 /// `write_key_file_atomic_publish` for the `initialize()` path.
 fn write_key_file(key_path: &Path, key: &[u8]) -> Result<()> {
     write_key_file_atomic_publish(key_path, key)
@@ -2264,7 +2264,7 @@ exit 65
     }
 
     /// A test-only KeySource that calls the callback once, then returns
-    /// an error — simulating a KMS/HSM connection failure.
+    /// an error - simulating a KMS/HSM connection failure.
     #[derive(Debug)]
     struct BackendErrorSource {
         key: [u8; 32],
@@ -2374,7 +2374,7 @@ exit 65
     // ── Backward compatibility (frozen fixture) ──────────────
 
     /// Pre-computed hex encoding of the frozen test key.
-    /// This is a literal artifact — it must never be regenerated at
+    /// This is a literal artifact - it must never be regenerated at
     /// test runtime.  A change to hex_encode must break this test
     /// (or the frozen fixture test) rather than silently updating
     /// both sides of the proof.

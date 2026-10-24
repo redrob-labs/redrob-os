@@ -1,12 +1,12 @@
 //! Strictly-typed JSON-to-`Config::set_prop` value coercion.
 //!
-//! Both the gateway HTTP CRUD layer and the CLI (`zeroclaw config patch`)
+//! Both the gateway HTTP CRUD layer and the CLI (`redrob-agentctl config patch`)
 //! receive incoming values as `serde_json::Value` and need to hand them to
 //! `Config::set_prop`, which takes a `&str`. The naive coercion (just JSON
 //! stringify everything) loses type safety: a JSON array passed where a
 //! scalar is expected silently round-trips through string parsing instead
 //! of being rejected. Worse: the two surfaces had divergent coercion logic
-//! — the HTTP layer enforced types, the CLI accepted whatever.
+//! - the HTTP layer enforced types, the CLI accepted whatever.
 //!
 //! This module is the single source of truth. Both surfaces consult the
 //! field's declared `PropKind` and reject shape mismatches with a

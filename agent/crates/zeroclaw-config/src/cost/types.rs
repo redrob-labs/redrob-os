@@ -107,8 +107,8 @@ impl TokenUsage {
 
     /// Create a new token usage record that also prices the cache-write
     /// band: `cache_creation_input_tokens` at `cache_write_price_per_million`.
-    /// A non-positive write rate keeps the historical behavior — cache
-    /// writes stay inside the plain uncached-input band at the input rate —
+    /// A non-positive write rate keeps the historical behavior - cache
+    /// writes stay inside the plain uncached-input band at the input rate -
     /// so sheets without a write rate reproduce yesterday's totals exactly.
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_cache_write(
@@ -196,7 +196,7 @@ pub struct CostRecord {
     /// Token usage details
     pub usage: TokenUsage,
     /// Tracker identifier: one random UUID per daemon process, grouping every
-    /// record this daemon emits. This is NOT the chat session — attribute
+    /// record this daemon emits. This is NOT the chat session - attribute
     /// per-conversation spend through `conversation_id`.
     pub session_id: String,
     /// Chat-session identifier (the runtime session key scoped around the
