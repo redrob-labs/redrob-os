@@ -112,9 +112,9 @@ pub enum PairingCodePolicyError {
 
 /// The one pairing-code generation policy.
 ///
-/// Every code the gateway issues — the startup code, `zeroclaw gateway
+/// Every code the gateway issues - the startup code, `redrob-agentctl gateway
 /// get-paircode --new`, `POST /api/pairing/initiate`, and the rotate-device
-/// flow — comes from this policy via [`PairingGuard`]. There is no second
+/// flow - comes from this policy via [`PairingGuard`]. There is no second
 /// pairing-code setting anywhere in the schema.
 ///
 /// # Default
@@ -237,7 +237,7 @@ impl PairingCodePolicy {
     /// Generate one pairing code using cryptographically secure randomness.
     ///
     /// Each character is drawn by rejection sampling so every symbol in the
-    /// alphabet is equally likely — a plain `%` would bias the low symbols
+    /// alphabet is equally likely - a plain `%` would bias the low symbols
     /// for any alphabet size that does not divide `u32::MAX + 1`.
     pub fn generate(&self) -> String {
         let alphabet = self.charset.alphabet();
@@ -420,7 +420,7 @@ impl PairingGuard {
     ///
     /// The policy is **not** retained. `PairingGuard` outlives any number of
     /// config writes, and root `AGENTS.md` forbids snapshotting live policy
-    /// into a long-lived handle — a code minted after an operator strengthens
+    /// into a long-lived handle - a code minted after an operator strengthens
     /// `[gateway.pairing_code]` must use the new policy without a restart.
     /// Every later mint therefore takes the policy the caller resolved from
     /// live config at that moment.
@@ -670,7 +670,7 @@ impl PairingGuard {
     /// hashes to a currently-paired token, regardless of `require_pairing`.
     /// The gateway's `is_authenticated` convenience fails OPEN when pairing
     /// is disabled, which is only correct on surfaces that already treat
-    /// the transport as trusted — an auth provider must use this instead,
+    /// the transport as trusted - an auth provider must use this instead,
     /// so an empty token set denies everything.
     pub fn token_is_paired(&self, token: &str) -> bool {
         let hashed = hash_token(token);
@@ -743,7 +743,7 @@ impl PairingGuard {
     /// pair with `revoke_token`/`revoke_token_hash` + a config persist pass.
     ///
     /// `code_policy` is passed per call, resolved by the caller from live
-    /// config at this moment — the guard holds no policy of its own, so an
+    /// config at this moment - the guard holds no policy of its own, so an
     /// operator who strengthens `[gateway.pairing_code]` sees the next code
     /// follow the new policy without a restart.
     pub fn generate_new_pairing_code(&self, code_policy: PairingCodePolicy) -> Option<String> {
@@ -1500,7 +1500,7 @@ mod tests {
         );
     }
 
-    /// The happy path must stay quiet — a warning on every mint would train
+    /// The happy path must stay quiet - a warning on every mint would train
     /// operators to ignore it.
     #[test]
     async fn generating_at_a_valid_length_emits_no_clamp_warning() {
@@ -1975,7 +1975,7 @@ mod tests {
 
     /// Review follow-up: the guard must not snapshot the policy.
     /// A guard built under the weak compatibility policy, then asked to mint
-    /// under a strengthened one, issues the strengthened shape — no
+    /// under a strengthened one, issues the strengthened shape - no
     /// reconstruction, no restart. This is the unit-level half of the
     /// regression; the gateway half swaps live config.
     #[test]

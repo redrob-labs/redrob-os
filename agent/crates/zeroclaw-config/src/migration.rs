@@ -101,7 +101,7 @@ pub fn migrate_file(input: &str) -> Result<Option<String>> {
     }
 }
 
-/// Embedded V1 fixture used by [`generate`] / the `zeroclaw config generate`
+/// Embedded V1 fixture used by [`generate`] / the `redrob-agentctl config generate`
 /// CLI. Authored against the V1 schema at the parent of the V2-intro
 /// commit; see `fixtures/v1.toml`.
 const V1_FIXTURE: &str = include_str!("../fixtures/v1.toml");
@@ -116,7 +116,7 @@ pub struct GenerateOptions<'a> {
     pub encrypt_secrets: bool,
     /// Directory containing (or to receive) the `.secret_key` used for
     /// `enc2:` encryption. Required when `encrypt_secrets` is true. The
-    /// key is created with 0o600 permissions if absent — matches how the
+    /// key is created with 0o600 permissions if absent - matches how the
     /// daemon's `SecretStore` behaves on first use.
     pub secret_store_dir: Option<&'a Path>,
 }
@@ -216,7 +216,7 @@ fn encrypt_in_place(value: &mut toml::Value, store: &crate::secrets::SecretStore
 }
 
 /// Versioned TOML → validated V3 `Config`, strict: any defect errors.
-/// Used by repair tooling (`zeroclaw config migrate`, `model_routing_config`)
+/// Used by repair tooling (`redrob-agentctl config migrate`, `model_routing_config`)
 /// that needs the precise failure. Daemon load uses the resilient path.
 pub fn migrate_to_current(input: &str) -> Result<Config> {
     let _attribution = ::zeroclaw_log::attribution_span!(&ConfigLoadAttribution).entered();
@@ -889,7 +889,7 @@ pub(crate) fn sync_table(doc: &mut toml_edit::Table, new: &toml::Table) {
 
 /// Convert a `toml::Value` into a `toml_edit::Item` for insertion into
 /// a `DocumentMut`. Tables become inline tables when small, real tables
-/// otherwise — matches `toml_edit`'s default round-trip behavior.
+/// otherwise - matches `toml_edit`'s default round-trip behavior.
 pub(crate) fn toml_value_to_edit_item(value: &toml::Value) -> toml_edit::Item {
     // Easiest path: serialize to string, parse as toml_edit. Lossy on numeric
     // formatting nuance but correct for migration round-trip where we're

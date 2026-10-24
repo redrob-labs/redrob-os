@@ -1,7 +1,7 @@
 //! Live config publication storage.
 //!
-//! One canonical published pair — a [`Config`] plus its opaque
-//! [`ConfigRevision`] — behind a single short reader lock. The
+//! One canonical published pair - a [`Config`] plus its opaque
+//! [`ConfigRevision`] - behind a single short reader lock. The
 //! inward-facing types here are storage and access only: who may publish,
 //! when writes serialize, and how commits are retained are owned by the
 //! runtime's `LiveConfigAuthority` transaction, not by this module.
@@ -178,7 +178,7 @@ impl LiveConfig {
     /// `revision` must be the successor of the currently published
     /// revision within the same epoch; anything else (stale, repeated, or
     /// cross-epoch) is refused with the published pair unchanged. The
-    /// write lock is held only for the pair install — never across
+    /// write lock is held only for the pair install - never across
     /// persistence I/O, which the caller performs between allocation and
     /// this call.
     pub fn publish(
@@ -251,7 +251,7 @@ impl LiveConfigHandle {
 ///
 /// Dereferences to [`Config`] so ordinary read sites keep their shape.
 /// The guard is a `parking_lot` read guard: it is `!Send` and must never
-/// be held across an `.await` — clone out what crosses an async
+/// be held across an `.await` - clone out what crosses an async
 /// boundary.
 pub struct LiveConfigReadGuard<'a> {
     guard: parking_lot::RwLockReadGuard<'a, PublishedPair>,

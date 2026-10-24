@@ -88,7 +88,7 @@ pub enum RefStrength {
 /// references carry [`ScrubAction::Refuse`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScrubAction {
-    /// Mandatory reference — block the delete.
+    /// Mandatory reference - block the delete.
     Refuse,
     /// Clear a scalar / `Option` field to empty / `None`.
     ClearOptional,
@@ -146,11 +146,11 @@ pub struct OwnedArtifact {
 pub struct ImpactReport {
     pub target_kind: AliasKind,
     pub target_alias: String,
-    /// Hard references — non-empty means the delete is refused.
+    /// Hard references - non-empty means the delete is refused.
     pub blockers: Vec<RefSite>,
     /// Soft references that would be scrubbed.
     pub scrubs: Vec<RefSite>,
-    /// Owned non-config state — empty from the pure config walk; populated by
+    /// Owned non-config state - empty from the pure config walk; populated by
     /// the surface cascade, which owns the infra stores.
     pub owned_state: Vec<OwnedArtifact>,
     /// `true` iff no hard reference (or hard owned artifact) blocks the delete.
@@ -596,7 +596,7 @@ pub enum RenameError {
     Reserved(String),
     /// Bug guard: rewrite drifted from `find_all_references` and left a dangling
     /// reference to the OLD alias. **The config WAS mutated** (key swapped + refs
-    /// rewritten) — the caller must NOT persist it. Unreachable while rewrite and
+    /// rewritten) - the caller must NOT persist it. Unreachable while rewrite and
     /// the collect_* walks mirror each other (same sites, same trim split).
     PostCondition(String),
 }
@@ -683,7 +683,7 @@ pub fn rename_with_cascade(
     })
 }
 
-/// The map-key section path for a kind — the `section_path` argument to
+/// The map-key section path for a kind - the `section_path` argument to
 /// `Config::rename_map_key` / `Config::delete_map_key`.
 fn section_path(kind: &AliasKind) -> String {
     match kind {

@@ -1,5 +1,5 @@
 //! Shared TOML comment-writing helpers used by both the gateway HTTP CRUD
-//! handlers and the CLI `zeroclaw config set --comment` / `zeroclaw config patch`
+//! handlers and the CLI `redrob-agentctl config set --comment` / `redrob-agentctl config patch`
 //! flow. Walks a `toml_edit::DocumentMut` to a leaf key by dotted path and
 //! decorates its leading whitespace with `# {comment}\n`. Empty comment string
 

@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 /// raises the structured warning, and the runtime traces it at each config
 /// application (`warn_verifiable_intent_withheld` in `src/main.rs`).
 ///
-/// The prose deliberately differs per surface — the [`ValidationWarning`]
-/// message is the stable English contract for API consumers, `zeroclaw doctor`
+/// The prose deliberately differs per surface - the [`ValidationWarning`]
+/// message is the stable English contract for API consumers, `redrob-agentctl doctor`
 /// renders a localized line through Fluent, and the trace carries an operator
 /// log sentence. The code is what ties them together, which is why it is shared
 /// and the wording is not.
@@ -69,7 +69,7 @@ pub const SECURITY_AUDIT_DISABLED_DROPS_CERTIFICATE_RECORD: &str =
 ///   value, because no production path records tool commands.
 /// - `peer_group_channel_dangling`: a `peer_groups.<name>.channel` dotted
 ///   alias (`<type>.<alias>`) does not resolve to any configured
-///   `[channels.<type>.<alias>]` block — typically a typo that silently
+///   `[channels.<type>.<alias>]` block - typically a typo that silently
 ///   authorizes nobody. `Config::validate()` already hard-errors this exact
 ///   condition (see `classify_peer_group_channel_ref` in `schema.rs`); this
 ///   warning is the non-fatal surface for callers (channel doctor,
@@ -77,7 +77,7 @@ pub const SECURITY_AUDIT_DISABLED_DROPS_CERTIFICATE_RECORD: &str =
 ///   failed `validate()` is still allowed to boot.
 /// - `context_compression_unsupported`: a `runtime_profiles.<alias>.context_compression`
 ///   knob (`enabled = true`, or any other field set to a non-default value)
-///   has no runtime consumer — the context compressor was removed —
+///   has no runtime consumer - the context compressor was removed -
 ///   so it currently has no effect. One warning per non-default field (see
 ///   `collect_context_compression_ignored_warnings` in `schema.rs`).
 /// - `proxy_conflicts_with_dns_pinned_tools`: the configured proxy scope
@@ -88,7 +88,7 @@ pub const SECURITY_AUDIT_DISABLED_DROPS_CERTIFICATE_RECORD: &str =
 ///   credential chain verifier exists, so enabling the section does not enable
 ///   credential verification. The runtime also traces this at config load, and
 ///   that trace has no sink under `observability.log_persistence = "none"`;
-///   this warning is the channel that survives, since `zeroclaw doctor` and the
+///   this warning is the channel that survives, since `redrob-agentctl doctor` and the
 ///   config API read the structured list rather than the log.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
@@ -119,7 +119,7 @@ impl ValidationWarning {
 
 /// Levenshtein edit distance between `a` and `b`, operating on `char`s
 /// (Unicode scalar values) rather than bytes. Used to suggest a likely
-/// intended configured alias when a reference doesn't resolve — e.g. a
+/// intended configured alias when a reference doesn't resolve - e.g. a
 /// `peer_groups.*.channel` dotted alias that doesn't match any configured
 /// `[channels.<type>.<alias>]` block.
 pub(crate) fn levenshtein_distance(a: &str, b: &str) -> usize {
@@ -157,10 +157,10 @@ pub(crate) fn levenshtein_distance(a: &str, b: &str) -> usize {
 /// deterministic output should pass `candidates` in a stable (e.g. sorted)
 /// order.
 ///
-/// Returns `None` when `target` is empty (an empty ref — e.g. a trailing-dot
-/// alias like `"telegram."` — is not a typo of anything, and the distance-2
+/// Returns `None` when `target` is empty (an empty ref - e.g. a trailing-dot
+/// alias like `"telegram."` - is not a typo of anything, and the distance-2
 /// floor would otherwise "suggest" any alias of up to two characters), when
-/// `candidates` is empty, or when nothing clears the threshold — the caller
+/// `candidates` is empty, or when nothing clears the threshold - the caller
 /// should omit the suggestion in those cases rather than propose an
 /// unrelated alias.
 pub(crate) fn closest_match<'a>(target: &str, candidates: &'a [String]) -> Option<&'a str> {

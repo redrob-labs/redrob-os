@@ -531,7 +531,7 @@ fn providers_picker(cfg: &zeroclaw_config::schema::Config) -> Vec<PickerItem> {
             key: p.name.to_string(),
             label: p.display_name.to_string(),
             description: if p.local {
-                Some("Local — no API key required".to_string())
+                Some("Local - no API key required".to_string())
             } else {
                 None
             },
@@ -814,7 +814,7 @@ fn tunnel_provider_picker(cfg: &zeroclaw_config::schema::Config) -> Vec<PickerIt
     let mut items = vec![PickerItem {
         key: "none".to_string(),
         label: "none".to_string(),
-        description: Some("Localhost only — no public tunnel.".to_string()),
+        description: Some("Localhost only - no public tunnel.".to_string()),
         badge: if active == "none" || active.is_empty() {
             Some("active".to_string())
         } else {

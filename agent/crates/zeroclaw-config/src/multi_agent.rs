@@ -140,7 +140,7 @@ pub struct AgentMemoryConfig {
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum OutputModality {
-    /// Always reply in kind — voice note if user sent voice, text otherwise.
+    /// Always reply in kind - voice note if user sent voice, text otherwise.
     #[default]
     Mirror,
     /// Always deliver via TTS as a voice note, regardless of input modality.
@@ -150,7 +150,7 @@ pub enum OutputModality {
     Text,
 }
 
-/// `[peer_groups.<name>]` — mutual-opt-in peer group on a channel type.
+/// `[peer_groups.<name>]` - mutual-opt-in peer group on a channel type.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, Configurable)]
 #[cfg_attr(feature = "schema-export", derive(schemars::JsonSchema))]
 #[prefix = "peer_group"]
@@ -220,11 +220,11 @@ pub struct A2aServerSection {
     pub client: A2aClientConfig,
 }
 
-/// `[a2a.client]` — outbound A2A client (caller role).
+/// `[a2a.client]` - outbound A2A client (caller role).
 ///
 /// Symmetric counterpart to [`A2aServerConfig`]: the server is the inbound
 /// (responder) surface, the client is the outbound (caller) surface that
-/// delegates tasks to remote A2A-compliant agents. Default-closed — the
+/// delegates tasks to remote A2A-compliant agents. Default-closed - the
 /// four `a2a_*` tools register only when `enabled = true`, so an
 /// unconfigured install carries no A2A outbound footprint. Peers are
 /// declared statically under `[[a2a.client.peers]]`; DNS auto-discovery is
@@ -253,7 +253,7 @@ pub struct A2aClientConfig {
     /// (secure-by-default: A2A is an outbound SSRF surface, same posture as
     /// `http_request`). Set `true` for local/intra-net deployments where a
     /// peer lives on `127.0.0.1` or an RFC1918 segment. Reuses the exact
-    /// `helpers::domain_guard` policy `http_request` uses — no duplicated
+    /// `helpers::domain_guard` policy `http_request` uses - no duplicated
     /// private-host authority.
     #[serde(default)]
     pub allow_private_hosts: bool,
@@ -273,7 +273,7 @@ pub struct A2aClientConfig {
     pub max_response_bytes: usize,
     /// Declared remote peers (`[[a2a.client.peers]]`). Empty (with
     /// `enabled = true`) registers the tools but every call fails fast
-    /// with "unknown peer" — useful for staging the config before peers
+    /// with "unknown peer" - useful for staging the config before peers
     /// are wired.
     #[nested]
     #[natural_key = "name"]
@@ -306,9 +306,9 @@ impl Default for A2aClientConfig {
     }
 }
 
-/// `[[a2a.client.peers]]` — one declared remote A2A peer.
+/// `[[a2a.client.peers]]` - one declared remote A2A peer.
 ///
-/// A peer is an A2A server origin (another ZeroClaw install, or any
+/// A peer is an A2A server origin (another Redrob OS install, or any
 /// A2A-compliant agent) identified by its base URL. The optional bearer
 /// `token` is resolved from an env var when the value is a `${VAR}`
 /// placeholder, reusing the same env-interpolation path as
@@ -335,7 +335,7 @@ pub struct A2aClientPeerConfig {
     ///
     /// **Auth extension boundary** (binding RFC condition): bearer is the
     /// MVP's first authentication mode, not the permanent abstraction. This
-    /// field is the single canonical peer-credential surface — future OAuth
+    /// field is the single canonical peer-credential surface - future OAuth
     /// or mTLS support will extend the peer schema with additional optional
     /// fields (e.g. `oauth_*` / `mtls_*`) or a tagged `auth` enum, without
     /// duplicating credential or policy resolution or requiring a breaking
