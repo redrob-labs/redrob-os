@@ -5,10 +5,7 @@
 # once: the agent runs as its own system user.
 # Copyright 2026 Janghoon Lee (Redrob) and contributors. Apache-2.0.
 set -euo pipefail
-sudo -u redrob-agent env \
-  ZEROCLAW_CONFIG_DIR=/var/lib/redrob/agent \
-  ZEROCLAW_DATA_DIR=/var/lib/redrob/agent/data \
-  redrob-agent gateway get-paircode --new --port 42617
+redrob-agentctl gateway get-paircode --new --port 42617
 # The pairing service picks the code up within 30 s; show it with the QR.
 if [ -n "${WAYLAND_DISPLAY:-}" ] && ! pgrep -u "$(id -u)" -x redrob-pairing >/dev/null; then
   (setsid redrob-pairing --notify >/dev/null 2>&1 &)

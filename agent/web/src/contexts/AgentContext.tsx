@@ -1176,7 +1176,7 @@ export function AgentProvider({
    */
   const removeSession = useCallback(async (targetSessionId: string) => {
     if (sessionPersistenceRef.current !== true) {
-      throw new Error('Session persistence is not available');
+      throw new Error(t('agent.session_persistence_unavailable'));
     }
     try {
       await sessionRuntimeRef.current.delete(targetSessionId);
@@ -1206,7 +1206,7 @@ export function AgentProvider({
 
   const renameConversation = useCallback(async (targetSessionId: string, name: string) => {
     if (sessionPersistence !== true) {
-      throw new Error('Session persistence is not available');
+      throw new Error(t('agent.session_persistence_unavailable'));
     }
     await sessionRuntime.rename(targetSessionId, name);
   }, [sessionPersistence, sessionRuntime]);

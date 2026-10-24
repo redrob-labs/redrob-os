@@ -1,4 +1,5 @@
 import { getToken } from './auth';
+import { t } from './i18n';
 import { apiOrigin, basePath } from './basePath';
 import { isTauri } from './tauri';
 
@@ -131,7 +132,7 @@ export class AcpWebSocketClient {
     this.ws = new WebSocket(url, protocols);
     this.ws.onopen = () => this.handlers.onOpen?.();
     this.ws.onclose = (event) => {
-      this.rejectPending(new Error('ACP WebSocket closed'));
+      this.rejectPending(new Error(t('conn.acp_closed')));
       this.handlers.onClose?.(event);
     };
     this.ws.onerror = (event) => this.handlers.onError?.(event);
@@ -157,7 +158,7 @@ export class AcpWebSocketClient {
     timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
   ): Promise<T> {
     if (!this.connected) {
-      return Promise.reject(new Error('ACP WebSocket is not connected'));
+      return Promise.reject(new Error(t('conn.acp_not_connected')));
     }
 
     const id = this.nextId++;
@@ -191,7 +192,7 @@ export class AcpWebSocketClient {
 
   notify(method: string, params?: unknown): void {
     if (!this.connected) {
-      throw new Error('ACP WebSocket is not connected');
+      throw new Error(t('conn.acp_not_connected'));
     }
     const frame: AcpNotification = {
       jsonrpc: '2.0',
@@ -203,7 +204,7 @@ export class AcpWebSocketClient {
 
   respond(id: JsonRpcId, result: unknown): void {
     if (!this.connected) {
-      throw new Error('ACP WebSocket is not connected');
+      throw new Error(t('conn.acp_not_connected'));
     }
     const frame: AcpResponse = {
       jsonrpc: '2.0',
@@ -215,7 +216,7 @@ export class AcpWebSocketClient {
 
   respondError(id: JsonRpcId, error: JsonRpcError): void {
     if (!this.connected) {
-      throw new Error('ACP WebSocket is not connected');
+      throw new Error(t('conn.acp_not_connected'));
     }
     const frame: AcpResponse = {
       jsonrpc: '2.0',
@@ -226,7 +227,7 @@ export class AcpWebSocketClient {
   }
 
   disconnect(): void {
-    this.rejectPending(new Error('ACP WebSocket disconnected'));
+    this.rejectPending(new Error(t('conn.acp_disconnected')));
     this.ws?.close();
     this.ws = null;
   }

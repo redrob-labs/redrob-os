@@ -11,6 +11,7 @@ import {
   type BindChannelResponse,
 } from "@/lib/api";
 import type { ChannelDetail } from "@/types/api";
+import { t } from "@/lib/i18n";
 
 // Only these channel types have a one-id-per-peer operator-bind surface.
 const BINDABLE_TYPES = ["telegram", "wechat", "line"];
@@ -83,7 +84,7 @@ export default function BindChannelForm({
   // there; for WeChat/LINE the button is the bind surface.
   const cliCommand =
     channelType === "telegram" && identity.trim()
-      ? `zeroclaw channel bind-telegram ${identity.trim()}${
+      ? `redrob-agentctl channel bind-telegram ${identity.trim()}${
           alias === "default" ? "" : ` --alias ${alias}`
         }`
       : "";
@@ -105,14 +106,14 @@ export default function BindChannelForm({
       setStatus({
         kind: "ok",
         msg: res.already_bound
-          ? `${id} was already authorized on ${channelType}.${alias}.`
-          : `Authorized ${id} on ${channelType}.${alias}. They can message the bot now - no /bind needed.`,
+          ? t('bind.already').replace('{id}', id).replace('{channel}', `${channelType}.${alias}`)
+          : t('bind.ok').replace('{id}', id).replace('{channel}', `${channelType}.${alias}`),
       });
       onBound?.();
     } catch (e) {
       setStatus({
         kind: "err",
-        msg: e instanceof Error ? e.message : "Bind failed.",
+        msg: e instanceof Error ? e.message : t('bind.failed'),
       });
     }
   }
@@ -134,24 +135,22 @@ export default function BindChannelForm({
     <Card className="max-w-2xl space-y-4 p-4">
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-pc-text">
-          Authorize a user (no /bind message)
+          {t('bind.title')}
         </h3>
         <p className="text-xs text-pc-text-muted">
-          Add someone&rsquo;s id to a Telegram, WeChat, or LINE channel&rsquo;s
-          allowlist. They can message the bot immediately - no pairing code, no
-          /bind.
+          {t('bind.body')}
         </p>
       </div>
 
       {!prescoped && channels.length === 0 ? (
         <p className="text-xs text-pc-text-faint">
-          No Telegram, WeChat, or LINE channels are configured.
+          {t('bind.no_channels')}
         </p>
       ) : (
         <>
           {!prescoped && (
             <label className="block space-y-1">
-              <span className="text-xs text-pc-text-muted">Channel</span>
+              <span className="text-xs text-pc-text-muted">{t('bind.channel')}</span>
               <Select
                 value={selected}
                 onChange={setSelected}
@@ -162,7 +161,7 @@ export default function BindChannelForm({
 
           <label className="block space-y-1">
             <span className="text-xs text-pc-text-muted">
-              Identity (e.g. Telegram numeric user id, or @username)
+              {t('bind.identity')}
             </span>
             <input
               type="text"
@@ -179,14 +178,14 @@ export default function BindChannelForm({
           {cliCommand ? (
             <div className="space-y-1">
               <span className="text-xs text-pc-text-muted">
-                Equivalent CLI command
+                {t('bind.cli')}
               </span>
               <div className="flex items-center gap-2">
                 <code className="flex-1 overflow-x-auto rounded border border-pc-border bg-pc-base px-2 py-1.5 font-mono text-xs text-pc-text-muted">
                   {cliCommand}
                 </code>
                 <Button variant="ghost" size="sm" onClick={copyCli}>
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? t('bind.copied') : t('bind.copy')}
                 </Button>
               </div>
             </div>
@@ -199,10 +198,10 @@ export default function BindChannelForm({
               onClick={() => void onSubmit()}
               disabled={!canBind}
             >
-              {status.kind === "loading" ? "Binding…" : "Bind"}
+              {status.kind === "loading" ? t('bind.binding') : t('bind.bind')}
             </Button>
-            {status.kind === "ok" ? <Badge tone="ok">Done</Badge> : null}
-            {status.kind === "err" ? <Badge tone="error">Error</Badge> : null}
+            {status.kind === "ok" ? <Badge tone="ok">{t('bind.done')}</Badge> : null}
+            {status.kind === "err" ? <Badge tone="error">{t('bind.error')}</Badge> : null}
           </div>
 
           {status.kind === "ok" || status.kind === "err" ? (

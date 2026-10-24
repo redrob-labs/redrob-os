@@ -1,4 +1,5 @@
 import type { LogEvent } from '../lib/api';
+import { t } from '../lib/i18n';
 
 export type RunLogKind = 'model' | 'tool' | 'step' | 'run' | 'event';
 
@@ -44,8 +45,9 @@ function pushMeta(meta: RunLogMeta[], label: string, value?: string): void {
   }
 }
 
-function plural(value: number, singular: string): string {
-  return `${value} ${singular}${value === 1 ? '' : 's'}`;
+/** `{n}` count with the one/many key pair, e.g. `1 token` / `3 tokens`. */
+function plural(value: number, key: string): string {
+  return t(value === 1 ? `${key}_one` : `${key}_many`).replace('{n}', String(value));
 }
 
 function outputPreview(event: LogEvent): string | undefined {
@@ -64,43 +66,40 @@ export function presentRunLogEvent(event: LogEvent): RunLogPresentation {
   const iteration = stringValue(attribute(event, 'iteration'));
 
   if (event.event.category === 'provider') {
-    pushMeta(meta, 'Provider', provider);
-    pushMeta(meta, 'Model', model);
-    pushMeta(meta, 'Round', iteration);
+    pushMeta(meta, t('runlog.provider'), provider);
+    pushMeta(meta, t('runlog.model'), model);
+    pushMeta(meta, t('runlog.round'), iteration);
     const inputTokens = numberValue(attribute(event, 'input_tokens'));
     const outputTokens = numberValue(attribute(event, 'output_tokens'));
-    if (inputTokens !== undefined) pushMeta(meta, 'Input', plural(inputTokens, 'token'));
-    if (outputTokens !== undefined) pushMeta(meta, 'Output', plural(outputTokens, 'token'));
+    if (inputTokens !== undefined) pushMeta(meta, t('runlog.input'), plural(inputTokens, 'runlog.tokens'));
+    if (outputTokens !== undefined) pushMeta(meta, t('runlog.output'), plural(outputTokens, 'runlog.tokens'));
     const toolCalls = numberValue(attribute(event, 'native_tool_calls'));
     if (toolCalls !== undefined && toolCalls > 0) {
-      pushMeta(meta, 'Requested', plural(toolCalls, 'tool call'));
+      pushMeta(meta, t('runlog.requested'), plural(toolCalls, 'runlog.tool_calls'));
     }
     return {
       kind: 'model',
-      eyebrow: 'Model',
-      title: event.event.action === 'send' ? 'Model request' : 'Model response',
+      eyebrow: t('runlog.model'),
+      title: event.event.action === 'send' ? t('runlog.model_request') : t('runlog.model_response'),
       meta,
       output: event.event.action === 'receive' ? outputPreview(event) : undefined,
     };
   }
 
   if (event.event.category === 'tool') {
-    pushMeta(meta, 'Tool', tool);
-    pushMeta(meta, 'Model', model);
-    pushMeta(meta, 'Round', iteration);
+    pushMeta(meta, t('runlog.tool'), tool);
+    pushMeta(meta, t('runlog.model'), model);
+    pushMeta(meta, t('runlog.round'), iteration);
     if (event.zeroclaw?.duration_ms !== undefined) {
-      pushMeta(meta, 'Duration', `${event.zeroclaw.duration_ms} ms`);
+      pushMeta(meta, t('runlog.duration'), `${event.zeroclaw.duration_ms} ms`);
     }
     const succeeded = event.event.outcome === 'success';
     const failed = event.event.outcome === 'failure';
     return {
       kind: 'tool',
-      eyebrow: 'Tool',
-      title: failed
-        ? `${tool || 'Tool'} failed`
-        : succeeded
-          ? `${tool || 'Tool'} completed`
-          : `${tool || 'Tool'} started`,
+      eyebrow: t('runlog.tool'),
+      title: t(failed ? 'runlog.tool_failed' : succeeded ? 'runlog.tool_completed' : 'runlog.tool_started')
+        .replace('{tool}', tool || t('runlog.tool')),
       meta,
       output: outputPreview(event),
     };
@@ -109,15 +108,15 @@ export function presentRunLogEvent(event: LogEvent): RunLogPresentation {
   const step = stringValue(attribute(event, 'step'));
   if (step) {
     const status = eventValue(event, 'status') ?? event.event.outcome;
-    pushMeta(meta, 'Agent', eventValue(event, 'effective_agent'));
+    pushMeta(meta, t('runlog.agent'), eventValue(event, 'effective_agent'));
     const toolCallCount = numberValue(attribute(event, 'tool_call_count'));
     if (toolCallCount !== undefined) {
-      pushMeta(meta, 'Used', plural(toolCallCount, 'tool call'));
+      pushMeta(meta, t('runlog.used'), plural(toolCallCount, 'runlog.tool_calls'));
     }
     return {
       kind: 'step',
-      eyebrow: `Step ${step}`,
-      title: status ? `Step ${step} ${status.replace(/_/g, ' ')}` : message,
+      eyebrow: t('runlog.step').replace('{step}', step),
+      title: status ? `${t('runlog.step').replace('{step}', step)} ${status.replace(/_/g, ' ')}` : message,
       meta,
       output: outputPreview(event),
     };
@@ -127,13 +126,13 @@ export function presentRunLogEvent(event: LogEvent): RunLogPresentation {
     pushMeta(meta, 'SOP', eventValue(event, 'sop_name'));
     return {
       kind: 'run',
-      eyebrow: 'Run',
+      eyebrow: t('runlog.run'),
       title: message,
       meta,
     };
   }
 
-  pushMeta(meta, 'Action', event.event.action);
+  pushMeta(meta, t('runlog.action'), event.event.action);
   return {
     kind: 'event',
     eyebrow: event.event.category,
