@@ -21,6 +21,11 @@ pub struct Note {
     pub body: String,
     /// Milliseconds; <= 0 means the shell default.
     pub timeout: i32,
+    /// The `image-path` hint: a PNG drawn full size under the text (the
+    /// pairing QR code).
+    pub image: String,
+    /// `urgency` 2 (critical): stays until replaced, closed or clicked.
+    pub sticky: bool,
 }
 
 pub enum Msg {
@@ -44,11 +49,18 @@ impl Server {
         summary: String,
         body: String,
         _actions: Vec<String>,
-        _hints: HashMap<String, OwnedValue>,
+        hints: HashMap<String, OwnedValue>,
         expire_timeout: i32,
     ) -> u32 {
         let id = if replaces_id != 0 { replaces_id } else { self.next.fetch_add(1, Ordering::Relaxed) };
-        let note = Note { id, app: app_name, icon: app_icon, summary, body: strip_markup(&body), timeout: expire_timeout };
+        let image = ["image-path", "image_path"]
+            .iter()
+            .find_map(|k| hints.get(*k).and_then(|v| <&str>::try_from(v).ok()))
+            .map(|s| s.strip_prefix("file://").unwrap_or(s).to_string())
+            .unwrap_or_default();
+        let sticky = hints.get("urgency").and_then(|v| u8::try_from(v).ok()) == Some(2);
+        let note =
+            Note { id, app: app_name, icon: app_icon, summary, body: strip_markup(&body), timeout: expire_timeout, image, sticky };
         let _ = self.tx.lock().map(|t| t.send(Msg::Show(note)));
         id
     }
@@ -58,7 +70,7 @@ impl Server {
     }
 
     fn get_capabilities(&self) -> Vec<String> {
-        vec!["body".into(), "icon-static".into()]
+        vec!["body".into(), "body-images".into(), "icon-static".into()]
     }
 
     fn get_server_information(&self) -> (String, String, String, String) {

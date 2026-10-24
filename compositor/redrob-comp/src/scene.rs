@@ -126,6 +126,8 @@ pub fn take_shot(state: &mut Smallvil, renderer: &mut GlesRenderer, size: Size<i
         summary: crate::i18n::tr(if saved.is_some() { "스크린샷을 저장했어요" } else { "스크린샷을 찍지 못했어요" }).into(),
         body: saved.map(|p| p.display().to_string()).unwrap_or_default(),
         timeout: 4000,
+        image: String::new(),
+        sticky: false,
     };
     state.toast(note);
 }

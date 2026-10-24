@@ -651,7 +651,7 @@ impl Smallvil {
     }
 
     pub fn toast(&mut self, n: Note) {
-        let ms = if n.timeout > 0 { n.timeout.min(30_000) as u64 } else { 5_000 };
+        let ms = if n.sticky { 86_400_000 } else if n.timeout > 0 { n.timeout.min(30_000) as u64 } else { 5_000 };
         self.layers.toasts.retain(|t| t.note.id != n.id);
         self.layers.toasts.push(Toast { note: n, until: Instant::now() + Duration::from_millis(ms) });
         while self.layers.toasts.len() > 3 {
@@ -991,17 +991,30 @@ impl Smallvil {
             return;
         }
         let t = theme::theme(self.chrome.mode);
-        let n = self.layers.toasts.len() as i32;
         let m = 24; // shadow room
         let gap = 10;
+        let notes: Vec<Note> = self.layers.toasts.iter().rev().map(|t| t.note.clone()).collect();
+        // A toast with an image (the pairing QR) shows the whole body and the
+        // picture at full size under the text.
+        let pics: Vec<Option<Pixmap>> =
+            notes.iter().map(|n| if n.image.is_empty() { None } else { Pixmap::load_png(&n.image).ok() }).collect();
+        let heights: Vec<i32> = notes
+            .iter()
+            .zip(&pics)
+            .map(|(n, pic)| match pic {
+                Some(img) => TOAST_H + n.body.lines().count().saturating_sub(1) as i32 * 19 + img.height() as i32 + 16,
+                None => TOAST_H,
+            })
+            .collect();
         let bw = TOAST_W + 2 * m;
-        let bh = n * TOAST_H + (n - 1) * gap + 2 * m;
+        let bh = heights.iter().sum::<i32>() + (notes.len() as i32 - 1) * gap + 2 * m;
         let Some(mut p) = draw::canvas(bw as f32, bh as f32) else { return };
         let mut hits = Vec::new();
-        let notes: Vec<Note> = self.layers.toasts.iter().rev().map(|t| t.note.clone()).collect();
+        let mut top = m;
         for (i, note) in notes.iter().enumerate() {
-            let (x, y) = (m as f32, (m + i as i32 * (TOAST_H + gap)) as f32);
-            let (tw, th) = (TOAST_W as f32, TOAST_H as f32);
+            let (x, y) = (m as f32, top as f32);
+            let (tw, th) = (TOAST_W as f32, heights[i] as f32);
+            top += heights[i] + gap;
             draw::shadow(&mut p, x, y, tw, th, theme::RADIUS_LG, 18.0, 6.0, t.shadow_md);
             fill_rrect(&mut p, x, y, tw, th, theme::RADIUS_LG, t.surface_raised);
             stroke_rrect(&mut p, x + 0.5, y + 0.5, tw - 1.0, th - 1.0, theme::RADIUS_LG, t.border_subtle);
@@ -1012,7 +1025,7 @@ impl Smallvil {
                 apps::for_app_id(&self.layers.apps, &note.app).and_then(|a| a.icon.clone())
             };
             let img = icon_name.and_then(|n| self.layers.icon(&n, 36).cloned());
-            let (ix, iy) = (x + 14.0, y + (th - 36.0) / 2.0);
+            let (ix, iy) = (x + 14.0, y + (TOAST_H as f32 - 36.0) / 2.0);
             match img {
                 Some(img) => blit(&mut p, &img, ix, iy),
                 None => {
@@ -1030,9 +1043,24 @@ impl Smallvil {
             draw::draw_text(&mut p, &self.chrome.fonts.medium, now, x + tw - 14.0 - nw, y + 22.0, 12.0, t.ink_muted);
             let sum = draw::fit_text(&self.chrome.fonts.semibold, &note.summary, 14.0, maxw);
             draw::draw_text(&mut p, &self.chrome.fonts.semibold, &sum, tx, y + 43.0, 14.0, t.ink_primary);
-            let body = draw::fit_text(&self.chrome.fonts.medium, &note.body.replace('\n', " "), 13.0, maxw);
-            draw::draw_text(&mut p, &self.chrome.fonts.medium, &body, tx, y + 62.0, 13.0, t.ink_secondary);
-            hits.push((Rectangle::new((m, m + i as i32 * (TOAST_H + gap)).into(), (TOAST_W, TOAST_H).into()), note.id));
+            if let Some(img) = &pics[i] {
+                let mut ly = y + 62.0;
+                for line in note.body.lines() {
+                    let l = draw::fit_text(&self.chrome.fonts.medium, line, 13.0, maxw);
+                    draw::draw_text(&mut p, &self.chrome.fonts.medium, &l, tx, ly, 13.0, t.ink_secondary);
+                    ly += 19.0;
+                }
+                // QR codes need a light ground and their quiet zone in any theme.
+                let (qw, qh) = (img.width() as f32, img.height() as f32);
+                let qx = x + (tw - qw) / 2.0;
+                let qy = ly - 4.0;
+                fill_rrect(&mut p, qx - 6.0, qy - 6.0, qw + 12.0, qh + 12.0, theme::RADIUS_MD, Rgba(255, 255, 255, 255));
+                blit(&mut p, img, qx, qy);
+            } else {
+                let body = draw::fit_text(&self.chrome.fonts.medium, &note.body.replace('\n', " "), 13.0, maxw);
+                draw::draw_text(&mut p, &self.chrome.fonts.medium, &body, tx, y + 62.0, 13.0, t.ink_secondary);
+            }
+            hits.push((Rectangle::new((m, y as i32).into(), (TOAST_W, heights[i]).into()), note.id));
         }
         let at: Point<i32, Logical> = match self.chrome.style {
             Style::Mac => (w - bw - 12 + m, theme::BAR_H + 10 - m).into(),
