@@ -666,7 +666,7 @@ export function AgentChatInner({
               <Bot className="h-7 w-7 text-pc-accent" />
             </div>
             {/* Until the transcript lands, an empty list means "still loading",
-                not "empty conversation" — saying the latter misreports a
+                not "empty conversation" - saying the latter misreports a
                 conversation the operator just picked precisely because it has
                 history in it. */}
             {hydrated ? (

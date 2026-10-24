@@ -465,7 +465,7 @@ function StepEditor({
                   unless_decided: e.target.value ? parseInt(e.target.value, 10) : null,
                 })
               }
-              placeholder="—"
+              placeholder="-"
               className={INPUT_CLS}
             />
           </Field>

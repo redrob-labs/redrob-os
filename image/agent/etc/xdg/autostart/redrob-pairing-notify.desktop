@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Redrob pairing
-Name[ko]=Redrob 페어링
+Name[ko]=레드롭 페어링
 Comment=Shows the one-time pairing code while this device is not paired with a phone yet
-Comment[ko]=이 기기가 아직 휴대전화와 페어링되지 않았을 때 일회용 페어링 코드를 보여 줍니다
+Comment[ko]=이 기기가 아직 휴대폰과 페어링되지 않았을 때 일회용 페어링 코드를 보여 줘요
 # notify mode: reads /run/redrob-pairing/pairing.json written by redrob-pairing.service
 # (root, every 30 s) and shows a desktop notification while a pairing code exists.
 # Exits by itself once the device is paired (no code), so nothing lingers.

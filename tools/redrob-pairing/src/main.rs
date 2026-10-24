@@ -128,6 +128,65 @@ pub fn qr_text(data: &str) -> Option<String> {
     Some(s)
 }
 
+/// QR as an 8-bit grayscale PNG, `px` pixels per module, quiet zone of 4.
+/// Written by hand (stored deflate blocks) so no image crate is needed; the
+/// desktop notification shows it full size.
+pub fn qr_png(data: &str, px: usize) -> Option<Vec<u8>> {
+    let qr = QrCode::encode_text(data, QrCodeEcc::Medium).ok()?;
+    let q = 4i32;
+    let side = (qr.size() + 2 * q) as usize * px;
+    let mut raw = Vec::with_capacity((side + 1) * side);
+    for y in 0..side {
+        raw.push(0u8); // filter: none
+        for x in 0..side {
+            let (mx, my) = ((x / px) as i32 - q, (y / px) as i32 - q);
+            raw.push(if qr.get_module(mx, my) { 0 } else { 255 });
+        }
+    }
+    let mut z = vec![0x78, 0x01];
+    let mut chunks = raw.chunks(65_535).peekable();
+    while let Some(c) = chunks.next() {
+        z.push(if chunks.peek().is_none() { 1 } else { 0 });
+        let n = c.len() as u16;
+        z.extend_from_slice(&n.to_le_bytes());
+        z.extend_from_slice(&(!n).to_le_bytes());
+        z.extend_from_slice(c);
+    }
+    let (mut a, mut b) = (1u32, 0u32);
+    for &v in &raw {
+        a = (a + v as u32) % 65_521;
+        b = (b + a) % 65_521;
+    }
+    z.extend_from_slice(&((b << 16) | a).to_be_bytes());
+
+    fn crc(bytes: &[u8]) -> u32 {
+        let mut c = 0xffff_ffffu32;
+        for &v in bytes {
+            c ^= v as u32;
+            for _ in 0..8 {
+                c = if c & 1 != 0 { 0xedb8_8320 ^ (c >> 1) } else { c >> 1 };
+            }
+        }
+        !c
+    }
+    fn chunk(out: &mut Vec<u8>, kind: &[u8; 4], body: &[u8]) {
+        out.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        let mut k = kind.to_vec();
+        k.extend_from_slice(body);
+        out.extend_from_slice(&k);
+        out.extend_from_slice(&crc(&k).to_be_bytes());
+    }
+    let mut png = b"\x89PNG\r\n\x1a\n".to_vec();
+    let mut ihdr = Vec::new();
+    ihdr.extend_from_slice(&(side as u32).to_be_bytes());
+    ihdr.extend_from_slice(&(side as u32).to_be_bytes());
+    ihdr.extend_from_slice(&[8, 0, 0, 0, 0]); // 8-bit grayscale
+    chunk(&mut png, b"IHDR", &ihdr);
+    chunk(&mut png, b"IDAT", &z);
+    chunk(&mut png, b"IEND", &[]);
+    Some(png)
+}
+
 pub fn pairing_uri(device: &str, host: &str, code: &str, fp: Option<&str>) -> String {
     let mut uri = format!("redrob://pair?device={device}&host={host}&code={code}");
     if let Some(fp) = fp {
@@ -181,24 +240,38 @@ pub fn parse_pairing_json(body: &str) -> Option<PairingState> {
     })
 }
 
+/// True when the desktop session speaks Korean (same rule as redrob-comp).
+fn session_is_ko() -> bool {
+    for var in ["LC_ALL", "LC_MESSAGES", "LANG"] {
+        if let Ok(v) = std::env::var(var) {
+            let base = v.split(['.', '@']).next().unwrap_or("");
+            if !v.is_empty() && base != "C" && base != "POSIX" {
+                return v.starts_with("ko");
+            }
+        }
+    }
+    true
+}
+
 /// Body of the desktop notification shown while unpaired.
-pub fn notify_body(st: &PairingState, code: &str) -> String {
-    format!(
-        "Open the Redrob app on your phone (same Wi-Fi) and enter\n\
-         code  {code}\n\
-         device at  {host}\n\
-         or open  {uri}",
-        host = st.host,
-        uri = pairing_uri(&st.device, &st.host, code, st.fp.as_deref())
-    )
+pub fn notify_body(st: &PairingState, code: &str, ko: bool) -> String {
+    // The link itself is in the QR drawn under this text.
+    if ko {
+        format!("레드롭 앱으로 찍거나 코드를 입력하세요.\n코드  {code}\n기기 주소  {host}", host = st.host)
+    } else {
+        format!("Scan in the Redrob app, or enter:\ncode  {code}\ndevice at  {host}", host = st.host)
+    }
 }
 
 /// Send (or replace) a desktop notification via `notify-send`; returns the id
 /// `notify-send -p` printed, so the next call can replace this one in place.
-fn notify_send(summary: &str, body: &str, urgency: &str, replace: Option<u32>) -> Option<u32> {
+fn notify_send(summary: &str, body: &str, urgency: &str, replace: Option<u32>, image: Option<&Path>) -> Option<u32> {
     let mut cmd = std::process::Command::new("notify-send");
     cmd.args(["--app-name=Redrob OS", "--icon=redrob-os", "--print-id"])
         .arg(format!("--urgency={urgency}"));
+    if let Some(img) = image {
+        cmd.arg(format!("--hint=string:image-path:{}", img.display()));
+    }
     if let Some(id) = replace {
         cmd.arg(format!("--replace-id={id}"));
     }
@@ -245,20 +318,31 @@ fn run_notify(json_path: &Path) -> ! {
                 match st.code.as_deref() {
                     Some(code) if prev_code.as_deref() == Some(code) => {}
                     Some(code) => {
+                        let ko = session_is_ko();
+                        // The QR the phone app's "QR로 연결" scans, next to the code.
+                        let uri = pairing_uri(&st.device, &st.host, code, st.fp.as_deref());
+                        let qr_path = std::env::var_os("XDG_RUNTIME_DIR")
+                            .map(std::path::PathBuf::from)
+                            .unwrap_or_else(std::env::temp_dir)
+                            .join("redrob-pairing-qr.png");
+                        let qr = qr_png(&uri, 4).and_then(|b| fs::write(&qr_path, b).ok()).map(|_| qr_path.as_path());
                         let id = notify_send(
-                            "Redrob OS -- pair this device",
-                            &notify_body(&st, code),
+                            if ko { "Redrob OS: 이 기기 페어링" } else { "Redrob OS: pair this device" },
+                            &notify_body(&st, code, ko),
                             "critical",
                             prev_id,
+                            qr,
                         );
                         shown = Some((code.to_string(), id));
                     }
                     None if shown.is_some() => {
+                        let ko = session_is_ko();
                         notify_send(
-                            "Redrob OS -- paired",
-                            "This device is now paired with your phone.",
+                            if ko { "Redrob OS: 페어링됨" } else { "Redrob OS: paired" },
+                            if ko { "이 기기가 휴대폰과 페어링됐어요." } else { "This device is now paired with your phone." },
                             "low",
                             prev_id,
+                            None,
                         );
                         std::process::exit(0);
                     }
@@ -284,7 +368,7 @@ pub fn banner(
     fp: Option<&str>,
 ) -> String {
     let mut b = String::new();
-    b.push_str("\n  Redrob OS -- pair this device\n");
+    b.push_str("\n  Redrob OS: pair this device\n");
     b.push_str(&format!("  device   {device}\n  hostname {hostname}\n"));
     let host = addrs
         .first()
@@ -464,9 +548,13 @@ mod tests {
         assert_eq!(st.device, "dev-1");
         assert_eq!(st.host, "192.168.1.9:42617");
         assert_eq!(st.code.as_deref(), Some("XYZ"));
-        let text = notify_body(&st, "XYZ");
+        let text = notify_body(&st, "XYZ", false);
         assert!(text.contains("code  XYZ"));
-        assert!(text.contains("redrob://pair?device=dev-1&host=192.168.1.9:42617&code=XYZ"));
+        assert!(text.contains("192.168.1.9:42617"));
+        assert_eq!(
+            pairing_uri(&st.device, &st.host, "XYZ", None),
+            "redrob://pair?device=dev-1&host=192.168.1.9:42617&code=XYZ"
+        );
 
         let paired = r#"{"device":"dev-1","hostname":"h","addresses":[],"port":42617,"code":null}"#;
         let st = parse_pairing_json(paired).unwrap();

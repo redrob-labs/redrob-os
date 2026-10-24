@@ -203,7 +203,7 @@ export default function Skills() {
                 className="text-xs"
                 style={{ color: 'var(--pc-text-muted)' }}
               >
-                <span className="font-mono">{d.name}</span> ({d.origin}) — {d.reason}
+                <span className="font-mono">{d.name}</span> ({d.origin}) - {d.reason}
               </li>
             ))}
           </ul>

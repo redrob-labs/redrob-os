@@ -106,7 +106,7 @@ export default function BindChannelForm({
         kind: "ok",
         msg: res.already_bound
           ? `${id} was already authorized on ${channelType}.${alias}.`
-          : `Authorized ${id} on ${channelType}.${alias}. They can message the bot now — no /bind needed.`,
+          : `Authorized ${id} on ${channelType}.${alias}. They can message the bot now - no /bind needed.`,
       });
       onBound?.();
     } catch (e) {
@@ -138,7 +138,7 @@ export default function BindChannelForm({
         </h3>
         <p className="text-xs text-pc-text-muted">
           Add someone&rsquo;s id to a Telegram, WeChat, or LINE channel&rsquo;s
-          allowlist. They can message the bot immediately — no pairing code, no
+          allowlist. They can message the bot immediately - no pairing code, no
           /bind.
         </p>
       </div>

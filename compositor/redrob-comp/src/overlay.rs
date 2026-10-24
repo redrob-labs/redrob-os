@@ -651,7 +651,7 @@ impl Smallvil {
     }
 
     pub fn toast(&mut self, n: Note) {
-        let ms = if n.timeout > 0 { n.timeout.min(30_000) as u64 } else { 5_000 };
+        let ms = if n.sticky { 86_400_000 } else if n.timeout > 0 { n.timeout.min(30_000) as u64 } else { 5_000 };
         self.layers.toasts.retain(|t| t.note.id != n.id);
         self.layers.toasts.push(Toast { note: n, until: Instant::now() + Duration::from_millis(ms) });
         while self.layers.toasts.len() > 3 {
@@ -749,11 +749,15 @@ impl Smallvil {
                 stroke_rrect(&mut p, cx + 0.5, cy + 0.5, cw - 1.0, ch - 1.0, theme::RADIUS_LG, t.border_subtle);
                 let sb = &self.chrome.fonts.semibold;
                 let md = &self.chrome.fonts.medium;
-                draw::draw_text(&mut p, sb, "이 해상도를 유지할까요?", cx + 24.0, cy + 40.0, 17.0, t.ink_primary);
-                let line = format!("{} × {} · {left}초 뒤 원래대로 돌아갑니다", size.0, size.1);
+                draw::draw_text(&mut p, sb, crate::i18n::tr("이 해상도를 유지할까요?"), cx + 24.0, cy + 40.0, 17.0, t.ink_primary);
+                let line = if crate::i18n::ko() {
+                    format!("{} × {} · {left}초 뒤 원래대로 돌아가요", size.0, size.1)
+                } else {
+                    format!("{} × {} · reverting in {left} s", size.0, size.1)
+                };
                 draw::draw_text(&mut p, md, &line, cx + 24.0, cy + 68.0, 13.0, t.ink_secondary);
                 let (bw, bh, by) = (120.0, 36.0, cy + ch - 24.0 - 36.0);
-                for (k, (label, primary)) in [("유지", true), ("되돌리기", false)].iter().enumerate() {
+                for (k, (label, primary)) in [(crate::i18n::tr("유지"), true), (crate::i18n::tr("되돌리기"), false)].iter().enumerate() {
                     let bx = cx + cw - 24.0 - bw - k as f32 * (bw + 10.0);
                     fill_rrect(&mut p, bx, by, bw, bh, theme::RADIUS_MD, if *primary { t.action_primary } else { t.surface_raised });
                     if !*primary {
@@ -787,7 +791,7 @@ impl Smallvil {
                     }
                 }
                 // Hint pill at the top.
-                let hint = "드래그해서 영역을 고르세요 · Esc 취소";
+                let hint = crate::i18n::tr("드래그해서 영역을 고르세요 · Esc 취소");
                 let hw = draw::text_width(&self.chrome.fonts.medium, hint, 13.0) + 28.0;
                 fill_rrect(&mut p, (w as f32 - hw) / 2.0, 48.0, hw, 30.0, theme::RADIUS_FULL, t.surface_material);
                 draw::draw_text(&mut p, &self.chrome.fonts.medium, hint, (w as f32 - hw) / 2.0 + 14.0, 68.0, 13.0, t.ink_primary);
@@ -823,8 +827,8 @@ impl Smallvil {
         let tx = xf + 56.0;
         if query.is_empty() {
             let ph_text = match style {
-                Style::Mac => "Redrob 검색",
-                Style::Windows => "앱, 설정 검색",
+                Style::Mac => crate::i18n::tr("레드롭 검색"),
+                Style::Windows => crate::i18n::tr("앱, 설정 검색"),
             };
             draw::draw_text(p, font, ph_text, tx, mid + 7.0, 19.0, t.ink_muted);
             fill_rect(p, tx - 1.0, mid - 12.0, 2.0, 24.0, t.action_primary);
@@ -844,10 +848,10 @@ impl Smallvil {
         // Results.
         let ly = y + FIELD_H + 1 + 6;
         if rows == 0 {
-            draw::draw_text(p, font, "결과 없음", xf + 24.0, ly as f32 + 30.0, 14.0, t.ink_muted);
+            draw::draw_text(p, font, crate::i18n::tr("결과 없음"), xf + 24.0, ly as f32 + 30.0, 14.0, t.ink_muted);
             return;
         }
-        let head = if query.is_empty() { "모든 앱" } else { "앱" };
+        let head = crate::i18n::tr(if query.is_empty() { "모든 앱" } else { "앱" });
         let _ = head;
         for (k, &ai) in matches.iter().skip(top).take(ROWS).enumerate() {
             let idx = top + k;
@@ -868,7 +872,7 @@ impl Smallvil {
             let name = draw::fit_text(&self.chrome.fonts.semibold, &app.name, 14.0, wf - 120.0);
             draw::draw_text(p, &self.chrome.fonts.semibold, &name, ix + 40.0, ry as f32 + 27.0, 14.0, ink);
             if selected {
-                let hint = "↵ 열기";
+                let hint = crate::i18n::tr("↵ 열기");
                 let hw = draw::text_width(&self.chrome.fonts.medium, hint, 12.0);
                 draw::draw_text(p, &self.chrome.fonts.medium, hint, xf + wf - 24.0 - hw, ry as f32 + 27.0, 12.0, Rgba(255, 255, 255, 200));
             }
@@ -923,8 +927,12 @@ impl Smallvil {
         fill_rect(p, 0.0, 0.0, w, h, Rgba(0, 0, 0, 90));
         let white = Rgba(248, 249, 251, 255);
         let now = chrono::Local::now();
-        let wd = ["월", "화", "수", "목", "금", "토", "일"][now.weekday().num_days_from_monday() as usize];
-        let date = format!("{}월 {}일 {wd}요일", now.month(), now.day());
+        let wd = crate::i18n::weekday_long(now.weekday().num_days_from_monday() as usize);
+        let date = if crate::i18n::ko() {
+            format!("{}월 {}일 {wd}", now.month(), now.day())
+        } else {
+            format!("{wd}, {} {}", crate::i18n::month_en(now.month(), true), now.day())
+        };
         let time = format!("{}:{:02}", now.hour(), now.minute());
         let f = &self.chrome.fonts.semibold;
         let dw = draw::text_width(f, &date, 20.0);
@@ -954,7 +962,7 @@ impl Smallvil {
         }
         let m = &self.chrome.fonts.medium;
         if input.is_empty() {
-            let hint = if busy { "확인 중…" } else { "암호 입력" };
+            let hint = crate::i18n::tr(if busy { "확인 중…" } else { "암호 입력" });
             let hw = draw::text_width(m, hint, 14.0);
             draw::draw_text(p, m, hint, (w - hw) / 2.0, py + 25.0, 14.0, with_alpha(white, 150));
         } else {
@@ -966,12 +974,12 @@ impl Smallvil {
         }
         self.chrome.icons.draw(p, ICON_LOCK, Some(with_alpha(white, 160)), px + 14.0, py + 12.0, 16.0);
         if crate::greeter::active() && crate::greeter::user_count() > 1 {
-            let hint = "Tab 키로 사용자 바꾸기";
+            let hint = crate::i18n::tr("Tab 키로 사용자 바꾸기");
             let hw = draw::text_width(m, hint, 13.0);
             draw::draw_text(p, m, hint, (w - hw) / 2.0, py + ph + 52.0, 13.0, with_alpha(white, 140));
         }
         if error {
-            let e = "암호가 맞지 않습니다";
+            let e = crate::i18n::tr("암호가 맞지 않아요");
             let ew = draw::text_width(m, e, 13.0);
             draw::draw_text(p, m, e, (w - ew) / 2.0, py + ph + 26.0, 13.0, t.danger);
         }
@@ -983,17 +991,30 @@ impl Smallvil {
             return;
         }
         let t = theme::theme(self.chrome.mode);
-        let n = self.layers.toasts.len() as i32;
         let m = 24; // shadow room
         let gap = 10;
+        let notes: Vec<Note> = self.layers.toasts.iter().rev().map(|t| t.note.clone()).collect();
+        // A toast with an image (the pairing QR) shows the whole body and the
+        // picture at full size under the text.
+        let pics: Vec<Option<Pixmap>> =
+            notes.iter().map(|n| if n.image.is_empty() { None } else { Pixmap::load_png(&n.image).ok() }).collect();
+        let heights: Vec<i32> = notes
+            .iter()
+            .zip(&pics)
+            .map(|(n, pic)| match pic {
+                Some(img) => TOAST_H + n.body.lines().count().saturating_sub(1) as i32 * 19 + img.height() as i32 + 16,
+                None => TOAST_H,
+            })
+            .collect();
         let bw = TOAST_W + 2 * m;
-        let bh = n * TOAST_H + (n - 1) * gap + 2 * m;
+        let bh = heights.iter().sum::<i32>() + (notes.len() as i32 - 1) * gap + 2 * m;
         let Some(mut p) = draw::canvas(bw as f32, bh as f32) else { return };
         let mut hits = Vec::new();
-        let notes: Vec<Note> = self.layers.toasts.iter().rev().map(|t| t.note.clone()).collect();
+        let mut top = m;
         for (i, note) in notes.iter().enumerate() {
-            let (x, y) = (m as f32, (m + i as i32 * (TOAST_H + gap)) as f32);
-            let (tw, th) = (TOAST_W as f32, TOAST_H as f32);
+            let (x, y) = (m as f32, top as f32);
+            let (tw, th) = (TOAST_W as f32, heights[i] as f32);
+            top += heights[i] + gap;
             draw::shadow(&mut p, x, y, tw, th, theme::RADIUS_LG, 18.0, 6.0, t.shadow_md);
             fill_rrect(&mut p, x, y, tw, th, theme::RADIUS_LG, t.surface_raised);
             stroke_rrect(&mut p, x + 0.5, y + 0.5, tw - 1.0, th - 1.0, theme::RADIUS_LG, t.border_subtle);
@@ -1004,7 +1025,7 @@ impl Smallvil {
                 apps::for_app_id(&self.layers.apps, &note.app).and_then(|a| a.icon.clone())
             };
             let img = icon_name.and_then(|n| self.layers.icon(&n, 36).cloned());
-            let (ix, iy) = (x + 14.0, y + (th - 36.0) / 2.0);
+            let (ix, iy) = (x + 14.0, y + (TOAST_H as f32 - 36.0) / 2.0);
             match img {
                 Some(img) => blit(&mut p, &img, ix, iy),
                 None => {
@@ -1017,14 +1038,29 @@ impl Smallvil {
             let maxw = tw - (tx - x) - 14.0;
             let app = draw::fit_text(&self.chrome.fonts.medium, &note.app, 12.0, maxw - 30.0);
             draw::draw_text(&mut p, &self.chrome.fonts.medium, &app, tx, y + 22.0, 12.0, t.ink_muted);
-            let now = "지금";
+            let now = crate::i18n::tr("지금");
             let nw = draw::text_width(&self.chrome.fonts.medium, now, 12.0);
             draw::draw_text(&mut p, &self.chrome.fonts.medium, now, x + tw - 14.0 - nw, y + 22.0, 12.0, t.ink_muted);
             let sum = draw::fit_text(&self.chrome.fonts.semibold, &note.summary, 14.0, maxw);
             draw::draw_text(&mut p, &self.chrome.fonts.semibold, &sum, tx, y + 43.0, 14.0, t.ink_primary);
-            let body = draw::fit_text(&self.chrome.fonts.medium, &note.body.replace('\n', " "), 13.0, maxw);
-            draw::draw_text(&mut p, &self.chrome.fonts.medium, &body, tx, y + 62.0, 13.0, t.ink_secondary);
-            hits.push((Rectangle::new((m, m + i as i32 * (TOAST_H + gap)).into(), (TOAST_W, TOAST_H).into()), note.id));
+            if let Some(img) = &pics[i] {
+                let mut ly = y + 62.0;
+                for line in note.body.lines() {
+                    let l = draw::fit_text(&self.chrome.fonts.medium, line, 13.0, maxw);
+                    draw::draw_text(&mut p, &self.chrome.fonts.medium, &l, tx, ly, 13.0, t.ink_secondary);
+                    ly += 19.0;
+                }
+                // QR codes need a light ground and their quiet zone in any theme.
+                let (qw, qh) = (img.width() as f32, img.height() as f32);
+                let qx = x + (tw - qw) / 2.0;
+                let qy = ly - 4.0;
+                fill_rrect(&mut p, qx - 6.0, qy - 6.0, qw + 12.0, qh + 12.0, theme::RADIUS_MD, Rgba(255, 255, 255, 255));
+                blit(&mut p, img, qx, qy);
+            } else {
+                let body = draw::fit_text(&self.chrome.fonts.medium, &note.body.replace('\n', " "), 13.0, maxw);
+                draw::draw_text(&mut p, &self.chrome.fonts.medium, &body, tx, y + 62.0, 13.0, t.ink_secondary);
+            }
+            hits.push((Rectangle::new((m, y as i32).into(), (TOAST_W, heights[i]).into()), note.id));
         }
         let at: Point<i32, Logical> = match self.chrome.style {
             Style::Mac => (w - bw - 12 + m, theme::BAR_H + 10 - m).into(),
