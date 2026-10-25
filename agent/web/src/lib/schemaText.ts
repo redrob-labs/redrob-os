@@ -54,7 +54,14 @@ export function loadSchemaText(): Promise<void> {
     ])
       .then(([schema, server, fields]) => {
         ko = {
-          text: { ...(schema.default as Table), ...(server.default.texts as Table) },
+          // Lookups normalize the English first, so the keys must be normalized too
+          // (tool descriptions carry em dashes and the upstream product name).
+          text: Object.fromEntries(
+            Object.entries({
+              ...(schema.default as Table),
+              ...(server.default.texts as Table),
+            }).map(([en, k]) => [norm(en), k]),
+          ),
           fields: fields.default as Table,
           doctor: compileDoctor(server.default.doctor as Table),
         };
