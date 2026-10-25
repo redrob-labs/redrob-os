@@ -292,16 +292,15 @@ pub async fn handle_sections(State(state): State<AppState>) -> Response {
         roots.remove(*hidden);
     }
 
-    let all_map_paths: Vec<&'static str> = zeroclaw_config::schema::Config::map_key_sections()
-        .iter()
-        .map(|s| s.path)
-        .collect();
-    let section_has_picker_for_key = |key: &str| -> bool {
-        let key_dot = format!("{key}.");
-        all_map_paths.iter().any(|p| {
-            *p == key
-                || p.strip_prefix(&key_dot)
-                    .is_some_and(|rest| !rest.contains('.'))
+    let map_sections = zeroclaw_config::schema::Config::map_key_sections();
+    let all_map_paths: Vec<&'static str> = map_sections.iter().map(|s| s.path).collect();
+    // A section outside the Quickstart list has an alias picker only when
+    // the section itself is a map (`[oidc.<alias>]`, `[users.<name>]`).
+    // A struct that merely holds a map or list deeper down (`plugins`)
+    // renders as a plain form: the picker endpoint has nothing to list.
+    let section_is_alias_map = |key: &str| -> bool {
+        map_sections.iter().any(|s| {
+            s.path == key && matches!(s.kind, zeroclaw_config::traits::MapKeyKind::Map)
         })
     };
 
@@ -309,9 +308,21 @@ pub async fn handle_sections(State(state): State<AppState>) -> Response {
     // HashMap is empty (prop_fields() only yields paths for populated
     // entries). First segments only — the prefix-dedup pass below drops
     // bare parent segments when a multi-segment child is present.
+    //
+    // A nested struct reports its maps under its own `#[prefix]`, which is
+    // not always where it lives (`sop_approval.groups` is really
+    // `sop.approval.groups`). Such a root is not a field on `Config`, so it
+    // would be a sidebar entry with nothing behind it. Keep a root only when
+    // it is a real top-level field.
     let map_keyed_roots: std::collections::HashSet<&'static str> = all_map_paths
         .iter()
-        .filter_map(|p| p.split('.').next())
+        .filter_map(|p| {
+            let root = p.split('.').next()?;
+            let real = !p.contains('.')
+                || roots.contains(root)
+                || zeroclaw_config::schema::Config::nested_section_help(root).is_some();
+            real.then_some(root)
+        })
         .collect();
     for &prefix in &map_keyed_roots {
         roots.insert(prefix.to_string());
@@ -352,14 +363,15 @@ pub async fn handle_sections(State(state): State<AppState>) -> Response {
         .into_iter()
         .map(|key| {
             let wizard = zeroclaw_config::sections::Section::from_key(&key);
+            // Follows the same shape `picker_items_for` dispatches on, so a
+            // direct-form section (relay, onboard_state, ...) never sends
+            // the dashboard to a picker that answers with an error.
             let has_picker = match wizard {
                 Some(w) => !matches!(
-                    w,
-                    zeroclaw_config::sections::Section::Hardware
-                        | zeroclaw_config::sections::Section::Mcp
-                        | zeroclaw_config::sections::Section::Skills
+                    w.shape(),
+                    zeroclaw_config::sections::SectionShape::DirectForm
                 ),
-                None => section_has_picker_for_key(&key),
+                None => section_is_alias_map(&key),
             };
             let group = zeroclaw_config::sections::section_group_for_key(&key);
             ConfigSectionEntry {
