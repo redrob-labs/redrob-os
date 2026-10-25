@@ -18,6 +18,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Check, ChevronRight, MessageSquare, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import {
   ApiError,
+  createMapKey,
   deleteMapKey,
   getDeletePlan,
   getDrift,
@@ -236,9 +237,58 @@ export default function Config() {
   // or a flat alias list — no hardcoded section keys on the client.
   const needsAliasTier = activeSection?.shape === "typed_family_map";
   const isOneTierAliasSection = activeSection?.shape === "one_tier_alias_map";
+  // A map outside the Quickstart list (`oidc`, `users`, `permission_profiles`).
+  // The server has no picker for it, so the alias list reads and creates
+  // keys through the generic map-key endpoints instead.
+  const isPlainAliasMap = !!activeSection?.has_picker && !activeSection?.shape;
 
   const mainContent = (() => {
     if (!activeSection) return null;
+
+    if (isPlainAliasMap) {
+      const sectionKey = activeSection.key;
+      if (typeParam) {
+        const fieldsPrefix = `${sectionKey}.${typeParam}`;
+        return (
+          <div className="flex flex-col gap-3 flex-1 min-h-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/config/${encodeURIComponent(sectionKey)}`)}
+              className="self-start"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {t("common.back")}
+            </Button>
+            <WireTabForm
+              key={`${reloadKey}-${fieldsPrefix}`}
+              prefix={fieldsPrefix}
+              title={`${activeSection.label} / ${typeParam}`}
+              reloadKey={reloadKey}
+              onSaved={fetchDrift}
+              drift={drifted}
+            />
+          </div>
+        );
+      }
+      return (
+        <AliasListView
+          sectionKey={sectionKey}
+          sectionHelp={activeSection.help}
+          onSelectAlias={async (alias) => {
+            const { keys } = await getMapKeys(sectionKey);
+            if (!keys.includes(alias)) {
+              await createMapKey(sectionKey, alias);
+              window.dispatchEvent(new Event("zeroclaw-config-mutated"));
+            }
+            navigate(
+              `/config/${encodeURIComponent(sectionKey)}/${encodeURIComponent(alias)}`,
+            );
+          }}
+          onBack={() => navigate("/config")}
+        />
+      );
+    }
 
     if (!activeSection.has_picker) {
       return (
