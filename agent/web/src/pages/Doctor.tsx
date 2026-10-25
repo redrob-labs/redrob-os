@@ -15,6 +15,7 @@ import { Badge, Button, Card, PageHeader } from '@/components/ui';
 import ReloadDaemonButton from '@/components/sections/ReloadDaemonButton';
 import DoctorFixModal from '@/components/DoctorFixModal';
 import { t } from '@/lib/i18n';
+import { trDoctor } from '@/lib/schemaText';
 
 type Severity = DiagResult['severity'];
 
@@ -317,7 +318,7 @@ export default function Doctor() {
                       >
                         {severityIcon(result.severity)}
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm text-pc-text">{result.message}</p>
+                          <p className="text-sm text-pc-text">{trDoctor(result.message)}</p>
                         </div>
                         {target && (
                           <button
