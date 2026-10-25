@@ -30,6 +30,13 @@ import {
   type ToolAccess,
 } from './Tools.logic';
 
+// CLI tool category enum value -> label; an unknown value shows as-is.
+function cliCategoryLabel(category: string): string {
+  const key = `tools.cli_cat.${category}`;
+  const label = t(key);
+  return label === key ? category : label;
+}
+
 // ── Risk-profile tool access ────────────────────────────────────────────
 // Per-profile allow/exclude state for the tool-access matrix in each expanded
 // tool card. zeroclaw's gate (crates/zeroclaw-config policy + runtime):
@@ -428,7 +435,7 @@ export default function Tools() {
                             {tool.version ?? '-'}
                           </td>
                           <td className="px-4 py-2.5">
-                            <Badge tone="neutral" className="capitalize">{tool.category}</Badge>
+                            <Badge tone="neutral" className="capitalize">{cliCategoryLabel(tool.category)}</Badge>
                           </td>
                         </tr>
                       ))}

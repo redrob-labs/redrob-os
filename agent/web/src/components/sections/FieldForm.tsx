@@ -49,6 +49,7 @@ import { profileLevelFromDraft, parseOptionalAllowedTools, parseDenyAllToolsDraf
 import { Badge, Button, ComboBox, Select } from "@/components/ui";
 import type { BadgeTone } from "@/components/ui";
 import { t } from "@/lib/i18n";
+import { fieldLabelKo } from "@/lib/schemaText";
 import {
   ApiError,
   descriptionForPath,
@@ -227,6 +228,8 @@ const LABEL_ACRONYMS = new Set([
 // names — so the config renderer stays schema-driven (#6175). The dotted path
 // itself remains visible as a secondary line for unambiguous identification.
 function humanizeFieldLabel(path: string): string {
+  const ko = fieldLabelKo(path.split(".").pop() ?? path);
+  if (ko) return ko;
   return leafLabel(path)
     .trim()
     .split(/\s+/)

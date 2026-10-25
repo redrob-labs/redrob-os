@@ -17,7 +17,7 @@ import type {
 import type { components } from "./api-generated";
 import { clearToken, getToken, setToken } from "./auth";
 import { apiOrigin, basePath } from "./basePath";
-import { loadSchemaText, trSchema } from "./schemaText";
+import { fieldLabelKo, loadSchemaText, trSchema, trServer } from "./schemaText";
 
 // ---------------------------------------------------------------------------
 // Base fetch wrapper
@@ -608,7 +608,11 @@ export function deleteProp(path: string): Promise<PropResponse> {
 
 export function listProps(prefix?: string): Promise<ListResponse> {
   const q = prefix ? `?prefix=${encodeURIComponent(prefix)}` : "";
-  return apiFetch<ListResponse>(`/api/config/list${q}`);
+  // The field labels are localized at render time; have the table ready.
+  return Promise.all([
+    apiFetch<ListResponse>(`/api/config/list${q}`),
+    loadSchemaText(),
+  ]).then(([res]) => res);
 }
 
 export async function patchConfig(
@@ -1168,7 +1172,7 @@ export function objectArrayElementProps(
     } else if (t === "object") kind = "object";
     out.push({
       key: snakeKey,
-      label: snakeKey.replace(/_/g, " "),
+      label: fieldLabelKo(snakeKey) ?? snakeKey.replace(/_/g, " "),
       kind,
       description: trSchema(desc),
       enumVariants,
@@ -1938,12 +1942,15 @@ export function reloadDaemon(): Promise<AdminResponse> {
 
 export function getTools(agent?: string): Promise<ToolSpec[]> {
   const qs = agent ? `?agent=${encodeURIComponent(agent)}` : "";
-  return apiFetch<ToolSpec[] | { tools: ToolSpec[] }>(`/api/tools${qs}`).then(
-    (data) => {
-      const result = unwrapField(data, "tools");
-      return Array.isArray(result) ? result : [];
-    },
-  );
+  return Promise.all([
+    apiFetch<ToolSpec[] | { tools: ToolSpec[] }>(`/api/tools${qs}`),
+    loadSchemaText(),
+  ]).then(([data]) => {
+    const result = unwrapField(data, "tools");
+    return Array.isArray(result)
+      ? result.map((x) => ({ ...x, description: trServer(x.description) }))
+      : [];
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -2085,11 +2092,21 @@ export function patchCronSettings(
 // ---------------------------------------------------------------------------
 
 export function getIntegrations(): Promise<Integration[]> {
-  return apiFetch<Integration[] | { integrations: Integration[] }>(
-    "/api/integrations",
-  ).then((data) => {
+  return Promise.all([
+    apiFetch<Integration[] | { integrations: Integration[] }>(
+      "/api/integrations",
+    ),
+    loadSchemaText(),
+  ]).then(([data]) => {
     const result = unwrapField(data, "integrations");
-    return Array.isArray(result) ? result : [];
+    // `category` stays English: it is the filter key.
+    return Array.isArray(result)
+      ? result.map((x) => ({
+          ...x,
+          description: trServer(x.description),
+          category_label: x.category_label && trServer(x.category_label),
+        }))
+      : [];
   });
 }
 
@@ -2103,13 +2120,18 @@ export function getPlugins(): Promise<PluginsResponse> {
 // ---------------------------------------------------------------------------
 
 export function runDoctor(): Promise<DiagResult[]> {
-  return apiFetch<DiagResult[] | { results: DiagResult[]; summary?: unknown }>(
-    "/api/doctor",
-    {
-      method: "POST",
-      body: JSON.stringify({}),
-    },
-  ).then((data) => (Array.isArray(data) ? data : data.results));
+  // `message` stays English here: the Doctor page parses it to find the
+  // entity to fix, and translates it only for display (`trDoctor`).
+  return Promise.all([
+    apiFetch<DiagResult[] | { results: DiagResult[]; summary?: unknown }>(
+      "/api/doctor",
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+    ),
+    loadSchemaText(),
+  ]).then(([data]) => (Array.isArray(data) ? data : data.results));
 }
 
 // ---------------------------------------------------------------------------

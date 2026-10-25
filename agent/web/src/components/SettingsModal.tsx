@@ -23,7 +23,7 @@ const accentOptions: { value: AccentColor; color: string }[] = [
 ];
 
 const uiFontOptions: { value: UiFont; label: string; sample: string }[] = [
-  { value: 'system', label: 'System', sample: 'Segoe/UI' },
+  { value: 'system', label: 'settings.font_system', sample: 'Segoe/UI' },
   { value: 'inter', label: 'Inter', sample: 'Inter' },
   { value: 'segoe', label: 'Segoe UI', sample: 'Segoe' },
   { value: 'sf', label: 'SF Pro', sample: 'SF' },
@@ -33,7 +33,7 @@ const monoFontOptions: { value: MonoFont; label: string; sample: string }[] = [
   { value: 'jetbrains', label: 'JetBrains Mono', sample: 'JetBrains' },
   { value: 'fira', label: 'Fira Code', sample: 'Fira' },
   { value: 'cascadia', label: 'Cascadia Code', sample: 'Cascadia' },
-  { value: 'system-mono', label: 'System mono', sample: 'System' },
+  { value: 'system-mono', label: 'settings.font_system_mono', sample: 'System' },
 ];
 
 const uiSizes = [14, 15, 16, 17, 18];
@@ -400,7 +400,7 @@ export function SettingsModal({ open, onClose }: Props) {
                       aria-pressed={uiFont === opt.value}
                     >
                       <span style={{ fontSize: '14px', fontFamily: uiFontStacks[opt.value] }}>{opt.sample}</span>
-                      <span className="text-pc-text-faint" style={{ fontSize: '11px' }}>{opt.label}</span>
+                      <span className="text-pc-text-faint" style={{ fontSize: '11px' }}>{opt.label.startsWith('settings.') ? t(opt.label) : opt.label}</span>
                     </button>
                   ))}
                 </div>
@@ -425,7 +425,7 @@ export function SettingsModal({ open, onClose }: Props) {
                       aria-pressed={monoFont === opt.value}
                     >
                       <span style={{ fontSize: '14px', fontFamily: monoFontStacks[opt.value] }}>{opt.sample}</span>
-                      <span className="text-pc-text-faint" style={{ fontSize: '11px' }}>{opt.label}</span>
+                      <span className="text-pc-text-faint" style={{ fontSize: '11px' }}>{opt.label.startsWith('settings.') ? t(opt.label) : opt.label}</span>
                     </button>
                   ))}
                 </div>
