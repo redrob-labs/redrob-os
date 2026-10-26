@@ -924,6 +924,13 @@ pub(crate) async fn try_compute_drift(
         )
     })?;
     on_disk.config_path = path.clone();
+    // Loading merges the built-in defaults into `risk_profiles.default.auto_approve`
+    // (see `Config::load_or_init`). Apply the same step here, or every file whose
+    // default profile lists fewer tools than the built-in set reports drift
+    // forever, and a reload cannot clear it.
+    if let Some(default_profile) = on_disk.risk_profiles.get_mut("default") {
+        default_profile.ensure_default_auto_approve();
+    }
 
     let in_memory_props: std::collections::HashMap<String, zeroclaw_config::traits::PropFieldInfo> =
         in_memory

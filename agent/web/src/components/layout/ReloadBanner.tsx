@@ -86,50 +86,63 @@ export default function ReloadBanner() {
     return null;
   }
 
+  const title =
+    pendingReload && driftedCount > 0
+      ? t('reload_banner.pending_and_drift')
+      : pendingReload
+        ? t('reload_banner.pending_only')
+        : t('reload_banner.drift_title').replace('{count}', String(driftedCount));
+
+  // Phone: title and close on the first line, the path list folded away,
+  // the reload button on its own line below. From `sm` up the button sits
+  // beside the text again.
   return (
-    <div className="px-4 py-3 border-b border-status-warning/25 bg-status-warning/[0.06] flex items-center gap-3">
+    <div className="px-4 py-3 border-b border-status-warning/25 bg-status-warning/[0.06] flex items-start gap-3">
       <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5 text-status-warning" />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-pc-text">
-          {pendingReload && driftedCount > 0
-            ? t('reload_banner.pending_and_drift')
-            : pendingReload
-              ? t('reload_banner.pending_only')
-              : `${driftedCount} ${driftedCount === 1 ? t('reload_banner.path_singular') : t('reload_banner.path_plural')} ${t('reload_banner.differ_suffix')}`}
-        </p>
-        {driftedCount > 0 && (
-          <ul className="text-xs mt-1 flex flex-col gap-0.5 text-pc-text-muted">
-            {drifted.slice(0, 4).map((d) => (
-              <li key={d.path} className="font-mono break-all">
-                {d.path}
-                {d.secret && (
-                  <span className="text-pc-text-faint">
-                    {' '}
-                    {t('reload_banner.secret_label')}
-                  </span>
+      <div className="flex-1 min-w-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-pc-text">{title}</p>
+          {driftedCount > 0 && (
+            <details className="mt-1 text-xs text-pc-text-muted">
+              <summary className="cursor-pointer select-none w-fit hover:text-pc-text">
+                {t('reload_banner.show_paths')}
+              </summary>
+              <ul className="mt-1 flex flex-col gap-0.5">
+                {drifted.slice(0, 4).map((d) => (
+                  <li key={d.path} className="font-mono break-all">
+                    {d.path}
+                    {d.secret && (
+                      <span className="text-pc-text-faint">
+                        {' '}
+                        {t('reload_banner.secret_label')}
+                      </span>
+                    )}
+                  </li>
+                ))}
+                {driftedCount > 4 && (
+                  <li className="text-pc-text-faint">
+                    {t('reload_banner.and_more_prefix')}
+                    {driftedCount - 4}
+                    {t('reload_banner.and_more_suffix')}
+                  </li>
                 )}
-              </li>
-            ))}
-            {driftedCount > 4 && (
-              <li className="text-pc-text-faint">
-                {t('reload_banner.and_more_prefix')}
-                {driftedCount - 4}
-                {t('reload_banner.and_more_suffix')}
-              </li>
-            )}
-          </ul>
-        )}
-        {!reloadAvailable && (
-          <p className="text-xs mt-1 text-pc-text-muted">
-            {t('reload_banner.remote_note_prefix')}{' '}
-            <code className="font-mono">sudo systemctl restart redrob-agent</code>
-            {t('reload_banner.remote_note_suffix')}
-          </p>
+              </ul>
+            </details>
+          )}
+          {!reloadAvailable && (
+            <p className="text-xs mt-1 text-pc-text-muted">
+              {t('reload_banner.remote_note_prefix')}{' '}
+              <code className="font-mono">sudo systemctl restart redrob-agent</code>
+              {t('reload_banner.remote_note_suffix')}
+            </p>
+          )}
+        </div>
+        {reloadAvailable && (
+          <div className="self-start sm:self-auto flex-shrink-0">
+            <ReloadDaemonButton onReloaded={() => setPollKey((k) => k + 1)} />
+          </div>
         )}
       </div>
-      {reloadAvailable && (
-        <ReloadDaemonButton onReloaded={() => setPollKey((k) => k + 1)} />
-      )}
       <button
         type="button"
         onClick={() => setDismissedSig(sig)}
