@@ -38,17 +38,27 @@ export class UnauthorizedError extends Error {
  * 429 logic; the code is the authoritative dispatch key).
  */
 export class ApiError extends Error {
+  public readonly envelope: {
+    code: string;
+    message: string;
+    path?: string;
+    op_index?: number;
+  };
+
   constructor(
     public readonly status: number,
-    public readonly envelope: {
+    envelope: {
       code: string;
       message: string;
       path?: string;
       op_index?: number;
     },
   ) {
-    super(`[${envelope.code}] ${trError(envelope.message)}`);
+    // Screens read `envelope.message` directly, so localize it there.
+    const message = trError(envelope.message);
+    super(`[${envelope.code}] ${message}`);
     this.name = "ApiError";
+    this.envelope = { ...envelope, message };
   }
 }
 
