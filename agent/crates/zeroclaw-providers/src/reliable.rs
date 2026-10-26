@@ -1026,6 +1026,8 @@ pub enum ReliableProviderTerminalFailureKind {
     ContextWindow,
     CredentialsMissing,
     Authentication,
+    /// The device's egress proxy refused the provider host.
+    EgressBlocked,
     RateLimited,
     ProviderServer,
     ModelNotFound,
@@ -1041,6 +1043,7 @@ impl ReliableProviderTerminalFailureKind {
             "context_window" => Self::ContextWindow,
             "credentials_missing" => Self::CredentialsMissing,
             "auth" => Self::Authentication,
+            "egress_blocked" => Self::EgressBlocked,
             "rate_limited" => Self::RateLimited,
             "provider_server" => Self::ProviderServer,
             "model_not_found" => Self::ModelNotFound,
@@ -1246,6 +1249,40 @@ fn http_status_from_error_text(text: &str) -> Option<u16> {
     outermost.map(|(_, code)| code)
 }
 
+/// The host part of a URL such as `https://user@host:443/v1/x`.
+fn url_host(url: &str) -> Option<String> {
+    let rest = url.split_once("://").map_or(url, |(_, r)| r);
+    let authority = rest.split(['/', '?', '#']).next()?;
+    let hostport = authority.rsplit_once('@').map_or(authority, |(_, h)| h);
+    let host = match hostport.strip_prefix('[') {
+        Some(v6) => v6.split(']').next()?,
+        None => hostport.split(':').next()?,
+    };
+    (!host.is_empty()).then(|| host.to_string())
+}
+
+/// The host named in the egress proxy's refusal body
+/// (`redrob-egress: refused host <host>, not on the allow-list`).
+fn egress_refused_host(text: &str) -> Option<String> {
+    let rest = &text[text.find("redrob-egress: refused host ")? + 28..];
+    let host: String = rest
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | ':' | '[' | ']'))
+        .collect();
+    (!host.is_empty()).then_some(host)
+}
+
+/// A refusal from the Redrob OS egress proxy: its marker body on a plain
+/// HTTP request, or a refused CONNECT tunnel on an HTTPS one.
+fn is_egress_refused(err: &anyhow::Error) -> bool {
+    err.chain().any(|cause| {
+        let text = cause.to_string().to_lowercase();
+        text.contains("redrob-egress: refused")
+            || text.contains("tunnel error: unsuccessful")
+            || text.contains("unsuccessful tunnel")
+    })
+}
+
 fn http_status_diagnostic(code: u16, endpoint: Option<String>) -> ProviderErrorDiagnostic {
     let (kind, hint) = if matches!(code, 401 | 403) {
         ("auth", "check provider credentials")
@@ -1326,6 +1363,21 @@ fn provider_error_diagnostic(err: &anyhow::Error) -> ProviderErrorDiagnostic {
     let text_status = http_status_from_error_text(&lower);
 
     let http_status = structured_status.or(text_status);
+
+    // The device's egress proxy refused the host. Its 403 says nothing about
+    // the provider's credentials, so it must not read as an auth failure.
+    if is_egress_refused(err) {
+        return ProviderErrorDiagnostic {
+            kind: "egress_blocked",
+            phase: "proxy",
+            hint: "the egress proxy does not allow this host; add it to the allow-list",
+            // Name the host alone: that is what goes on the allow-list.
+            endpoint: endpoint
+                .as_deref()
+                .and_then(url_host)
+                .or_else(|| egress_refused_host(&error_detail)),
+        };
+    }
 
     if let Some(status) = http_status.filter(|status| http_status_is_authoritative(*status)) {
         return http_status_diagnostic(status, endpoint);

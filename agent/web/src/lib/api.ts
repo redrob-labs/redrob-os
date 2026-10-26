@@ -17,7 +17,7 @@ import type {
 import type { components } from "./api-generated";
 import { clearToken, getToken, setToken } from "./auth";
 import { apiOrigin, basePath } from "./basePath";
-import { fieldLabelKo, loadSchemaText, trSchema, trServer } from "./schemaText";
+import { fieldLabelKo, loadSchemaText, trError, trSchema, trServer } from "./schemaText";
 
 // ---------------------------------------------------------------------------
 // Base fetch wrapper
@@ -38,18 +38,51 @@ export class UnauthorizedError extends Error {
  * 429 logic; the code is the authoritative dispatch key).
  */
 export class ApiError extends Error {
+  public readonly envelope: {
+    code: string;
+    message: string;
+    path?: string;
+    op_index?: number;
+  };
+
   constructor(
     public readonly status: number,
-    public readonly envelope: {
+    envelope: {
       code: string;
       message: string;
       path?: string;
       op_index?: number;
     },
   ) {
-    super(`[${envelope.code}] ${envelope.message}`);
+    // Screens read `envelope.message` directly, so localize it there.
+    const message = trError(envelope.message);
+    super(`[${envelope.code}] ${message}`);
     this.name = "ApiError";
+    this.envelope = { ...envelope, message };
   }
+}
+
+// An `{"error": "..."}` / `{"message": "..."}` body with its sentence
+// localized. The body stays JSON, so callers that unwrap it still can.
+function localizeErrorBody(body: string): string {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const o = { ...(parsed as Record<string, unknown>) };
+      let changed = false;
+      for (const k of ["error", "message"]) {
+        const v = o[k];
+        if (typeof v === "string" && v) {
+          o[k] = trError(v);
+          changed = true;
+        }
+      }
+      if (changed) return JSON.stringify(o);
+    }
+  } catch {
+    // Plain text body.
+  }
+  return trError(body);
 }
 
 /**
@@ -64,7 +97,7 @@ export class HttpError extends Error {
     public readonly status: number,
     body: string,
   ) {
-    super(`API ${status}: ${body}`);
+    super(`API ${status}: ${localizeErrorBody(body)}`);
     this.name = "HttpError";
   }
 }
