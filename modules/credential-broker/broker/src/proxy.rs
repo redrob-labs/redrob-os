@@ -139,9 +139,24 @@ impl TaskProxies {
     }
 }
 
-// The body names the proxy, so a client can tell this refusal apart from a
-// 403 sent by the upstream service itself (the agent matches on it).
-const FORBIDDEN: &[u8] = b"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nContent-Length: 54\r\nConnection: close\r\n\r\nredrob-egress: refused, host is not on the allow-list\n";
+// The body names the proxy and the refused host, so a client can tell this
+// refusal apart from a 403 sent by the upstream service itself (the agent
+// matches on the `redrob-egress: refused` prefix and reads the host).
+fn forbidden(host: &str) -> Vec<u8> {
+    // The host comes from the client's request line: keep only host characters.
+    let host: String = host
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | ':' | '[' | ']'))
+        .take(253)
+        .collect();
+    let body = format!("redrob-egress: refused host {host}, not on the allow-list\n");
+    format!(
+        "HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    )
+    .into_bytes()
+}
+
 const BAD_GATEWAY: &[u8] =
     b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 const BAD_REQUEST: &[u8] =
@@ -229,7 +244,7 @@ where
         let port: u16 = port.parse().unwrap_or(443);
         if !host_allowed(allow, host) {
             log(audit, task, "CONNECT", host, "", 403, "refused:host-not-allowed");
-            client.write_all(FORBIDDEN).await?;
+            client.write_all(&forbidden(host)).await?;
             return Ok(());
         }
         let mut upstream = match TcpStream::connect((host, port)).await {
@@ -263,7 +278,7 @@ where
         .unwrap_or((hostport, 80u16));
     if !host_allowed(allow, host) {
         log(audit, task, &head.method, host, path, 403, "refused:host-not-allowed");
-        client.write_all(FORBIDDEN).await?;
+        client.write_all(&forbidden(host)).await?;
         return Ok(());
     }
     let mut upstream = TcpStream::connect((host, port))

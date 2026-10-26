@@ -1249,6 +1249,17 @@ fn http_status_from_error_text(text: &str) -> Option<u16> {
     outermost.map(|(_, code)| code)
 }
 
+/// The host named in the egress proxy's refusal body
+/// (`redrob-egress: refused host <host>, not on the allow-list`).
+fn egress_refused_host(text: &str) -> Option<String> {
+    let rest = &text[text.find("redrob-egress: refused host ")? + 28..];
+    let host: String = rest
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | ':' | '[' | ']'))
+        .collect();
+    (!host.is_empty()).then_some(host)
+}
+
 /// A refusal from the Redrob OS egress proxy: its marker body on a plain
 /// HTTP request, or a refused CONNECT tunnel on an HTTPS one.
 fn is_egress_refused(err: &anyhow::Error) -> bool {
@@ -1346,7 +1357,7 @@ fn provider_error_diagnostic(err: &anyhow::Error) -> ProviderErrorDiagnostic {
             kind: "egress_blocked",
             phase: "proxy",
             hint: "the egress proxy does not allow this host; add it to the allow-list",
-            endpoint,
+            endpoint: endpoint.or_else(|| egress_refused_host(&error_detail)),
         };
     }
 
