@@ -17,7 +17,7 @@ import type {
 import type { components } from "./api-generated";
 import { clearToken, getToken, setToken } from "./auth";
 import { apiOrigin, basePath } from "./basePath";
-import { fieldLabelKo, loadSchemaText, trSchema, trServer } from "./schemaText";
+import { fieldLabelKo, loadSchemaText, trError, trSchema, trServer } from "./schemaText";
 
 // ---------------------------------------------------------------------------
 // Base fetch wrapper
@@ -47,9 +47,32 @@ export class ApiError extends Error {
       op_index?: number;
     },
   ) {
-    super(`[${envelope.code}] ${envelope.message}`);
+    super(`[${envelope.code}] ${trError(envelope.message)}`);
     this.name = "ApiError";
   }
+}
+
+// An `{"error": "..."}` / `{"message": "..."}` body with its sentence
+// localized. The body stays JSON, so callers that unwrap it still can.
+function localizeErrorBody(body: string): string {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const o = { ...(parsed as Record<string, unknown>) };
+      let changed = false;
+      for (const k of ["error", "message"]) {
+        const v = o[k];
+        if (typeof v === "string" && v) {
+          o[k] = trError(v);
+          changed = true;
+        }
+      }
+      if (changed) return JSON.stringify(o);
+    }
+  } catch {
+    // Plain text body.
+  }
+  return trError(body);
 }
 
 /**
@@ -64,7 +87,7 @@ export class HttpError extends Error {
     public readonly status: number,
     body: string,
   ) {
-    super(`API ${status}: ${body}`);
+    super(`API ${status}: ${localizeErrorBody(body)}`);
     this.name = "HttpError";
   }
 }

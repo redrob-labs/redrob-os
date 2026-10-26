@@ -17,6 +17,7 @@ import { getAdminPairCode, generatePairCode, PairCodeForbiddenError, getQuicksta
 import { RedrobLockup } from "./components/RedrobLockup";
 import { ConfigDraftProvider } from "./lib/draftStore";
 import { setLocale, t, type Locale } from "./lib/i18n";
+import { loadSchemaText } from "./lib/schemaText";
 import { Router } from "./router/router";
 
 // Locale context
@@ -369,6 +370,11 @@ function AppContent() {
     setLocale(newLocale as Locale);
     saveLocale(newLocale);
   };
+
+  // Server text tables (errors arrive before any page has loaded them).
+  useEffect(() => {
+    void loadSchemaText();
+  }, [locale]);
 
   // Listen for 401 events to force logout
   useEffect(() => {

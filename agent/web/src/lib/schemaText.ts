@@ -18,6 +18,7 @@ interface KoTables {
   text: Table;
   fields: Table;
   doctor: { re: RegExp; ko: string }[];
+  errors: { re: RegExp; ko: string }[];
 }
 
 let ko: KoTables | null = null;
@@ -51,8 +52,9 @@ export function loadSchemaText(): Promise<void> {
       import('./schemaText.ko.json'),
       import('./serverText.ko.json'),
       import('./fieldLabels.ko.json'),
+      import('./errorText.ko.json'),
     ])
-      .then(([schema, server, fields]) => {
+      .then(([schema, server, fields, errors]) => {
         ko = {
           // Lookups normalize the English first, so the keys must be normalized too
           // (tool descriptions carry em dashes and the upstream product name).
@@ -64,6 +66,11 @@ export function loadSchemaText(): Promise<void> {
           ),
           fields: fields.default as Table,
           doctor: compileDoctor(server.default.doctor as Table),
+          // Longest template first, so a specific message wins over a
+          // shorter one that a wildcard slot would also match.
+          errors: compileDoctor(errors.default as Table).sort(
+            (a, b) => b.re.source.length - a.re.source.length,
+          ),
         };
       })
       .catch(() => {
@@ -97,6 +104,22 @@ export function trDoctor(text: string): string {
   const n = norm(text);
   if (getLocale() !== 'ko' || !ko) return n;
   for (const { re, ko: k } of ko.doctor) {
+    const m = n.match(re);
+    if (m) return k.replace(/\{(\d+)\}/g, (_, i) => m[Number(i) + 1] ?? '');
+  }
+  return n;
+}
+
+/**
+ * An API error or config warning message in the current locale. The gateway
+ * builds these from format strings; each template's slots are filled back in.
+ * A message with no template is shown in English after the usual clean-up.
+ */
+export function trError(text: string): string {
+  if (!text) return text;
+  const n = norm(text);
+  if (getLocale() !== 'ko' || !ko) return n;
+  for (const { re, ko: k } of ko.errors) {
     const m = n.match(re);
     if (m) return k.replace(/\{(\d+)\}/g, (_, i) => m[Number(i) + 1] ?? '');
   }
