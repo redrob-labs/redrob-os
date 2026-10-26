@@ -890,6 +890,8 @@ function NewSeededEntryForm({
   const [claimPath, setClaimPath] = useState("groups");
   const [claimValue, setClaimValue] = useState("");
   const [profile, setProfile] = useState("");
+  const [serviceClient, setServiceClient] = useState("");
+  const [serviceProfile, setServiceProfile] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -900,6 +902,7 @@ function NewSeededEntryForm({
         if (cancelled) return;
         setProfiles(r.keys);
         setProfile(r.keys[0] ?? "");
+        setServiceProfile(r.keys[0] ?? "");
       })
       .catch(() => {
         if (!cancelled) setProfiles([]);
@@ -925,18 +928,39 @@ function NewSeededEntryForm({
         { op: "add", path: `${base}.permission_profiles`, value: picked },
       ];
     }
-    if (!issuer.trim() || !audience.trim() || !claimPath.trim() || !claimValue.trim()) {
+    if (!issuer.trim() || !audience.trim()) {
       return t("config.new_entry_fields_required");
     }
-    if (!profile) return t("config.new_entry_profile_required");
-    // `issuer` goes first: it creates the entry, and the map property after
-    // it only resolves once the entry exists.
-    return [
+    // At least one mapping: a person's claim value, a service's client id,
+    // or both (`OidcConfig::validate` needs profile_map or service_profile_map).
+    const human = claimValue.trim();
+    const client = serviceClient.trim();
+    if (!human && !client) return t("config.new_entry_mapping_required");
+    if (human && !claimPath.trim()) return t("config.new_entry_fields_required");
+    if ((human && !profile) || (client && !serviceProfile)) {
+      return t("config.new_entry_profile_required");
+    }
+    // `issuer` goes first: it creates the entry, and the map properties
+    // after it only resolve once the entry exists.
+    const ops: PatchOp[] = [
       { op: "add", path: `${base}.issuer`, value: issuer.trim() },
       { op: "add", path: `${base}.audience`, value: audience.trim() },
-      { op: "add", path: `${base}.claim_path`, value: claimPath.trim() },
-      { op: "add", path: `${base}.profile_map.${claimValue.trim()}`, value: profile },
     ];
+    if (human) {
+      ops.push(
+        { op: "add", path: `${base}.claim_path`, value: claimPath.trim() },
+        { op: "add", path: `${base}.profile_map.${human}`, value: profile },
+      );
+    }
+    if (client) {
+      // A service token resolves only when its client is declared a service
+      // client, so the mapping and the declaration are written together.
+      ops.push(
+        { op: "add", path: `${base}.service_clients`, value: [client] },
+        { op: "add", path: `${base}.service_profile_map.${client}`, value: serviceProfile },
+      );
+    }
+    return ops;
   };
 
   const submit = async () => {
@@ -981,6 +1005,26 @@ function NewSeededEntryForm({
           setError(null);
         }}
       />
+    </label>
+  );
+
+  const profileSelect = (value: string, set: (v: string) => void) => (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="text-pc-text-secondary">{t("config.new_entry_profile")}</span>
+      <select
+        className="input-electric px-3 py-1.5 text-sm"
+        value={value}
+        onChange={(e) => {
+          set(e.target.value);
+          setError(null);
+        }}
+      >
+        {(profiles ?? []).map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
+      </select>
     </label>
   );
 
@@ -1036,25 +1080,24 @@ function NewSeededEntryForm({
           <>
             {field(t("config.new_entry_issuer"), issuer, setIssuer, "https://sso.example.com/realms/main")}
             {field(t("config.new_entry_audience"), audience, setAudience)}
-            {field(t("config.new_entry_claim_path"), claimPath, setClaimPath, "groups")}
-            {field(t("config.new_entry_claim_value"), claimValue, setClaimValue, "admins")}
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-pc-text-secondary">{t("config.new_entry_profile")}</span>
-              <select
-                className="input-electric px-3 py-1.5 text-sm"
-                value={profile}
-                onChange={(e) => {
-                  setProfile(e.target.value);
-                  setError(null);
-                }}
-              >
-                {(profiles ?? []).map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <fieldset className="flex flex-col gap-3 border-t border-pc-border pt-3">
+              <legend className="pr-2 text-sm font-medium text-pc-text">
+                {t("config.new_entry_human_mapping")}
+              </legend>
+              {field(t("config.new_entry_claim_path"), claimPath, setClaimPath, "groups")}
+              {field(t("config.new_entry_claim_value"), claimValue, setClaimValue, "admins")}
+              {profileSelect(profile, setProfile)}
+            </fieldset>
+            <fieldset className="flex flex-col gap-3 border-t border-pc-border pt-3">
+              <legend className="pr-2 text-sm font-medium text-pc-text">
+                {t("config.new_entry_service_mapping")}
+              </legend>
+              {field(t("config.new_entry_service_client"), serviceClient, setServiceClient, "ci-bot")}
+              {profileSelect(serviceProfile, setServiceProfile)}
+            </fieldset>
+            <p className="text-xs text-pc-text-secondary">
+              {t("config.new_entry_mapping_hint")}
+            </p>
           </>
         )}
 
