@@ -1249,6 +1249,18 @@ fn http_status_from_error_text(text: &str) -> Option<u16> {
     outermost.map(|(_, code)| code)
 }
 
+/// The host part of a URL such as `https://user@host:443/v1/x`.
+fn url_host(url: &str) -> Option<String> {
+    let rest = url.split_once("://").map_or(url, |(_, r)| r);
+    let authority = rest.split(['/', '?', '#']).next()?;
+    let hostport = authority.rsplit_once('@').map_or(authority, |(_, h)| h);
+    let host = match hostport.strip_prefix('[') {
+        Some(v6) => v6.split(']').next()?,
+        None => hostport.split(':').next()?,
+    };
+    (!host.is_empty()).then(|| host.to_string())
+}
+
 /// The host named in the egress proxy's refusal body
 /// (`redrob-egress: refused host <host>, not on the allow-list`).
 fn egress_refused_host(text: &str) -> Option<String> {
@@ -1359,7 +1371,11 @@ fn provider_error_diagnostic(err: &anyhow::Error) -> ProviderErrorDiagnostic {
             kind: "egress_blocked",
             phase: "proxy",
             hint: "the egress proxy does not allow this host; add it to the allow-list",
-            endpoint: endpoint.or_else(|| egress_refused_host(&error_detail)),
+            // Name the host alone: that is what goes on the allow-list.
+            endpoint: endpoint
+                .as_deref()
+                .and_then(url_host)
+                .or_else(|| egress_refused_host(&error_detail)),
         };
     }
 
