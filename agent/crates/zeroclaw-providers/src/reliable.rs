@@ -1265,7 +1265,9 @@ fn egress_refused_host(text: &str) -> Option<String> {
 fn is_egress_refused(err: &anyhow::Error) -> bool {
     err.chain().any(|cause| {
         let text = cause.to_string().to_lowercase();
-        text.contains("redrob-egress: refused") || text.contains("unsuccessful tunnel")
+        text.contains("redrob-egress: refused")
+            || text.contains("tunnel error: unsuccessful")
+            || text.contains("unsuccessful tunnel")
     })
 }
 
