@@ -31,6 +31,7 @@ import {
   type DeletePlan,
   type DriftEntry,
   type ListResponseEntry,
+  type PatchOp,
   type PickerItem,
   type SectionInfo,
 } from "../lib/api";
@@ -272,19 +273,15 @@ export default function Config() {
         );
       }
       return (
-        <AliasListView
+        <PlainMapList
+          key={sectionKey}
           sectionKey={sectionKey}
           sectionHelp={activeSection.help}
-          onSelectAlias={async (alias) => {
-            const { keys } = await getMapKeys(sectionKey);
-            if (!keys.includes(alias)) {
-              await createMapKey(sectionKey, alias);
-              window.dispatchEvent(new Event("zeroclaw-config-mutated"));
-            }
+          onOpen={(alias) =>
             navigate(
               `/config/${encodeURIComponent(sectionKey)}/${encodeURIComponent(alias)}`,
-            );
-          }}
+            )
+          }
           onBack={() => navigate("/config")}
         />
       );
@@ -819,6 +816,270 @@ function suggestConfigAlias(aliases: string[]): string {
 function validateConfigAlias(alias: string): string | null {
   if (/^(?!_)(?!.*__)(?!.*_$)[a-z0-9_]{1,63}$/.test(alias)) return null;
   return t("config.alias_validation_error");
+}
+
+// Map sections the server refuses to save with an empty entry: a `users`
+// entry needs a uid and a permission profile, an `oidc` entry needs an
+// issuer, an audience and one claim mapping (`UserConfig::validate`,
+// `OidcConfig::validate`). A new entry there is created together with those
+// values in one PATCH, so it is never written half-filled.
+const SEEDED_MAP_SECTIONS = new Set(["users", "oidc"]);
+
+function PlainMapList({
+  sectionKey,
+  sectionHelp,
+  onOpen,
+  onBack,
+}: {
+  sectionKey: string;
+  sectionHelp?: string;
+  onOpen: (alias: string) => void;
+  onBack: () => void;
+}) {
+  const [pending, setPending] = useState<string | null>(null);
+
+  if (pending) {
+    return (
+      <NewSeededEntryForm
+        sectionKey={sectionKey}
+        alias={pending}
+        onCreated={() => onOpen(pending)}
+        onCancel={() => setPending(null)}
+      />
+    );
+  }
+
+  return (
+    <AliasListView
+      sectionKey={sectionKey}
+      sectionHelp={sectionHelp}
+      onSelectAlias={async (alias) => {
+        const { keys } = await getMapKeys(sectionKey);
+        if (!keys.includes(alias)) {
+          if (SEEDED_MAP_SECTIONS.has(sectionKey)) {
+            setPending(alias);
+            return;
+          }
+          await createMapKey(sectionKey, alias);
+          window.dispatchEvent(new Event("zeroclaw-config-mutated"));
+        }
+        onOpen(alias);
+      }}
+      onBack={onBack}
+    />
+  );
+}
+
+function NewSeededEntryForm({
+  sectionKey,
+  alias,
+  onCreated,
+  onCancel,
+}: {
+  sectionKey: string;
+  alias: string;
+  onCreated: () => void;
+  onCancel: () => void;
+}) {
+  const isUser = sectionKey === "users";
+  const [profiles, setProfiles] = useState<string[] | null>(null);
+  const [uid, setUid] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [issuer, setIssuer] = useState("");
+  const [audience, setAudience] = useState("");
+  const [claimPath, setClaimPath] = useState("groups");
+  const [claimValue, setClaimValue] = useState("");
+  const [profile, setProfile] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getMapKeys("permission_profiles")
+      .then((r) => {
+        if (cancelled) return;
+        setProfiles(r.keys);
+        setProfile(r.keys[0] ?? "");
+      })
+      .catch(() => {
+        if (!cancelled) setProfiles([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Dotted paths, not JSON pointers: an OIDC claim value is often a group
+  // path like `/admins`, which a pointer would split.
+  const base = `${sectionKey}.${alias}`;
+
+  const buildOps = (): PatchOp[] | string => {
+    if (isUser) {
+      const n = Number(uid.trim());
+      if (!/^\d+$/.test(uid.trim()) || !Number.isSafeInteger(n)) {
+        return t("config.new_entry_uid_invalid");
+      }
+      if (picked.length === 0) return t("config.new_entry_profile_required");
+      return [
+        { op: "add", path: `${base}.uid`, value: n },
+        { op: "add", path: `${base}.permission_profiles`, value: picked },
+      ];
+    }
+    if (!issuer.trim() || !audience.trim() || !claimPath.trim() || !claimValue.trim()) {
+      return t("config.new_entry_fields_required");
+    }
+    if (!profile) return t("config.new_entry_profile_required");
+    // `issuer` goes first: it creates the entry, and the map property after
+    // it only resolves once the entry exists.
+    return [
+      { op: "add", path: `${base}.issuer`, value: issuer.trim() },
+      { op: "add", path: `${base}.audience`, value: audience.trim() },
+      { op: "add", path: `${base}.claim_path`, value: claimPath.trim() },
+      { op: "add", path: `${base}.profile_map.${claimValue.trim()}`, value: profile },
+    ];
+  };
+
+  const submit = async () => {
+    const ops = buildOps();
+    if (typeof ops === "string") {
+      setError(ops);
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      await patchConfig(ops);
+      onCreated();
+    } catch (e) {
+      setError(
+        e instanceof ApiError
+          ? e.envelope.message
+          : e instanceof Error
+            ? e.message
+            : String(e),
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field = (
+    label: string,
+    value: string,
+    set: (v: string) => void,
+    placeholder?: string,
+  ) => (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="text-pc-text-secondary">{label}</span>
+      <input
+        type="text"
+        className="input-electric px-3 py-1.5 text-sm"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => {
+          set(e.target.value);
+          setError(null);
+        }}
+      />
+    </label>
+  );
+
+  const noProfiles = profiles !== null && profiles.length === 0;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Button variant="ghost" size="sm" onClick={onCancel} className="self-start">
+        <ArrowLeft className="h-4 w-4" />
+        {t("common.back")}
+      </Button>
+
+      <Card className="flex flex-col gap-3">
+        <h3 className="text-base font-semibold text-pc-text">
+          {t("config.new_entry_title")} <code>{base}</code>
+        </h3>
+        <p className="text-sm text-pc-text-secondary">
+          {isUser ? t("config.new_entry_user_help") : t("config.new_entry_oidc_help")}
+        </p>
+
+        {noProfiles ? (
+          <p className="text-sm text-pc-text-secondary">
+            {t("config.new_entry_no_profiles")}{" "}
+            <Link to="/config/permission_profiles" className="underline">
+              {t("config.new_entry_open_profiles")}
+            </Link>
+          </p>
+        ) : isUser ? (
+          <>
+            {field(t("config.new_entry_uid"), uid, setUid, "1000")}
+            <fieldset className="flex flex-col gap-1 text-sm">
+              <legend className="mb-1 text-pc-text-secondary">
+                {t("config.new_entry_profiles")}
+              </legend>
+              {(profiles ?? []).map((p) => (
+                <label key={p} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={picked.includes(p)}
+                    onChange={(e) => {
+                      setPicked((prev) =>
+                        e.target.checked ? [...prev, p] : prev.filter((x) => x !== p),
+                      );
+                      setError(null);
+                    }}
+                  />
+                  <code>{p}</code>
+                </label>
+              ))}
+            </fieldset>
+          </>
+        ) : (
+          <>
+            {field(t("config.new_entry_issuer"), issuer, setIssuer, "https://sso.example.com/realms/main")}
+            {field(t("config.new_entry_audience"), audience, setAudience)}
+            {field(t("config.new_entry_claim_path"), claimPath, setClaimPath, "groups")}
+            {field(t("config.new_entry_claim_value"), claimValue, setClaimValue, "admins")}
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-pc-text-secondary">{t("config.new_entry_profile")}</span>
+              <select
+                className="input-electric px-3 py-1.5 text-sm"
+                value={profile}
+                onChange={(e) => {
+                  setProfile(e.target.value);
+                  setError(null);
+                }}
+              >
+                {(profiles ?? []).map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
+
+        {error && (
+          <p className="text-xs" style={{ color: "var(--color-status-error)" }}>
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={saving || profiles === null || noProfiles}
+            onClick={() => void submit()}
+          >
+            {t("config.add")}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            {t("common.cancel")}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
 }
 
 function AliasListView({
