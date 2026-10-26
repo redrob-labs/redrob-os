@@ -228,6 +228,13 @@ fn reliable_provider_terminal_failure_message_with_renderer(
             ),
             None => render("cli-agent-error-provider-authentication", &[]),
         },
+        ReliableProviderTerminalFailureKind::EgressBlocked => match failure.endpoint() {
+            Some(endpoint) => render(
+                "cli-agent-error-provider-egress-blocked-named",
+                &[("endpoint", endpoint)],
+            ),
+            None => render("cli-agent-error-provider-egress-blocked", &[]),
+        },
         ReliableProviderTerminalFailureKind::RateLimited => {
             render("cli-agent-error-provider-rate-limited", &[])
         }

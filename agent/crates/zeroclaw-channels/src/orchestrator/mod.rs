@@ -12483,13 +12483,13 @@ pub async fn bind_telegram_identity(config: &Config, identity: &str, alias: &str
         }
         Ok(false) => {
             println!(
-                "ℹ️ No managed daemon service detected. If `zeroclaw daemon`/`channel start` is already running, restart it to load the updated allowlist."
+                "ℹ️ The agent was not restarted. Run `sudo systemctl restart redrob-agent` to load the updated allowlist."
             );
         }
         Err(e) => {
             eprintln!(
                 "⚠️ Allowlist saved, but failed to reload daemon service automatically: {e}\n\
-                 Restart service manually with `zeroclaw service stop && zeroclaw service start`."
+                 Restart it manually with `sudo systemctl restart redrob-agent`."
             );
         }
     }

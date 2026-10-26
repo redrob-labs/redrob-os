@@ -1,3 +1,4 @@
+import { trError } from '@/lib/schemaText';
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import type {
   ApprovalDecision,
@@ -152,9 +153,11 @@ function friendlyAgentError(message?: string): string {
     const model = localConnectFailure[2] ?? 'the selected model';
     const url = localConnectFailure[3] ?? 'the configured endpoint';
     const displayProvider = modelProviderDisplayName(provider);
-    return `${displayProvider} is unreachable at ${url}. Start the local provider service, confirm it serves ${model}, then try again.`;
+    return trError(
+      `${displayProvider} is unreachable at ${url}. Start the local provider service, confirm it serves ${model}, then try again.`,
+    );
   }
-  return raw;
+  return trError(raw);
 }
 
 export interface AgentProviderProps {
