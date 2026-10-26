@@ -1202,7 +1202,9 @@ function AliasListView({
         variant="ghost"
         size="sm"
         onClick={onBack}
-        className={backIsAllSettings ? "self-start hidden md:inline-flex" : "self-start"}
+        // `max-md:hidden`, not `hidden md:inline-flex`: Button already carries
+        // `inline-flex`, and in Tailwind 4's order that beats `hidden`.
+        className={backIsAllSettings ? "self-start max-md:hidden" : "self-start"}
       >
         <ArrowLeft className="h-4 w-4" />
         {t("common.back")}
