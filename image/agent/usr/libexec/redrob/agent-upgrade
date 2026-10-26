@@ -10,10 +10,14 @@
 #    admin who wrote their own [gateway.tls] (enabled = false too) is left alone.
 # 2. Open the dashboard port (firewalld service redrob-agent, 42617/tcp) once.
 #    The marker keeps a later admin `--remove-service` from being undone.
+# 3. The agent adds its built-in auto_approve list on load, which lets network
+#    tools run without asking. A device whose default profile has no always_ask
+#    yet gets the same list a fresh install ships; an existing one is left alone.
 set -eu
 
 CONFIG=/var/lib/redrob/agent/config.toml
 MARKER=/var/lib/redrob/agent/.firewall-opened
+ALWAYS_ASK='always_ask = ["web_fetch", "web_search_tool", "browser_open", "weather"]'
 
 if [ -s "$CONFIG" ] && ! grep -q '^\[gateway\.tls\]' "$CONFIG"; then
     printf '\n[gateway.tls]\nenabled = true   # empty cert_path/key_path = self-provisioned certificate\n' >> "$CONFIG"
@@ -25,4 +29,13 @@ if [ ! -e "$MARKER" ] && command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd
     firewall-cmd --reload >/dev/null
     : > "$MARKER"
     echo "redrob-agent-upgrade: opened the LAN dashboard port"
+fi
+
+if [ -s "$CONFIG" ] && grep -q '^\[risk_profiles\.default\]' "$CONFIG" &&
+    ! awk '/^\[/ { sec = $0 } sec == "[risk_profiles.default]" && /^always_ask[ \t]*=/ { found = 1 } END { exit !found }' "$CONFIG"; then
+    # Rewrite in place (cat >) so the file keeps its owner and mode.
+    awk -v line="$ALWAYS_ASK" '{ print } $0 == "[risk_profiles.default]" { print line }' "$CONFIG" > "$CONFIG.new"
+    cat "$CONFIG.new" > "$CONFIG"
+    rm -f "$CONFIG.new"
+    echo "redrob-agent-upgrade: network tools now ask before running"
 fi

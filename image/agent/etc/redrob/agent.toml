@@ -48,6 +48,9 @@ auto_approve = [
   "file_read", "glob_search", "content_search", "image_info",
   "memory_recall", "memory_store", "calculator",
 ]
+# The agent adds its own built-in auto_approve list on load, which includes
+# these. They reach the network, so ask anyway; always_ask wins over auto_approve.
+always_ask = ["web_fetch", "web_search_tool", "browser_open", "weather"]
 forbidden_paths = [
   "/var/lib/redrob/broker",
   "/var/lib/redrob/identity/device.key",

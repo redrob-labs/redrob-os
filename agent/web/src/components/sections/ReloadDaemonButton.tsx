@@ -26,6 +26,8 @@ interface ReloadDaemonButtonProps {
   onReloaded?: () => void;
   /** Override the default 30s health-poll timeout. */
   timeoutMs?: number;
+  /** Icon only on a phone while idle; the busy states keep their text. */
+  compact?: boolean;
 }
 
 type State =
@@ -36,7 +38,7 @@ type State =
   | { kind: 'back' }            // /health answered after reload
   | { kind: 'error'; message: string };
 
-export default function ReloadDaemonButton({ onReloaded, timeoutMs = 30_000 }: ReloadDaemonButtonProps) {
+export default function ReloadDaemonButton({ onReloaded, timeoutMs = 30_000, compact = false }: ReloadDaemonButtonProps) {
   const [state, setState] = useState<State>({ kind: 'idle' });
   const reloadAvailable = useReloadAvailable();
 
@@ -103,6 +105,7 @@ export default function ReloadDaemonButton({ onReloaded, timeoutMs = 30_000 }: R
         disabled={isBusy}
         className="btn-secondary flex items-center gap-2 text-sm px-3 py-2"
         title={t('reload_btn.button_title')}
+        aria-label={t('reload_btn.reload_daemon')}
       >
         {state.kind === 'reloading' || state.kind === 'waiting' ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -115,7 +118,9 @@ export default function ReloadDaemonButton({ onReloaded, timeoutMs = 30_000 }: R
             ? t('reload_btn.waiting')
             : state.kind === 'back'
               ? t('reload_btn.back')
-              : t('reload_btn.reload_daemon')}
+              : compact
+                ? <span className="hidden sm:inline">{t('reload_btn.reload_daemon')}</span>
+                : t('reload_btn.reload_daemon')}
       </button>
 
       {state.kind === 'error' && (

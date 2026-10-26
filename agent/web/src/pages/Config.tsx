@@ -522,6 +522,7 @@ export default function Config() {
             );
           }}
           onBack={() => navigate("/config")}
+          backIsAllSettings
         />
       );
     }
@@ -718,7 +719,12 @@ export default function Config() {
             <PageHeader
               title={activeSection.label}
               description={
-                <span className="flex items-center gap-1.5 flex-wrap text-pc-text-muted">
+                // `설정 > <section>` only repeats the title on a phone, where
+                // the "all settings" button above already leads back; show
+                // the trail there only once it names an entry.
+                <span
+                  className={`${crumbs.length > 2 ? "flex" : "hidden md:flex"} items-center gap-1.5 flex-wrap text-pc-text-muted`}
+                >
                   {crumbs.map((crumb, i) => (
                     <span key={i} className="flex items-center gap-1.5">
                       {i > 0 && (
@@ -748,11 +754,14 @@ export default function Config() {
                     size="sm"
                     onClick={() => navigate("/quickstart")}
                     title={t("cfg.header.quickstart")}
+                    aria-label={t("cfg.header.quickstart")}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
-                    {t("cfg.header.quickstart")}
+                    {/* Icon only on a phone, so the title keeps its row. */}
+                    <span className="hidden sm:inline">{t("cfg.header.quickstart")}</span>
                   </Button>
                   <ReloadDaemonButton
+                    compact
                     onReloaded={() => {
                       goToSection(activeSection.key);
                       fetchDrift();
@@ -775,31 +784,17 @@ export default function Config() {
 
 // Alias list page: /config/:section/:type
 // Shows existing aliases as clickable rows + an inline "new alias" input.
-/// Help block shown above every alias-input field. Mirrors the wizard's
-/// `AliasHelpBox` text — keep both in sync if the validator's rules
-/// (`zeroclaw_config::helpers::validate_alias_key`) ever change.
+/// One-line name hint shown above every alias-input field, with the full
+/// naming rules folded away. Keep the rules text in sync with
+/// `zeroclaw_config::helpers::validate_alias_key` (and `validateConfigAlias`).
 function ConfigAliasHelpBox() {
   return (
-    <div
-      className="rounded-[var(--radius-md)] border border-pc-border px-3 py-2 text-xs text-pc-text-secondary"
-      style={{ background: "var(--pc-bg-surface-subtle)" }}
-    >
-      <p className="mb-1">
-        <strong>{t("config.alias_help_term")}</strong>{" "}
-        {t("config.alias_help_intro")}{" "}
-        <code>
-          {"<type>"}.{"<alias>"}
-        </code>
-        {t("config.alias_help_examples_pre")}{" "}
-        <code>work</code> {t("config.alias_help_examples_mid")}{" "}
-        <code>personal</code> {t("config.alias_help_examples_post")}
-      </p>
-      <p className="mb-0">
-        {t("config.alias_help_rules")}{" "}
-        <strong>{t("config.alias_help_no_rename")}</strong>{" "}
-        {t("config.alias_help_rename_advice")}
-      </p>
-    </div>
+    <details className="text-xs text-pc-text-secondary">
+      <summary className="cursor-pointer select-none">
+        {t("config.alias_help_summary")}
+      </summary>
+      <p className="mt-1">{t("config.alias_help_rules")}</p>
+    </details>
   );
 }
 
@@ -866,6 +861,7 @@ function PlainMapList({
         onOpen(alias);
       }}
       onBack={onBack}
+      backIsAllSettings
     />
   );
 }
@@ -890,6 +886,8 @@ function NewSeededEntryForm({
   const [claimPath, setClaimPath] = useState("groups");
   const [claimValue, setClaimValue] = useState("");
   const [profile, setProfile] = useState("");
+  const [serviceClient, setServiceClient] = useState("");
+  const [serviceProfile, setServiceProfile] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -900,6 +898,7 @@ function NewSeededEntryForm({
         if (cancelled) return;
         setProfiles(r.keys);
         setProfile(r.keys[0] ?? "");
+        setServiceProfile(r.keys[0] ?? "");
       })
       .catch(() => {
         if (!cancelled) setProfiles([]);
@@ -925,18 +924,39 @@ function NewSeededEntryForm({
         { op: "add", path: `${base}.permission_profiles`, value: picked },
       ];
     }
-    if (!issuer.trim() || !audience.trim() || !claimPath.trim() || !claimValue.trim()) {
+    if (!issuer.trim() || !audience.trim()) {
       return t("config.new_entry_fields_required");
     }
-    if (!profile) return t("config.new_entry_profile_required");
-    // `issuer` goes first: it creates the entry, and the map property after
-    // it only resolves once the entry exists.
-    return [
+    // At least one mapping: a person's claim value, a service's client id,
+    // or both (`OidcConfig::validate` needs profile_map or service_profile_map).
+    const human = claimValue.trim();
+    const client = serviceClient.trim();
+    if (!human && !client) return t("config.new_entry_mapping_required");
+    if (human && !claimPath.trim()) return t("config.new_entry_fields_required");
+    if ((human && !profile) || (client && !serviceProfile)) {
+      return t("config.new_entry_profile_required");
+    }
+    // `issuer` goes first: it creates the entry, and the map properties
+    // after it only resolve once the entry exists.
+    const ops: PatchOp[] = [
       { op: "add", path: `${base}.issuer`, value: issuer.trim() },
       { op: "add", path: `${base}.audience`, value: audience.trim() },
-      { op: "add", path: `${base}.claim_path`, value: claimPath.trim() },
-      { op: "add", path: `${base}.profile_map.${claimValue.trim()}`, value: profile },
     ];
+    if (human) {
+      ops.push(
+        { op: "add", path: `${base}.claim_path`, value: claimPath.trim() },
+        { op: "add", path: `${base}.profile_map.${human}`, value: profile },
+      );
+    }
+    if (client) {
+      // A service token resolves only when its client is declared a service
+      // client, so the mapping and the declaration are written together.
+      ops.push(
+        { op: "add", path: `${base}.service_clients`, value: [client] },
+        { op: "add", path: `${base}.service_profile_map.${client}`, value: serviceProfile },
+      );
+    }
+    return ops;
   };
 
   const submit = async () => {
@@ -981,6 +1001,26 @@ function NewSeededEntryForm({
           setError(null);
         }}
       />
+    </label>
+  );
+
+  const profileSelect = (value: string, set: (v: string) => void) => (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="text-pc-text-secondary">{t("config.new_entry_profile")}</span>
+      <select
+        className="input-electric px-3 py-1.5 text-sm"
+        value={value}
+        onChange={(e) => {
+          set(e.target.value);
+          setError(null);
+        }}
+      >
+        {(profiles ?? []).map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
+      </select>
     </label>
   );
 
@@ -1036,25 +1076,24 @@ function NewSeededEntryForm({
           <>
             {field(t("config.new_entry_issuer"), issuer, setIssuer, "https://sso.example.com/realms/main")}
             {field(t("config.new_entry_audience"), audience, setAudience)}
-            {field(t("config.new_entry_claim_path"), claimPath, setClaimPath, "groups")}
-            {field(t("config.new_entry_claim_value"), claimValue, setClaimValue, "admins")}
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-pc-text-secondary">{t("config.new_entry_profile")}</span>
-              <select
-                className="input-electric px-3 py-1.5 text-sm"
-                value={profile}
-                onChange={(e) => {
-                  setProfile(e.target.value);
-                  setError(null);
-                }}
-              >
-                {(profiles ?? []).map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <fieldset className="flex flex-col gap-3 border-t border-pc-border pt-3">
+              <legend className="pr-2 text-sm font-medium text-pc-text">
+                {t("config.new_entry_human_mapping")}
+              </legend>
+              {field(t("config.new_entry_claim_path"), claimPath, setClaimPath, "groups")}
+              {field(t("config.new_entry_claim_value"), claimValue, setClaimValue, "admins")}
+              {profileSelect(profile, setProfile)}
+            </fieldset>
+            <fieldset className="flex flex-col gap-3 border-t border-pc-border pt-3">
+              <legend className="pr-2 text-sm font-medium text-pc-text">
+                {t("config.new_entry_service_mapping")}
+              </legend>
+              {field(t("config.new_entry_service_client"), serviceClient, setServiceClient, "ci-bot")}
+              {profileSelect(serviceProfile, setServiceProfile)}
+            </fieldset>
+            <p className="text-xs text-pc-text-secondary">
+              {t("config.new_entry_mapping_hint")}
+            </p>
           </>
         )}
 
@@ -1088,6 +1127,7 @@ function AliasListView({
   sectionHelp,
   onSelectAlias,
   onBack,
+  backIsAllSettings = false,
 }: {
   sectionKey: string;
   /** Channel/provider type for two-tier sections; omitted for one-tier
@@ -1099,6 +1139,9 @@ function AliasListView({
   sectionHelp?: string;
   onSelectAlias: (alias: string) => Promise<void>;
   onBack: () => void;
+  /** `onBack` goes to /config: on a phone the page's own "all settings"
+   *  button already does that, so this one is hidden there. */
+  backIsAllSettings?: boolean;
 }) {
   const [aliases, setAliases] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1159,7 +1202,9 @@ function AliasListView({
         variant="ghost"
         size="sm"
         onClick={onBack}
-        className="self-start"
+        // `max-md:hidden`, not `hidden md:inline-flex`: Button already carries
+        // `inline-flex`, and in Tailwind 4's order that beats `hidden`.
+        className={backIsAllSettings ? "self-start max-md:hidden" : "self-start"}
       >
         <ArrowLeft className="h-4 w-4" />
         {t("common.back")}
