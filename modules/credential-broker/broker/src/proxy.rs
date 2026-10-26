@@ -139,8 +139,9 @@ impl TaskProxies {
     }
 }
 
-const FORBIDDEN: &[u8] =
-    b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+// The body names the proxy, so a client can tell this refusal apart from a
+// 403 sent by the upstream service itself (the agent matches on it).
+const FORBIDDEN: &[u8] = b"HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nContent-Length: 54\r\nConnection: close\r\n\r\nredrob-egress: refused, host is not on the allow-list\n";
 const BAD_GATEWAY: &[u8] =
     b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 const BAD_REQUEST: &[u8] =
