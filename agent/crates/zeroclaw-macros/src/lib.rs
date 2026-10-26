@@ -1925,6 +1925,86 @@ pub fn derive_configurable(input: TokenStream) -> TokenStream {
         let vec_inner = extract_vec_inner(inner_ty);
         let is_vec = vec_inner.is_some();
         if is_compound_type(inner_ty) && !is_vec {
+            // A plain `HashMap<String, String>` (OIDC `profile_map`): each
+            // entry is its own property `<field>.<key>`, the shape the secret
+            // maps above already use, so a form or a PATCH can add, edit and
+            // remove entries. An empty value removes the entry.
+            let is_string_map = extract_hashmap_value_type(inner_ty)
+                .is_some_and(|v| v.to_token_stream().to_string() == "String");
+            if is_string_map {
+                let full_name = if prefix.is_empty() {
+                    field_ident.to_string()
+                } else {
+                    format!("{}.{}", prefix, field_ident)
+                };
+                let full_name_lit = &full_name;
+                let category_lit = &category;
+                let description = extract_doc(&field.attrs);
+                let description_lit = description.as_str();
+                let map_expr = if is_option {
+                    quote! { self.#field_ident.as_ref() }
+                } else {
+                    quote! { Some(&self.#field_ident) }
+                };
+                let map_mut_expr = if is_option {
+                    quote! { self.#field_ident.get_or_insert_with(std::collections::HashMap::new) }
+                } else {
+                    quote! { &mut self.#field_ident }
+                };
+                dynamic_secret_map_prop_fields.push(quote! {
+                    if let Some(map) = #map_expr {
+                        let mut keys: Vec<&String> = map.keys().collect();
+                        keys.sort();
+                        for key in keys {
+                            let value = &map[key];
+                            fields.push(crate::config::PropFieldInfo {
+                                name: format!("{}.{}", #full_name_lit, key),
+                                category: #category_lit,
+                                display_value: if value.is_empty() {
+                                    crate::config::UNSET_DISPLAY.to_string()
+                                } else {
+                                    value.clone()
+                                },
+                                type_hint: "String",
+                                kind: crate::config::PropKind::String,
+                                is_secret: false,
+                                enum_variants: None::<fn() -> Vec<String>>,
+                                description: #description_lit,
+                                derived_from_secret: false,
+                                credential_class: #credential_class_expr,
+                                tab: #tab_token,
+                                alias_source: None,
+                                multiline: false,
+                            });
+                        }
+                    }
+                });
+                dynamic_secret_map_get_prop.push(quote! {
+                    if let Some(key) = name
+                        .strip_prefix(#full_name_lit)
+                        .and_then(|s| s.strip_prefix('.'))
+                        .filter(|key| !key.is_empty())
+                        && let Some(value) = #map_expr.and_then(|map| map.get(key))
+                    {
+                        return Ok(value.clone());
+                    }
+                });
+                dynamic_secret_map_set_prop.push(quote! {
+                    if let Some(key) = name
+                        .strip_prefix(#full_name_lit)
+                        .and_then(|s| s.strip_prefix('.'))
+                        .filter(|key| !key.is_empty())
+                    {
+                        let value = value_str.trim();
+                        if value.is_empty() {
+                            (#map_mut_expr).remove(key);
+                        } else {
+                            (#map_mut_expr).insert(key.to_string(), value.to_string());
+                        }
+                        return Ok(());
+                    }
+                });
+            }
             continue;
         }
 
